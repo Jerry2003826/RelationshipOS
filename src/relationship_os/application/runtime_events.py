@@ -11,6 +11,9 @@ class RuntimeEventBatch:
     events: tuple[StoredEvent, ...]
 
 
+_SHUTDOWN_SENTINEL = RuntimeEventBatch(stream_id="__shutdown__", events=())
+
+
 class RuntimeEventSubscription:
     def __init__(
         self,
@@ -22,7 +25,10 @@ class RuntimeEventSubscription:
         self._queue = queue
 
     async def get(self) -> RuntimeEventBatch:
-        return await self._queue.get()
+        batch = await self._queue.get()
+        if batch.stream_id == "__shutdown__":
+            raise asyncio.CancelledError("broker shut down")
+        return batch
 
     async def close(self) -> None:
         await self._broker.unsubscribe(self._queue)
@@ -66,7 +72,20 @@ class RuntimeEventBroker:
 
     async def shutdown(self) -> None:
         async with self._lock:
+            queues = list(self._subscriptions)
             self._subscriptions.clear()
+        for queue in queues:
+            try:
+                queue.put_nowait(_SHUTDOWN_SENTINEL)
+            except asyncio.QueueFull:
+                try:
+                    queue.get_nowait()
+                except asyncio.QueueEmpty:
+                    pass
+                try:
+                    queue.put_nowait(_SHUTDOWN_SENTINEL)
+                except asyncio.QueueFull:
+                    pass
 
     async def subscribe(
         self,

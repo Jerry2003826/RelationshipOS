@@ -1,3 +1,4 @@
+import asyncio
 from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -27,12 +28,15 @@ from relationship_os.application.runtime_service import RuntimeService
 from relationship_os.application.scenario_evaluation_service import ScenarioEvaluationService
 from relationship_os.application.stream_service import StreamService
 from relationship_os.core.config import Settings
+from relationship_os.core.logging import get_logger
 from relationship_os.domain.event_store import EventStore
 from relationship_os.domain.llm import LLMClient
 from relationship_os.domain.projectors import VersionedProjectorRegistry
 from relationship_os.infrastructure.db.engine import build_async_engine
 from relationship_os.infrastructure.event_store.memory import InMemoryEventStore
 from relationship_os.infrastructure.event_store.postgres import PostgresEventStore
+
+_shutdown_logger = get_logger("relationship_os.container")
 
 
 @dataclass(slots=True)
@@ -55,9 +59,20 @@ class RuntimeContainer:
     database_engine: AsyncEngine | None = None
 
     async def shutdown(self) -> None:
-        await self.proactive_followup_dispatcher.shutdown()
-        await self.job_executor.shutdown()
-        await self.runtime_event_broker.shutdown()
+        results = await asyncio.gather(
+            self.proactive_followup_dispatcher.shutdown(),
+            self.job_executor.shutdown(),
+            self.runtime_event_broker.shutdown(),
+            return_exceptions=True,
+        )
+        for idx, result in enumerate(results):
+            if isinstance(result, Exception):
+                _shutdown_logger.error(
+                    "shutdown_component_failed",
+                    component=("dispatcher", "job_executor", "broker")[idx],
+                    error=str(result),
+                    error_type=type(result).__name__,
+                )
         if self.database_engine is not None:
             await self.database_engine.dispose()
 

@@ -52,10 +52,10 @@ class ProactiveFollowupDispatcher:
             poller_task = self._poller_task
             if poller_task is not None:
                 poller_task.cancel()
-            self._active_dispatches.clear()
         if poller_task is not None:
             await asyncio.gather(poller_task, return_exceptions=True)
         async with self._lock:
+            self._active_dispatches.clear()
             self._poller_task = None
 
     async def dispatch_due_followups(
@@ -134,6 +134,10 @@ class ProactiveFollowupDispatcher:
                 dispatched_session_ids=dispatched_session_ids,
             )
         return report
+
+    @property
+    def is_running(self) -> bool:
+        return self._poller_task is not None and not self._poller_task.done()
 
     async def get_runtime_state(self) -> dict[str, Any]:
         async with self._lock:

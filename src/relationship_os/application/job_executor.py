@@ -143,15 +143,25 @@ class JobExecutor:
             poller_task = self._poller_task
             if poller_task is not None:
                 poller_task.cancel()
-            tasks = list(self._active_tasks.values())
 
         if poller_task is not None:
             await asyncio.gather(poller_task, return_exceptions=True)
+
+        async with self._lock:
+            tasks = list(self._active_tasks.values())
+            for task in tasks:
+                task.cancel()
+
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
+
         async with self._lock:
             self._active_tasks.clear()
             self._poller_task = None
+
+    @property
+    def is_running(self) -> bool:
+        return self._poller_task is not None and not self._poller_task.done()
 
     async def get_runtime_state(self) -> dict[str, Any]:
         async with self._lock:
