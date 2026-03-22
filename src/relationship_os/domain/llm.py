@@ -43,6 +43,7 @@ class LLMRequest:
     max_tokens: int = 400
     tools: list[LLMToolDefinition] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    response_format: dict[str, Any] | None = None
 
 
 @dataclass(slots=True, frozen=True)

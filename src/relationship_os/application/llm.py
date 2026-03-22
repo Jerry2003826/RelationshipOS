@@ -2,6 +2,7 @@ import asyncio
 import time
 from typing import Any
 
+from relationship_os.core.logging import get_logger
 from relationship_os.domain.llm import (
     LLMClient,
     LLMFailure,
@@ -10,6 +11,10 @@ from relationship_os.domain.llm import (
     LLMToolCall,
     LLMUsage,
 )
+
+
+def _get_llm_logger():
+    return get_logger("relationship_os.llm")
 
 
 def _contains_chinese(text: str) -> bool:
@@ -147,30 +152,126 @@ class LiteLLMClient(LLMClient):
         timeout_seconds: int = 30,
         api_base: str | None = None,
         api_key: str | None = None,
+        max_retries: int = 3,
+        circuit_breaker_threshold: int = 5,
+        circuit_breaker_reset_seconds: float = 60.0,
     ) -> None:
         self._model = model
         self._timeout_seconds = timeout_seconds
         self._api_base = api_base
         self._api_key = api_key
+        self._max_retries = max(1, max_retries)
+        self._circuit_breaker_threshold = max(1, circuit_breaker_threshold)
+        self._circuit_breaker_reset_seconds = max(1.0, circuit_breaker_reset_seconds)
+        self._consecutive_failures = 0
+        self._circuit_open_until: float = 0.0
+        self._logger = _get_llm_logger()
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
-        started_at = time.perf_counter()
-        try:
-            response = await asyncio.to_thread(self._invoke_completion, request)
-        except Exception as exc:
+        if time.monotonic() < self._circuit_open_until:
+            self._logger.warning(
+                "llm_circuit_open",
+                model=request.model or self._model,
+                resets_in_seconds=round(
+                    self._circuit_open_until - time.monotonic(), 1
+                ),
+            )
             return LLMResponse(
                 model=request.model or self._model,
                 output_text="",
-                latency_ms=int((time.perf_counter() - started_at) * 1000),
                 failure=LLMFailure(
-                    error_type=type(exc).__name__,
-                    message=str(exc),
-                    retryable=type(exc).__name__.lower()
-                    in {"timeout", "timeouterror", "ratelimiterror", "apierror"},
+                    error_type="CircuitOpen",
+                    message="LLM circuit breaker is open",
+                    retryable=False,
                 ),
             )
 
-        latency_ms = int((time.perf_counter() - started_at) * 1000)
+        last_exc: Exception | None = None
+        for attempt in range(self._max_retries):
+            started_at = time.perf_counter()
+            try:
+                response = await asyncio.to_thread(
+                    self._invoke_completion, request
+                )
+            except Exception as exc:
+                latency_ms = int((time.perf_counter() - started_at) * 1000)
+                retryable = self._is_retryable(exc)
+                self._logger.warning(
+                    "llm_call_failed",
+                    model=request.model or self._model,
+                    attempt=attempt + 1,
+                    latency_ms=latency_ms,
+                    error_type=type(exc).__name__,
+                    retryable=retryable,
+                )
+                last_exc = exc
+                if not retryable or attempt == self._max_retries - 1:
+                    self._record_failure()
+                    return LLMResponse(
+                        model=request.model or self._model,
+                        output_text="",
+                        latency_ms=latency_ms,
+                        failure=LLMFailure(
+                            error_type=type(exc).__name__,
+                            message=str(exc),
+                            retryable=retryable,
+                        ),
+                    )
+                await asyncio.sleep(min(2**attempt * 0.5, 8.0))
+                continue
+
+            latency_ms = int((time.perf_counter() - started_at) * 1000)
+            self._consecutive_failures = 0
+            parsed = self._parse_response(response, request, latency_ms)
+            self._logger.info(
+                "llm_call_ok",
+                model=parsed.model,
+                latency_ms=latency_ms,
+                prompt_tokens=parsed.usage.prompt_tokens if parsed.usage else 0,
+                completion_tokens=(
+                    parsed.usage.completion_tokens if parsed.usage else 0
+                ),
+            )
+            return parsed
+
+        self._record_failure()
+        return LLMResponse(
+            model=request.model or self._model,
+            output_text="",
+            failure=LLMFailure(
+                error_type=type(last_exc).__name__ if last_exc else "Unknown",
+                message=str(last_exc) if last_exc else "max retries exceeded",
+                retryable=False,
+            ),
+        )
+
+    def _is_retryable(self, exc: Exception) -> bool:
+        name = type(exc).__name__.lower()
+        return name in {
+            "timeout",
+            "timeouterror",
+            "ratelimiterror",
+            "apierror",
+            "serviceunavailableerror",
+            "connectionerror",
+        }
+
+    def _record_failure(self) -> None:
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= self._circuit_breaker_threshold:
+            self._circuit_open_until = (
+                time.monotonic() + self._circuit_breaker_reset_seconds
+            )
+            self._logger.error(
+                "llm_circuit_opened",
+                model=self._model,
+                consecutive_failures=self._consecutive_failures,
+                reset_seconds=self._circuit_breaker_reset_seconds,
+            )
+
+    def _parse_response(
+        self, response: Any, request: LLMRequest, latency_ms: int
+    ) -> LLMResponse:
         choices = _response_get(response, "choices", []) or []
         first_choice = choices[0] if choices else {}
         message = _response_get(first_choice, "message", {})
@@ -197,7 +298,9 @@ class LiteLLMClient(LLMClient):
             )
 
         return LLMResponse(
-            model=str(_response_get(response, "model", request.model or self._model)),
+            model=str(
+                _response_get(response, "model", request.model or self._model)
+            ),
             output_text=str(_response_get(message, "content", "") or ""),
             tool_calls=tool_calls,
             usage=usage,
@@ -232,6 +335,8 @@ class LiteLLMClient(LLMClient):
                 }
                 for tool in request.tools
             ]
+        if request.response_format is not None:
+            kwargs["response_format"] = request.response_format
         return completion(**kwargs)
 
     def _load_completion_callable(self) -> Any:

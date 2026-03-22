@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: phase-2
     content: "Phase 2: 核心数据结构泛化与强类型改造"
-    status: in_progress
+    status: completed
   - id: phase-3
     content: "Phase 3: LLM 基建增强与领域协同设计"
-    status: pending
+    status: in_progress
   - id: phase-4
     content: "Phase 4: 生产就绪与上线收口"
     status: pending
