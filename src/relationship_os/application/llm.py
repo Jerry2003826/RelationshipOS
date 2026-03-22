@@ -146,10 +146,12 @@ class LiteLLMClient(LLMClient):
         model: str,
         timeout_seconds: int = 30,
         api_base: str | None = None,
+        api_key: str | None = None,
     ) -> None:
         self._model = model
         self._timeout_seconds = timeout_seconds
         self._api_base = api_base
+        self._api_key = api_key
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         started_at = time.perf_counter()
@@ -216,6 +218,8 @@ class LiteLLMClient(LLMClient):
         }
         if self._api_base:
             kwargs["api_base"] = self._api_base
+        if self._api_key:
+            kwargs["api_key"] = self._api_key
         if request.tools:
             kwargs["tools"] = [
                 {

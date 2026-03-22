@@ -1,3 +1,5 @@
+import pytest
+
 from relationship_os.application.container import build_container
 from relationship_os.application.llm import LiteLLMClient, MockLLMClient
 from relationship_os.core.config import Settings
@@ -40,6 +42,11 @@ def test_build_container_can_switch_to_postgres_event_store() -> None:
     assert container.job_executor is not None
     assert container.runtime_service is not None
     assert container.database_engine is not None
+
+
+def test_build_container_requires_database_url_for_postgres_backend() -> None:
+    with pytest.raises(ValueError, match="RELATIONSHIP_OS_DATABASE_URL must be set"):
+        build_container(Settings(event_store_backend="postgres"))
 
 
 def test_build_container_can_switch_to_litellm_client() -> None:

@@ -65,7 +65,7 @@ class RuntimeContainer:
 def build_container(settings: Settings) -> RuntimeContainer:
     database_engine: AsyncEngine | None = None
     if settings.event_store_backend == "postgres":
-        database_engine = build_async_engine(settings.database_url)
+        database_engine = build_async_engine(settings.require_database_url())
         event_store: EventStore = PostgresEventStore(database_engine)
     else:
         event_store = InMemoryEventStore()
@@ -104,6 +104,7 @@ def build_container(settings: Settings) -> RuntimeContainer:
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,
             api_base=settings.llm_api_base,
+            api_key=settings.llm_api_key,
         )
     else:
         llm_client = MockLLMClient(model=settings.llm_model)

@@ -1,3 +1,4 @@
+.env
 .venv/
 __pycache__/
 .pytest_cache/
@@ -11,4 +12,3 @@ build/
 *.sqlite3
 *.db
 .DS_Store
-

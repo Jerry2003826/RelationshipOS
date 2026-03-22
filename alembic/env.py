@@ -22,12 +22,12 @@ from relationship_os.infrastructure.db import tables  # noqa: F401
 from relationship_os.infrastructure.db.metadata import metadata
 
 config = context.config
+settings = get_settings()
+config.set_main_option("sqlalchemy.url", settings.require_database_url())
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.database_url)
 target_metadata = metadata
 
 

@@ -1626,7 +1626,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.13.1" },
     { name = "fastapi", specifier = ">=0.110.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "litellm", specifier = ">=1.74.0" },
+    { name = "litellm", specifier = ">=1.74.0,<2.0" },
     { name = "pgvector", specifier = ">=0.2.5" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.1.18" },
     { name = "pydantic-settings", specifier = ">=2.2.1" },

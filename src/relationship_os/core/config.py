@@ -12,15 +12,14 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
     api_prefix: str = "/api/v1"
-    database_url: str = (
-        "postgresql+psycopg://postgres:postgres@localhost:5432/relationship_os"
-    )
+    database_url: str = ""
     event_store_backend: Literal["memory", "postgres"] = "memory"
     llm_backend: Literal["mock", "litellm"] = "mock"
     llm_model: str = "openai/gpt-5"
     llm_temperature: float = 0.2
     llm_timeout_seconds: int = 30
     llm_api_base: str | None = None
+    llm_api_key: str | None = None
     job_max_attempts: int = 2
     job_poll_interval_seconds: float = 0.5
     job_worker_id: str | None = None
@@ -39,6 +38,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    def require_database_url(self) -> str:
+        database_url = self.database_url.strip()
+        if not database_url:
+            raise ValueError("RELATIONSHIP_OS_DATABASE_URL must be set")
+        return database_url
 
 
 @lru_cache
