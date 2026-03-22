@@ -432,10 +432,10 @@ class SessionTranscriptProjector(Projector[dict[str, Any]]):
     def apply(self, state: dict[str, Any], event: StoredEvent) -> dict[str, Any]:
         next_state = {"messages": list(state["messages"])}
 
-        if event.event_type not in {"user.message.received", "assistant.message.sent"}:
+        if event.event_type not in {USER_MESSAGE_RECEIVED, ASSISTANT_MESSAGE_SENT}:
             return next_state
 
-        role = "user" if event.event_type == "user.message.received" else "assistant"
+        role = "user" if event.event_type == USER_MESSAGE_RECEIVED else "assistant"
         next_state["messages"].append(
             {
                 "event_id": str(event.event_id),
@@ -721,6 +721,7 @@ class SessionRuntimeProjector(Projector[dict[str, Any]]):
                     "occurred_at": event.occurred_at.isoformat(),
                 }
             )
+            next_state["messages"] = next_state["messages"][-500:]
             if event.event_type == USER_MESSAGE_RECEIVED:
                 next_state["turn_count"] += 1
             return next_state
@@ -1469,6 +1470,7 @@ class SessionRuntimeProjector(Projector[dict[str, Any]]):
             next_state["inner_monologue"].extend(
                 list(event.payload.get("entries", []))
             )
+            next_state["inner_monologue"] = next_state["inner_monologue"][-200:]
             return next_state
 
         if event.event_type == LLM_COMPLETION_FAILED:
@@ -1991,6 +1993,7 @@ class InnerMonologueBufferProjector(Projector[dict[str, Any]]):
 
         entries = list(event.payload.get("entries", []))
         next_state["entries"].extend(entries)
+        next_state["entries"] = next_state["entries"][-200:]
         next_state["entry_count"] += len(entries)
         if entries:
             next_state["last_stage"] = entries[-1].get("stage")
@@ -2019,6 +2022,7 @@ class SessionSnapshotProjector(Projector[dict[str, Any]]):
 
         snapshot = dict(event.payload)
         next_state["snapshots"].append(snapshot)
+        next_state["snapshots"] = next_state["snapshots"][-50:]
         next_state["snapshot_count"] += 1
         next_state["latest_snapshot_id"] = snapshot.get("snapshot_id")
         return next_state
