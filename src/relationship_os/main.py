@@ -2,6 +2,11 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
 
 from relationship_os.api.router import api_router
 from relationship_os.application.container import RuntimeContainer, build_container
@@ -35,6 +40,19 @@ async def lifespan(app: FastAPI):
     logger.info("runtime_stopped", app=container.settings.app_name)
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Inject standard security response headers."""
+
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     resolved_settings = settings or get_settings()
     configure_logging(resolved_settings.log_level)
@@ -46,6 +64,28 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     app.state.container = container
+
+    origins = [
+        o.strip()
+        for o in resolved_settings.cors_origins.split(",")
+        if o.strip()
+    ]
+    if origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    if resolved_settings.env == "production":
+        app.add_middleware(
+            TrustedHostMiddleware,
+            allowed_hosts=["*"],
+        )
 
     @app.get("/healthz", include_in_schema=False)
     async def root_healthz() -> dict[str, str]:

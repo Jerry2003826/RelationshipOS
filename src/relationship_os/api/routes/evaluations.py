@@ -1,10 +1,7 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import get_container
-from relationship_os.application.container import RuntimeContainer
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.application.scenario_evaluation_service import (
     ScenarioBaselineNotFoundError,
     ScenarioNotFoundError,
@@ -12,7 +9,6 @@ from relationship_os.application.scenario_evaluation_service import (
 )
 
 router = APIRouter(prefix="/evaluations", tags=["evaluations"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 class RunScenariosRequest(BaseModel):
@@ -57,6 +53,7 @@ async def list_scenarios(
 async def run_scenarios(
     payload: RunScenariosRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         return await container.scenario_evaluation_service.run_scenarios(
@@ -89,6 +86,7 @@ async def set_scenario_baseline(
     label: str,
     payload: SetScenarioBaselineRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         return await container.scenario_evaluation_service.set_baseline(
@@ -107,6 +105,7 @@ async def set_scenario_baseline(
 async def clear_scenario_baseline(
     label: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         return await container.scenario_evaluation_service.clear_baseline(label=label)

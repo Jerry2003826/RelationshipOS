@@ -1,15 +1,13 @@
 import asyncio
 from datetime import datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Query
 
-from relationship_os.api.dependencies import get_container
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.application.container import RuntimeContainer
 from relationship_os.domain.event_types import TRACE_EVENT_TYPES
 
 router = APIRouter(prefix="/runtime", tags=["runtime"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 async def build_runtime_overview_payload(
@@ -77,7 +75,7 @@ async def list_proactive_followups(
     container: ContainerDep,
     as_of: datetime | None = None,
     include_hold: bool = True,
-    limit: int = 20,
+    limit: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, object]:
     return await container.proactive_followup_service.list_followups(
         as_of=as_of,
@@ -89,6 +87,7 @@ async def list_proactive_followups(
 @router.post("/proactive-followups/dispatch")
 async def dispatch_due_proactive_followups(
     container: ContainerDep,
+    _auth: AuthDep,
     as_of: datetime | None = None,
     limit: int | None = None,
 ) -> dict[str, object]:

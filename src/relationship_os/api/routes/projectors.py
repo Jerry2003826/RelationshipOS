@@ -1,19 +1,15 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import get_container
-from relationship_os.application.container import RuntimeContainer
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.domain.projectors import UnknownProjectorError
 
 router = APIRouter(prefix="/projectors", tags=["projectors"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 class RebuildProjectionRequest(BaseModel):
     version: str = "v1"
-    stream_ids: list[str] = Field(default_factory=list)
+    stream_ids: list[str] = Field(default_factory=list, max_length=100)
 
 
 @router.post("/{projector_name}/rebuild")
@@ -21,6 +17,7 @@ async def rebuild_projection(
     projector_name: str,
     payload: RebuildProjectionRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         return await container.stream_service.rebuild_projection(

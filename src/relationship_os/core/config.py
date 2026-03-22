@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     proactive_followup_worker_id: str | None = None
     proactive_followup_poll_interval_seconds: float = 5.0
     proactive_followup_max_dispatch_per_cycle: int = 2
+    api_key: str = ""
+    cors_origins: str = ""
     default_projector_version: str = Field(default="v1")
 
     model_config = SettingsConfigDict(

@@ -1,23 +1,25 @@
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import get_container
-from relationship_os.application.container import RuntimeContainer
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.application.runtime_service import SessionAlreadyExistsError
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 class CreateSessionRequest(BaseModel):
-    session_id: str | None = None
+    session_id: str | None = Field(
+        default=None,
+        max_length=128,
+        pattern=r"^[a-zA-Z0-9_-]+$",
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class TurnRequest(BaseModel):
-    content: str
+    content: str = Field(min_length=1, max_length=10_000)
     generate_reply: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -32,6 +34,7 @@ async def list_sessions(container: ContainerDep) -> dict[str, object]:
 async def create_session(
     payload: CreateSessionRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         return await container.runtime_service.create_session(
@@ -131,6 +134,7 @@ async def process_turn(
     session_id: str,
     payload: TurnRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     result = await container.runtime_service.process_turn(
         session_id=session_id,

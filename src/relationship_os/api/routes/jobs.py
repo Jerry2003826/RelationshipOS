@@ -1,10 +1,9 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import get_container
-from relationship_os.application.container import RuntimeContainer
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.application.job_service import (
     JobNotFoundError,
     JobRetryNotAllowedError,
@@ -12,11 +11,10 @@ from relationship_os.application.job_service import (
 )
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 class CreateOfflineConsolidationJobRequest(BaseModel):
-    session_id: str
+    session_id: str = Field(max_length=128, pattern=r"^[a-zA-Z0-9_-]+$")
     metadata: dict[str, Any] = Field(default_factory=dict)
     max_attempts: int | None = Field(default=None, ge=1, le=10)
 
@@ -37,6 +35,7 @@ async def list_jobs(
 async def create_offline_consolidation_job(
     payload: CreateOfflineConsolidationJobRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         job = await container.job_service.create_offline_consolidation_job(
@@ -73,6 +72,7 @@ async def get_job(
 async def retry_job(
     job_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         job = await container.job_service.retry_job(job_id=job_id)

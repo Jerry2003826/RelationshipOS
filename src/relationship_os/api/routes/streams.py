@@ -1,17 +1,15 @@
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import get_container
-from relationship_os.application.container import RuntimeContainer
+from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.domain.event_store import OptimisticConcurrencyError
 from relationship_os.domain.events import NewEvent, StoredEvent
 from relationship_os.domain.projectors import UnknownProjectorError
 
 router = APIRouter(prefix="/streams", tags=["streams"])
-ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 
 class AppendEventItem(BaseModel):
@@ -22,7 +20,7 @@ class AppendEventItem(BaseModel):
 
 class AppendEventsRequest(BaseModel):
     expected_version: int | None = None
-    events: list[AppendEventItem]
+    events: list[AppendEventItem] = Field(max_length=50)
 
 
 class StoredEventResponse(BaseModel):
@@ -62,6 +60,7 @@ async def append_events(
     stream_id: str,
     payload: AppendEventsRequest,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, list[StoredEventResponse]]:
     try:
         stored_events = await container.stream_service.append_events(
