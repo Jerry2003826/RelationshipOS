@@ -2,6 +2,9 @@ from datetime import datetime, timedelta
 
 from fastapi.testclient import TestClient
 
+from relationship_os.application.proactive_followup_service.followup_builder import (
+    _apply_matrix_learning_spacing,
+)
 from relationship_os.domain.llm import LLMFailure, LLMResponse
 from relationship_os.main import create_app
 
@@ -1573,12 +1576,10 @@ def test_dispatch_proactive_followup_records_dispatch_event_and_projection_state
 
 
 def test_proactive_followup_service_buffers_second_touch_when_learning_is_cold() -> None:
-    app = create_app()
-    service = app.state.container.proactive_followup_service
     due_at = datetime.fromisoformat("2026-03-22T10:00:00+00:00")
 
     adjusted_due_at, adjusted_expires_at, schedule_reason = (
-        service._apply_matrix_learning_spacing(
+        _apply_matrix_learning_spacing(
             due_at=due_at,
             expires_at=due_at + timedelta(hours=2),
             schedule_reason="respect_outbound_cooldown",
