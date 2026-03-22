@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: phase-4
     content: "Phase 4: 生产就绪与上线收口"
-    status: in_progress
+    status: completed
 isProject: true
 ---
 

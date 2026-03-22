@@ -15,7 +15,7 @@ def test_console_home_renders_control_room_shell() -> None:
     assert 'id="console-scenarios"' in response.text
     assert "htmx.org@1.9.12" in response.text
     assert "alpinejs@3.14.1" in response.text
-    assert "new WebSocket" in response.text
+    assert "/static/console.js" in response.text
 
 
 def test_console_session_detail_fragment_renders_runtime_panels() -> None:
