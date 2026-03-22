@@ -81,6 +81,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.add_middleware(SecurityHeadersMiddleware)
 
+    from relationship_os.api.middleware import RequestLoggingMiddleware
+
+    app.add_middleware(RequestLoggingMiddleware)
+
     if resolved_settings.env == "production":
         app.add_middleware(
             TrustedHostMiddleware,

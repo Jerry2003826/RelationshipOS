@@ -1,0 +1,32 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: relationship_os
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_only}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      RELATIONSHIP_OS_DATABASE_URL: "postgresql+psycopg://postgres:${DB_PASSWORD:-dev_only}@db:5432/relationship_os"
+      RELATIONSHIP_OS_EVENT_STORE_BACKEND: postgres
+      RELATIONSHIP_OS_LLM_BACKEND: mock
+      RELATIONSHIP_OS_LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

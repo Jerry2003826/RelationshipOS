@@ -16,10 +16,10 @@ todos:
     status: completed
   - id: phase-3
     content: "Phase 3: LLM 基建增强与领域协同设计"
-    status: in_progress
+    status: completed
   - id: phase-4
     content: "Phase 4: 生产就绪与上线收口"
-    status: pending
+    status: in_progress
 isProject: true
 ---
 
