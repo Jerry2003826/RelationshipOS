@@ -47,7 +47,7 @@ class StreamService:
         return await self._event_store.read_all()
 
     async def list_stream_ids(self) -> list[str]:
-        return sorted({event.stream_id for event in await self._event_store.read_all()})
+        return await self._event_store.list_stream_ids()
 
     async def subscribe_runtime_events(self) -> RuntimeEventSubscription | None:
         if self._runtime_event_broker is None:

@@ -100,6 +100,15 @@ class PostgresEventStore(EventStore):
             )
             return [_row_to_stored_event(row) for row in result.mappings().all()]
 
+    async def list_stream_ids(self) -> list[str]:
+        async with self._engine.connect() as connection:
+            result = await connection.execute(
+                select(event_records.c.stream_id)
+                .distinct()
+                .order_by(event_records.c.stream_id.asc())
+            )
+            return [str(stream_id) for stream_id in result.scalars().all()]
+
     async def _read_current_version(
         self,
         *,

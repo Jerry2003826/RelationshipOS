@@ -41,5 +41,15 @@ class InMemoryEventStore(EventStore):
         return list(self._streams.get(stream_id, []))
 
     async def read_all(self) -> list[StoredEvent]:
-        return list(chain.from_iterable(self._streams.values()))
+        events = list(chain.from_iterable(self._streams.values()))
+        return sorted(
+            events,
+            key=lambda event: (
+                event.occurred_at,
+                event.stream_id,
+                event.version,
+            ),
+        )
 
+    async def list_stream_ids(self) -> list[str]:
+        return sorted(self._streams)

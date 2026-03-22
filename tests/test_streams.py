@@ -1,5 +1,12 @@
+import asyncio
+from dataclasses import dataclass
+
 from fastapi.testclient import TestClient
 
+from relationship_os.application.stream_service import StreamService
+from relationship_os.domain.events import NewEvent, StoredEvent
+from relationship_os.domain.projectors import VersionedProjectorRegistry
+from relationship_os.infrastructure.event_store.memory import InMemoryEventStore
 from relationship_os.main import create_app
 
 
@@ -95,3 +102,60 @@ def test_rebuild_projection_reports_selected_streams() -> None:
     assert body["projector"] == {"name": "session-transcript", "version": "v1"}
     assert body["stream_count"] == 2
     assert {item["stream_id"] for item in body["streams"]} == {"session-a", "session-b"}
+
+
+@dataclass
+class _ListStreamIdsOnlyEventStore:
+    stream_ids: list[str]
+
+    async def append(self, *, stream_id, expected_version, events):  # type: ignore[no-untyped-def]
+        raise NotImplementedError
+
+    async def read_stream(self, *, stream_id: str) -> list[StoredEvent]:
+        raise NotImplementedError
+
+    async def read_all(self) -> list[StoredEvent]:
+        raise AssertionError("StreamService.list_stream_ids should not call read_all")
+
+    async def list_stream_ids(self) -> list[str]:
+        return list(self.stream_ids)
+
+
+def test_stream_service_list_stream_ids_uses_native_event_store_lookup() -> None:
+    stream_service = StreamService(
+        event_store=_ListStreamIdsOnlyEventStore(["session-b", "session-a"]),
+        projector_registry=VersionedProjectorRegistry(),
+    )
+
+    stream_ids = asyncio.run(stream_service.list_stream_ids())
+
+    assert stream_ids == ["session-b", "session-a"]
+
+
+def test_in_memory_event_store_read_all_returns_global_event_order() -> None:
+    event_store = InMemoryEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="session-a",
+            expected_version=None,
+            events=[NewEvent(event_type="user.message.received", payload={"step": 1})],
+        )
+    )
+    asyncio.run(
+        event_store.append(
+            stream_id="session-b",
+            expected_version=None,
+            events=[NewEvent(event_type="assistant.message.sent", payload={"step": 2})],
+        )
+    )
+    asyncio.run(
+        event_store.append(
+            stream_id="session-a",
+            expected_version=None,
+            events=[NewEvent(event_type="assistant.message.sent", payload={"step": 3})],
+        )
+    )
+
+    events = asyncio.run(event_store.read_all())
+
+    assert [event.payload["step"] for event in events] == [1, 2, 3]
