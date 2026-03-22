@@ -7,10 +7,10 @@ todos:
     status: completed
   - id: phase-0
     content: "Phase 0: 阻断性基础设施与安全危机"
-    status: in_progress
+    status: completed
   - id: phase-1
     content: "Phase 1: 工程质量与文件拆分"
-    status: pending
+    status: in_progress
   - id: phase-2
     content: "Phase 2: 核心数据结构泛化与强类型改造"
     status: pending
