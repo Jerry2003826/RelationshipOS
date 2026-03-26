@@ -114,7 +114,7 @@ def build_container(settings: Settings) -> RuntimeContainer:
         claim_ttl_seconds=settings.job_claim_ttl_seconds,
         heartbeat_interval_seconds=settings.job_heartbeat_interval_seconds,
     )
-    if settings.llm_backend == "litellm":
+    if settings.llm_backend in {"litellm", "minimax"}:
         llm_client = LiteLLMClient(
             model=settings.llm_model,
             timeout_seconds=settings.llm_timeout_seconds,

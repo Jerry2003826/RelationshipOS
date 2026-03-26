@@ -28,6 +28,7 @@ dev = [
   "pytest-cov>=5.0.0",
   "ruff>=0.3.5",
 ]
+benchmark = []
 
 [project.scripts]
 relationship-os = "relationship_os.main:run"

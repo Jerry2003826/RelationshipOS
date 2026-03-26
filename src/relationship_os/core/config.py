@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
     database_url: str = ""
     event_store_backend: Literal["memory", "postgres"] = "memory"
-    llm_backend: Literal["mock", "litellm"] = "mock"
+    llm_backend: Literal["mock", "litellm", "minimax"] = "mock"
     llm_model: str = "openai/gpt-5"
     llm_temperature: float = 0.2
     llm_timeout_seconds: int = 30
