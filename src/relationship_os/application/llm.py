@@ -60,6 +60,25 @@ def _response_get(value: Any, key: str, default: Any = None) -> Any:
     return getattr(value, key, default)
 
 
+def _merge_system_messages(
+    messages: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """MiniMax rejects multiple system roles in one request (error 2013)."""
+    system_parts: list[str] = []
+    rest: list[dict[str, Any]] = []
+    for message in messages:
+        if message.get("role") == "system":
+            content = message.get("content")
+            if content:
+                system_parts.append(str(content))
+        else:
+            rest.append(message)
+    if not system_parts:
+        return rest
+    merged = "\n\n".join(system_parts)
+    return [{"role": "system", "content": merged}, *rest]
+
+
 def _maybe_dict(value: Any) -> dict[str, Any]:
     if value is None:
         return {}
@@ -254,6 +273,8 @@ class LiteLLMClient(LLMClient):
             "apierror",
             "serviceunavailableerror",
             "connectionerror",
+            "apiconnectionerror",
+            "connecterror",
         }
 
     def _record_failure(self) -> None:
@@ -309,12 +330,16 @@ class LiteLLMClient(LLMClient):
 
     def _invoke_completion(self, request: LLMRequest) -> Any:
         completion = self._load_completion_callable()
+        raw_messages = [
+            {"role": message.role, "content": message.content}
+            for message in request.messages
+        ]
+        model_id = request.model or self._model
+        if isinstance(model_id, str) and model_id.lower().startswith("minimax/"):
+            raw_messages = _merge_system_messages(raw_messages)
         kwargs: dict[str, Any] = {
-            "model": request.model or self._model,
-            "messages": [
-                {"role": message.role, "content": message.content}
-                for message in request.messages
-            ],
+            "model": model_id,
+            "messages": raw_messages,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
             "timeout": self._timeout_seconds,

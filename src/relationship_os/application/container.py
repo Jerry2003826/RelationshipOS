@@ -115,20 +115,24 @@ def build_container(settings: Settings) -> RuntimeContainer:
         heartbeat_interval_seconds=settings.job_heartbeat_interval_seconds,
     )
     if settings.llm_backend in {"litellm", "minimax"}:
+        llm_model = settings.llm_model
+        if settings.llm_backend == "minimax" and "/" not in llm_model:
+            llm_model = f"minimax/{llm_model}"
         llm_client = LiteLLMClient(
-            model=settings.llm_model,
+            model=llm_model,
             timeout_seconds=settings.llm_timeout_seconds,
             api_base=settings.llm_api_base,
             api_key=settings.llm_api_key,
         )
     else:
-        llm_client = MockLLMClient(model=settings.llm_model)
+        llm_model = settings.llm_model
+        llm_client = MockLLMClient(model=llm_model)
     runtime_service = RuntimeService(
         stream_service=stream_service,
         memory_service=memory_service,
         evaluation_service=evaluation_service,
         llm_client=llm_client,
-        llm_model=settings.llm_model,
+        llm_model=llm_model,
         llm_temperature=settings.llm_temperature,
         runtime_quality_doctor_interval_turns=(
             settings.runtime_quality_doctor_interval_turns
