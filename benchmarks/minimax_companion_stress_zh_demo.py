@@ -110,6 +110,7 @@ def run_suite(args: argparse.Namespace) -> dict[str, Any]:
 
     turns: list[dict[str, Any]] = []
     assistant_chars = 0
+    user_chars = 0
     # Keep under API max message length (10_000) while scaling with desired assistant volume.
     min_user_chars = min(
         10_000,
@@ -135,6 +136,7 @@ def run_suite(args: argparse.Namespace) -> dict[str, Any]:
             raise RuntimeError(f"turn {i} bad response type")
         reply = str(turn_resp.get("assistant_response") or "")
         assistant_chars += len(reply)
+        user_chars += len(content)
         turns.append(
             {
                 "turn": i,
@@ -154,10 +156,12 @@ def run_suite(args: argparse.Namespace) -> dict[str, Any]:
         "languages": args.languages,
         "stress_turns": args.stress_turns,
         "stress_min_characters": args.stress_min_characters,
+        "user_total_characters": user_chars,
         "assistant_total_characters": assistant_chars,
         "suite_elapsed_seconds": round(suite_elapsed, 3),
         "turns": turns,
-        "min_characters_met": assistant_chars >= args.stress_min_characters,
+        # Cumulative user input (Chinese stress volume); not model output length.
+        "min_characters_met": user_chars >= args.stress_min_characters,
     }
 
     report_path = out_dir / "report.json"
@@ -199,7 +203,7 @@ def main() -> int:
     print(json.dumps({k: report[k] for k in report if k != "turns"}, ensure_ascii=False, indent=2))
     if not report["min_characters_met"]:
         print(
-            f"WARNING: assistant_total_characters {report['assistant_total_characters']} "
+            f"WARNING: user_total_characters {report['user_total_characters']} "
             f"< threshold {report['stress_min_characters']}",
             file=sys.stderr,
         )

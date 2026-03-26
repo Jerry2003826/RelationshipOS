@@ -12,3 +12,4 @@ build/
 *.sqlite3
 *.db
 .DS_Store
+benchmark_results/
