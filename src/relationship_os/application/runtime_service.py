@@ -11,15 +11,8 @@ from relationship_os.application.analyzers import (
     apply_semantic_hints,
     build_confidence_assessment,
     build_context_frame,
-    build_conversation_cadence_plan,
-    build_empowerment_audit,
-    build_expression_plan,
-    build_guidance_plan,
     build_inner_monologue,
-    build_knowledge_boundary_decision,
     build_memory_bundle,
-    build_policy_gate,
-    build_private_judgment,
     build_proactive_actuation_plan,
     build_proactive_aggregate_governance_assessment,
     build_proactive_cadence_plan,
@@ -31,22 +24,15 @@ from relationship_os.application.analyzers import (
     build_reengagement_learning_context_stratum,
     build_reengagement_matrix_assessment,
     build_reengagement_plan,
-    build_rehearsal_result,
     build_relationship_state,
     build_repair_assessment,
     build_repair_plan,
-    build_response_draft_plan,
     build_response_normalization_result,
     build_response_output_units,
     build_response_post_audit,
-    build_response_rendering_policy,
     build_response_sequence_plan,
-    build_runtime_coordination_snapshot,
     build_runtime_quality_doctor_report,
     build_session_directive,
-    build_session_ritual_plan,
-    build_somatic_orchestration_plan,
-    build_strategy_decision,
     build_system3_snapshot,
 )
 from relationship_os.application.analyzers.experts.plan_dag import execute_plan_dag
@@ -54,7 +40,6 @@ from relationship_os.application.analyzers.vanguard_router import route_user_tur
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
     build_grounded_template_reply,
-    build_safe_fallback_text,
 )
 from relationship_os.application.memory_index import MemoryMediaAttachment
 from relationship_os.application.memory_service import MemoryService
@@ -6955,8 +6940,11 @@ class RuntimeService:
                 content=(
                     "Reply contract:\n"
                     "- stay in-world\n"
-                    "- YOU MUST FIRST emit <internal_thought> tags analyzing your constraints and memory gating decisions.\n"
-                    "- YOU MUST THEN emit <spoken_words> tags containing your final string facing the user.\n"
+                    "- YOU MUST FIRST emit <internal_thought> tags "
+                    "analyzing your constraints and memory gating "
+                    "decisions.\n"
+                    "- YOU MUST THEN emit <spoken_words> tags "
+                    "containing your final string facing the user.\n"
                     "- do not output anything outside these tags.\n\n"
                     + "Reply guidelines:\n"
                     + "\n".join(plan_lines)
@@ -7697,7 +7685,6 @@ class RuntimeService:
         )
 
     def _get_cached_persona_timeout_dialogue(self) -> str:
-        cache = getattr(self, "_persona_timeout_cache", None)
         # Using a mock static map for demonstration (Phase 1).
         # Phase 2 involves proactively fetching this from the memory_service.
         if hasattr(self, "entity_persona") and self.entity_persona:
@@ -8051,7 +8038,15 @@ class RuntimeService:
         
         messages = [LLMMessage(role="system", content=system_prompt)]
         if context_str:
-             messages.append(LLMMessage(role="user", content=f"Recent Conversation:\n{context_str}\n\nUSER'S LATEST MESSAGE: {user_message}"))
+             messages.append(
+                LLMMessage(
+                    role="user",
+                    content=(
+                        f"Recent Conversation:\n{context_str}"
+                        f"\n\nUSER'S LATEST MESSAGE: {user_message}"
+                    ),
+                )
+            )
         else:
              messages.append(LLMMessage(role="user", content=user_message))
 

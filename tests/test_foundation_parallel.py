@@ -9,10 +9,7 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
-from relationship_os.application.runtime_service import (
-    RuntimeService,
-    _TurnContext,
-)
+from relationship_os.application.runtime_service import RuntimeService
 
 
 def _make_turn_context(**overrides):
@@ -161,7 +158,9 @@ def _make_service_with_stubs():
     def _stub_should_include_factual_shadow_in_person_recall(**kwargs):
         return False
 
-    service._should_include_factual_shadow_in_person_recall = _stub_should_include_factual_shadow_in_person_recall  # type: ignore[method-assign]
+    service._should_include_factual_shadow_in_person_recall = (
+        _stub_should_include_factual_shadow_in_person_recall  # type: ignore[method-assign]
+    )
 
     def _stub_merge_recalled_memory_items(existing, new, *, limit=10):
         return existing + new
@@ -176,7 +175,9 @@ def _make_service_with_stubs():
     def _stub_should_use_friend_chat_lightweight_foundation(*args, **kwargs):
         return False
 
-    service._should_use_friend_chat_lightweight_foundation = _stub_should_use_friend_chat_lightweight_foundation  # type: ignore[method-assign]
+    service._should_use_friend_chat_lightweight_foundation = (
+        _stub_should_use_friend_chat_lightweight_foundation  # type: ignore[method-assign]
+    )
 
     def _stub_previous_relationship_state(turn_context):
         return None
@@ -341,7 +342,7 @@ def test_foundation_conscience_uses_recalled_memory():
 
     turn_context = _make_turn_context()
 
-    foundation = asyncio.run(
+    asyncio.run(
         service._build_turn_foundation(
             session_id="test-session",
             user_message="Remember when...",

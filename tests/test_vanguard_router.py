@@ -1,11 +1,10 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from relationship_os.application.analyzers.vanguard_router import (
-    RouterDecision,
-    route_user_turn,
-)
+import pytest
+
+from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.domain.llm import LLMClient, LLMResponse
+
 
 @pytest.mark.asyncio
 async def test_vanguard_router_level_1_intercept():

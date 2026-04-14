@@ -34,7 +34,11 @@ def _level_1_rule_intercept(user_message: str) -> RouterDecision | None:
         
         # Check patterns like "哈哈哈哈" or "嗯嗯嗯"
         if _FAST_PONG_PATTERN.match(text):
-            return RouterDecision(route_type="FAST_PONG", reason="rule_pattern_match", confidence=1.0)
+            return RouterDecision(
+                route_type="FAST_PONG",
+                reason="rule_pattern_match",
+                confidence=1.0,
+            )
             
     return None
 
@@ -61,24 +65,29 @@ async def route_user_turn(
             
     context_str = "\n".join(recent_context)
     
-    system_prompt = """You are an intent classifier for a chat AI. You must classify if the user's latest message requires deep memory recall / complex reflection (NEED_DEEP_THINK) or if it's just casual conversation/venting that can be replied to instantly (FAST_PONG).
-
-RULES for FAST_PONG:
-- Simple greetings, agreements, or short reactions.
-- Casual venting ("I'm so tired today") that just needs empathy, not facts.
-- Memes, jokes, or teasing that doesn't reference historical facts or other people's secrets.
-
-RULES for NEED_DEEP_THINK:
-- Asking factual questions ("What did I say yesterday?", "Who is Alex?").
-- Asking the AI about its own identity, persona, or current state.
-- Deep, complex emotional crises that require careful step-by-step psychological repair.
-- Direct continuations of a deep analytical discussion.
-
-Respond ONLY with a valid JSON in exactly this format:
-{
-  "route_type": "FAST_PONG" | "NEED_DEEP_THINK",
-  "reason": "short explanation"
-}"""
+    system_prompt = (
+        "You are an intent classifier for a chat AI. "
+        "Classify if the user's latest message requires deep memory "
+        "recall / complex reflection (NEED_DEEP_THINK) or if it's "
+        "just casual conversation/venting (FAST_PONG).\n"
+        "\nRULES for FAST_PONG:\n"
+        "- Simple greetings, agreements, or short reactions.\n"
+        '- Casual venting ("I\'m so tired today") that just needs '
+        "empathy, not facts.\n"
+        "- Memes, jokes, or teasing that doesn't reference historical "
+        "facts or other people's secrets.\n"
+        "\nRULES for NEED_DEEP_THINK:\n"
+        '- Asking factual questions ("What did I say yesterday?", '
+        '"Who is Alex?").\n'
+        "- Asking the AI about its own identity, persona, or current "
+        "state.\n"
+        "- Deep, complex emotional crises that require careful "
+        "step-by-step psychological repair.\n"
+        "- Direct continuations of a deep analytical discussion.\n"
+        "\nRespond ONLY with a valid JSON:\n"
+        '{"route_type": "FAST_PONG" | "NEED_DEEP_THINK",'
+        ' "reason": "short explanation"}'
+    )
     
     messages = [
         LLMMessage(role="system", content=system_prompt),
@@ -99,7 +108,11 @@ Respond ONLY with a valid JSON in exactly this format:
             )
         )
         if not response.output_text:
-            return RouterDecision(route_type="NEED_DEEP_THINK", reason="llm_no_response", confidence=0.0)
+            return RouterDecision(
+                route_type="NEED_DEEP_THINK",
+                reason="llm_no_response",
+                confidence=0.0,
+            )
             
         content = response.output_text
         data = json.loads(content)
