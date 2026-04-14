@@ -92,14 +92,38 @@ def test_offline_consolidation_job_completes_and_updates_session_projection() ->
 
         trace_response = client.get("/api/v1/runtime/trace/job-session")
         assert trace_response.status_code == 200
-        trace_event_types = {
-            event["event_type"] for event in trace_response.json()["trace"]
-        }
+        trace_event_types = {event["event_type"] for event in trace_response.json()["trace"]}
         assert "system.background_job.claimed" in trace_event_types
         assert "system.background_job.started" in trace_event_types
         assert "system.offline_consolidation.completed" in trace_event_types
         assert "system.session_snapshot.created" in trace_event_types
         assert "system.session.archived" in trace_event_types
+
+        drives_response = client.get("/api/v1/entity/drives")
+        assert drives_response.status_code == 200
+        drives_state = drives_response.json()
+        assert drives_state["source"] in {"turn_runtime", "offline_consolidation"}
+
+        goals_response = client.get("/api/v1/entity/goals")
+        assert goals_response.status_code == 200
+        goals_state = goals_response.json()
+        assert "goal_digest" in goals_state
+        assert goals_state["goal_digest"]
+
+        narrative_response = client.get("/api/v1/entity/narrative")
+        assert narrative_response.status_code == 200
+        narrative_state = narrative_response.json()
+        assert "离线整理后" in narrative_state["summary"]
+        assert any(
+            entry.get("source") == "offline_consolidation"
+            for entry in narrative_state["recent_entries"]
+        )
+
+        world_response = client.get("/api/v1/entity/world-state")
+        assert world_response.status_code == 200
+        world_state = world_response.json()
+        assert world_state["environment_appraisal"]["focus"] in {"rest", "organizational"}
+        assert int(world_state["tasks"]["pending_count"]) >= 1
 
     assert completed_job["status"] == "completed"
     assert completed_job["attempt_count"] == 1
@@ -110,6 +134,12 @@ def test_offline_consolidation_job_completes_and_updates_session_projection() ->
     assert completed_job["result"]["session_id"] == "job-session"
     assert completed_job["result"]["report"]["source_turn_count"] == 2
     assert completed_job["result"]["report"]["recommended_actions"]
+    assert completed_job["result"]["entity_consolidation"]["narrative_summary"]
+    assert completed_job["result"]["entity_consolidation"]["top_goal_titles"]
+    assert completed_job["result"]["entity_consolidation"]["world_focus"] in {
+        "rest",
+        "organizational",
+    }
 
 
 def test_offline_consolidation_job_returns_404_for_missing_session() -> None:
@@ -231,9 +261,10 @@ def test_job_executor_recovers_queued_job_on_startup() -> None:
 
     assert completed_job["status"] == "completed"
     assert overview["job_runtime"]["last_recovery_report"]["candidate_job_count"] >= 1
-    assert str(queued_job["job_id"]) in overview["job_runtime"]["last_recovery_report"][
-        "scheduled_job_ids"
-    ]
+    assert (
+        str(queued_job["job_id"])
+        in overview["job_runtime"]["last_recovery_report"]["scheduled_job_ids"]
+    )
 
 
 def test_job_executor_retries_failed_job_on_startup() -> None:

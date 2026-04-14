@@ -1,0 +1,15 @@
+{
+  "thresholds": {
+    "attribution_hint_only_confidence": 0.62,
+    "attribution_attribution_required_confidence": 0.78
+  },
+  "weights": {
+    "scope_bonuses": {
+      "user": 0.05,
+      "session": 0.1,
+      "self_user": 0.12,
+      "other_user": -0.04,
+      "global_entity": 0.01
+    }
+  }
+}

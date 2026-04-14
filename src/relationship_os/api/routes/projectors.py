@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.errors import legacy_lifecycle_error_response
+from relationship_os.application.analyzers.proactive.lifecycle_projection import (
+    LegacyLifecycleStreamUnsupportedError,
+)
 from relationship_os.domain.projectors import UnknownProjectorError
 
 router = APIRouter(prefix="/projectors", tags=["projectors"])
@@ -30,3 +34,5 @@ async def rebuild_projection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except LegacyLifecycleStreamUnsupportedError as exc:
+        return legacy_lifecycle_error_response(exc)

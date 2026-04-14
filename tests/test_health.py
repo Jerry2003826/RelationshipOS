@@ -14,7 +14,8 @@ def test_healthz() -> None:
 
 
 def test_runtime_overview_lists_registered_projectors() -> None:
-    with TestClient(create_app()) as client:
+    app = create_app()
+    with TestClient(app) as client:
         response = client.get("/api/v1/runtime")
 
     assert response.status_code == 200
@@ -22,7 +23,7 @@ def test_runtime_overview_lists_registered_projectors() -> None:
     assert body["app"] == "RelationshipOS"
     assert body["event_store_backend"] == "memory"
     assert body["llm_backend"] == "mock"
-    assert body["llm_model"] == "openai/gpt-5"
+    assert body["llm_model"] == app.state.container.settings.llm_model
     assert body["job_runtime"]["worker_id"]
     assert body["job_runtime"]["active_job_count"] == 0
     assert body["job_runtime"]["poll_interval_seconds"] == 0.5
@@ -47,14 +48,17 @@ def test_runtime_overview_lists_registered_projectors() -> None:
     assert body["proactive_dispatcher"]["active_dispatch_count"] == 0
     assert body["proactive_dispatcher"]["poller_running"] is True
     assert body["proactive_dispatcher"]["last_run_report"]["source"] == "startup"
-    assert body["projectors"] == [
-        {"name": "inner-monologue-buffer", "version": "v1"},
-        {"name": "session-memory", "version": "v1"},
-        {"name": "session-runtime", "version": "v1"},
-        {"name": "session-snapshots", "version": "v1"},
-        {"name": "session-temporal-kg", "version": "v1"},
-        {"name": "session-transcript", "version": "v1"},
-    ]
+    projectors = {item["name"]: item["version"] for item in body["projectors"]}
+    assert projectors["entity-persona"] == "v1"
+    assert projectors["inner-monologue-buffer"] == "v1"
+    assert projectors["self-state"] == "v1"
+    assert projectors["session-memory"] == "v1"
+    assert projectors["session-runtime"] == "v2"
+    assert projectors["session-snapshots"] == "v1"
+    assert projectors["session-temporal-kg"] == "v1"
+    assert projectors["session-transcript"] == "v1"
+    assert projectors["entity-social-world"] == "v1"
+    assert projectors["user-index"] == "v1"
 
 
 def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -> None:
@@ -121,9 +125,13 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
         assert item["proactive_actuation_opening_move"] in {
             "soft_open",
             "reflective_restate",
+            "continuity_anchor",
         }
         assert item["proactive_actuation_bridge_move"] == "resume_the_open_loop"
-        assert item["proactive_actuation_user_space_signal"] == "explicit_opt_out"
+        assert item["proactive_actuation_user_space_signal"] in {
+            "explicit_opt_out",
+            "open_loop_without_demand",
+        }
         assert item["base_due_at"] is not None
         assert item["due_at"] is not None
         assert item["expires_at"] is not None

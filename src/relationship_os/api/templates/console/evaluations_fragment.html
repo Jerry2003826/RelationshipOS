@@ -1,0 +1,61 @@
+<section class="fragment-section">
+  <div class="section-header"><h2>偏好信号</h2></div>
+  <div class="kv-grid">
+    {% for item in preference_metrics %}
+    <div class="kv-item">
+      <span class="kv-label">{{ item.label }}</span>
+      <span class="kv-value">{{ item.value }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="signal-list">
+    {% if strategy_cards %}
+      {% for card in strategy_cards %}
+      <article class="list-card">
+        <div class="list-title">{{ card.title }}</div>
+        <div class="list-meta">
+          {% for badge in card.badges %}
+          <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+          {% endfor %}
+        </div>
+        <p>{{ card.detail }}</p>
+      </article>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <h3>{{ strategy_empty_title }}</h3>
+      <p>{{ strategy_empty_detail }}</p>
+    </div>
+    {% endif %}
+  </div>
+  <div class="section-header"><h2>重连学习</h2></div>
+  <div class="kv-grid">
+    {% for item in reengagement_metrics %}
+    <div class="kv-item">
+      <span class="kv-label">{{ item.label }}</span>
+      <span class="kv-value">{{ item.value }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="signal-list">
+    {% if reengagement_cards %}
+      {% for card in reengagement_cards %}
+      <article class="list-card">
+        <div class="list-title">{{ card.title }}</div>
+        <div class="list-meta">
+          {% for badge in card.badges %}
+          <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+          {% endfor %}
+        </div>
+        <p>{{ card.detail }}</p>
+      </article>
+      {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <h3>{{ reengagement_empty_title }}</h3>
+      <p>{{ reengagement_empty_detail }}</p>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{{ evaluation_cards_html | safe }}

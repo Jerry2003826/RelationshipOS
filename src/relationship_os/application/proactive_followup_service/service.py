@@ -15,8 +15,14 @@ from relationship_os.domain.events import utc_now
 class ProactiveFollowupService:
     """Thin service that lists followup items by delegating to the builder."""
 
-    def __init__(self, *, stream_service: StreamService) -> None:
+    def __init__(
+        self,
+        *,
+        stream_service: StreamService,
+        runtime_projector_version: str = "v2",
+    ) -> None:
         self._stream_service = stream_service
+        self._runtime_projector_version = runtime_projector_version
 
     async def list_followups(
         self,
@@ -34,6 +40,7 @@ class ProactiveFollowupService:
                     stream_service=self._stream_service,
                     session_id=session_id,
                     reference_time=reference_time,
+                    runtime_projector_version=self._runtime_projector_version,
                 )
                 for session_id in stream_ids
             )

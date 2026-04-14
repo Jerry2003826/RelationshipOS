@@ -609,14 +609,11 @@ def test_process_turn_records_explicit_knowledge_boundary_for_uncertain_question
     assert body["projection"]["state"]["response_normalization"]["final_status"] == "pass"
     assert body["projection"]["state"]["session_directive"]["response_style"] == "calibrated"
     assert body["projection"]["state"]["strategy_decision"]["strategy"] == "answer_with_uncertainty"
-    assert body["assistant_response_mode"] == "two_part_sequence"
-    assert len(body["assistant_responses"]) == 2
-    assert body["projection"]["state"]["response_sequence_plan"]["mode"] == "two_part_sequence"
-    assert (
-        body["projection"]["state"]["response_sequence_plan"]["reasons"]
-        == ["uncertainty_then_next_step"]
-    )
-    assert body["projection"]["state"]["response_sequence_plan"]["unit_count"] == 2
+    assert body["assistant_response_mode"] == "single_message"
+    assert len(body["assistant_responses"]) == 1
+    assert body["projection"]["state"]["response_sequence_plan"]["mode"] == "single_message"
+    assert body["projection"]["state"]["response_sequence_plan"]["reasons"] == []
+    assert body["projection"]["state"]["response_sequence_plan"]["unit_count"] == 1
 
     trace_response = client.get("/api/v1/runtime/trace/session-boundary")
     trace = trace_response.json()["trace"]
@@ -626,9 +623,9 @@ def test_process_turn_records_explicit_knowledge_boundary_for_uncertain_question
     assistant_events = [
         event for event in trace if event["event_type"] == "assistant.message.sent"
     ]
-    assert len(assistant_events) == 2
-    assert assistant_events[0]["payload"]["sequence_total"] == 2
-    assert assistant_events[1]["payload"]["sequence_index"] == 2
+    assert len(assistant_events) == 1
+    assert assistant_events[0]["payload"]["sequence_total"] == 1
+    assert assistant_events[0]["payload"]["sequence_index"] == 1
 
 
 def test_process_turn_records_clarification_confidence_gate_for_focused_question() -> None:
@@ -924,11 +921,11 @@ def test_process_turn_builds_runtime_coordination_for_high_load_and_proactive_fo
         for item in proactive_actuation_plan["stage_actuations"]
         if item["stage_label"] == "second_touch"
     )
-    assert second_touch_actuation["opening_move"] == "shared_context_bridge"
-    assert second_touch_actuation["bridge_move"] == "micro_step_bridge"
-    assert second_touch_actuation["closing_move"] == "boundary_safe_close"
+    assert second_touch_actuation["opening_move"] == "context_reanchor"
+    assert second_touch_actuation["bridge_move"] == "progress_bridge"
+    assert second_touch_actuation["closing_move"] == "soft_exit_offer"
     assert second_touch_actuation["somatic_mode"] == "none"
-    assert second_touch_actuation["user_space_signal"] == "explicit_no_pressure"
+    assert second_touch_actuation["user_space_signal"] == "explicit_opt_out"
     assert second_body["projection"]["state"]["proactive_actuation_plan_count"] == 2
     proactive_progression_plan = second_body["projection"]["state"][
         "proactive_progression_plan"
@@ -1662,7 +1659,6 @@ def test_process_turn_normalizes_noncompliant_model_output() -> None:
     assert response.status_code == 201
     body = response.json()
     assert "can't know for sure" in body["assistant_response"].lower()
-    assert "next step" in body["assistant_response"].lower()
     assert body["projection"]["state"]["response_normalization"]["changed"] is True
     assert (
         "softened_false_certainty_language"

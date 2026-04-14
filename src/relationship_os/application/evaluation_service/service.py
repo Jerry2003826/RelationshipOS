@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from statistics import mean
 from typing import Any
 
+from relationship_os.application.analyzers.proactive.lifecycle_projection import (
+    LegacyLifecycleStreamUnsupportedError,
+    apply_snapshot_to_turn_record,
+    is_legacy_lifecycle_event_type,
+)
 from relationship_os.application.evaluation_service.summary_builder import (
     build_summary,
 )
@@ -36,72 +42,11 @@ from relationship_os.domain.event_types import (
     PROACTIVE_DISPATCH_ENVELOPE_UPDATED,
     PROACTIVE_DISPATCH_FEEDBACK_ASSESSED,
     PROACTIVE_DISPATCH_GATE_UPDATED,
+    PROACTIVE_DISPATCH_OUTCOME_RECORDED,
     PROACTIVE_FOLLOWUP_DISPATCHED,
     PROACTIVE_FOLLOWUP_UPDATED,
     PROACTIVE_GUARDRAIL_UPDATED,
-    PROACTIVE_LIFECYCLE_ACTIVATION_UPDATED,
-    PROACTIVE_LIFECYCLE_ANCESTRY_UPDATED,
-    PROACTIVE_LIFECYCLE_ARMING_UPDATED,
-    PROACTIVE_LIFECYCLE_ASSURANCE_UPDATED,
-    PROACTIVE_LIFECYCLE_ATTESTATION_UPDATED,
-    PROACTIVE_LIFECYCLE_AUTHORIZATION_UPDATED,
-    PROACTIVE_LIFECYCLE_AVAILABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_BEDROCK_UPDATED,
-    PROACTIVE_LIFECYCLE_CANDIDATE_UPDATED,
-    PROACTIVE_LIFECYCLE_CERTIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_CLOSURE_UPDATED,
-    PROACTIVE_LIFECYCLE_COMPLETION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONCLUSION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONFIRMATION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONTINUATION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONTROLLER_UPDATED,
-    PROACTIVE_LIFECYCLE_DISPATCH_UPDATED,
-    PROACTIVE_LIFECYCLE_DISPOSITION_UPDATED,
-    PROACTIVE_LIFECYCLE_DURABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_ELIGIBILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_ENACTMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_ENDORSEMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_ENVELOPE_UPDATED,
-    PROACTIVE_LIFECYCLE_FINALITY_UPDATED,
-    PROACTIVE_LIFECYCLE_FOUNDATION_UPDATED,
-    PROACTIVE_LIFECYCLE_GUARDIANSHIP_UPDATED,
-    PROACTIVE_LIFECYCLE_HANDOFF_UPDATED,
-    PROACTIVE_LIFECYCLE_HERITAGE_UPDATED,
-    PROACTIVE_LIFECYCLE_LAUNCH_UPDATED,
-    PROACTIVE_LIFECYCLE_LAYER_UPDATED,
-    PROACTIVE_LIFECYCLE_LEGACY_UPDATED,
-    PROACTIVE_LIFECYCLE_LINEAGE_UPDATED,
-    PROACTIVE_LIFECYCLE_LONGEVITY_UPDATED,
-    PROACTIVE_LIFECYCLE_MACHINE_UPDATED,
-    PROACTIVE_LIFECYCLE_ORIGIN_UPDATED,
-    PROACTIVE_LIFECYCLE_OUTCOME_UPDATED,
-    PROACTIVE_LIFECYCLE_OVERSIGHT_UPDATED,
-    PROACTIVE_LIFECYCLE_PERSISTENCE_UPDATED,
-    PROACTIVE_LIFECYCLE_PROVENANCE_UPDATED,
-    PROACTIVE_LIFECYCLE_QUEUE_UPDATED,
-    PROACTIVE_LIFECYCLE_RATIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_REACTIVATION_UPDATED,
-    PROACTIVE_LIFECYCLE_READINESS_UPDATED,
-    PROACTIVE_LIFECYCLE_REENTRY_UPDATED,
-    PROACTIVE_LIFECYCLE_RESIDENCY_UPDATED,
-    PROACTIVE_LIFECYCLE_RESOLUTION_UPDATED,
-    PROACTIVE_LIFECYCLE_RESUMPTION_UPDATED,
-    PROACTIVE_LIFECYCLE_RETENTION_UPDATED,
-    PROACTIVE_LIFECYCLE_ROOT_UPDATED,
-    PROACTIVE_LIFECYCLE_SCHEDULER_UPDATED,
-    PROACTIVE_LIFECYCLE_SELECTABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_SETTLEMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_STANDING_UPDATED,
-    PROACTIVE_LIFECYCLE_STATE_UPDATED,
-    PROACTIVE_LIFECYCLE_STEWARDSHIP_UPDATED,
-    PROACTIVE_LIFECYCLE_STRATUM_UPDATED,
-    PROACTIVE_LIFECYCLE_SUBSTRATE_UPDATED,
-    PROACTIVE_LIFECYCLE_SUSTAINMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_TENURE_UPDATED,
-    PROACTIVE_LIFECYCLE_TRANSITION_UPDATED,
-    PROACTIVE_LIFECYCLE_TRIGGER_UPDATED,
-    PROACTIVE_LIFECYCLE_VERIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_WINDOW_UPDATED,
+    PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED,
     PROACTIVE_LINE_CONTROLLER_UPDATED,
     PROACTIVE_LINE_MACHINE_UPDATED,
     PROACTIVE_LINE_STATE_UPDATED,
@@ -138,6 +83,511 @@ from relationship_os.domain.event_types import (
 )
 from relationship_os.domain.events import StoredEvent
 
+_PREFERENCE_STATUS_RULES: tuple[
+    tuple[str, str, tuple[tuple[str, float, str], ...]],
+    ...,
+] = (
+    (
+        "output_quality_status",
+        "stable",
+        (
+            ("watch", 0.2, "quality_watch"),
+            ("degrading", 0.4, "quality_degrading"),
+        ),
+    ),
+    (
+        "latest_runtime_quality_doctor_status",
+        "pass",
+        (
+            ("watch", 0.1, "runtime_quality_doctor_watch"),
+            ("revise", 0.2, "runtime_quality_doctor_revise"),
+        ),
+    ),
+    (
+        "latest_system3_identity_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.06, "system3_identity_trajectory_watch"),
+            ("recenter", 0.14, "system3_identity_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_strategy_audit_status",
+        "pass",
+        (
+            ("watch", 0.1, "system3_strategy_audit_watch"),
+            ("revise", 0.2, "system3_strategy_audit_revise"),
+        ),
+    ),
+    (
+        "latest_system3_strategy_audit_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_strategy_audit_trajectory_watch"),
+            ("corrective", 0.1, "system3_strategy_audit_trajectory_corrective"),
+        ),
+    ),
+    (
+        "latest_system3_strategy_supervision_status",
+        "pass",
+        (
+            ("watch", 0.08, "system3_strategy_supervision_watch"),
+            ("revise", 0.18, "system3_strategy_supervision_revise"),
+        ),
+    ),
+    (
+        "latest_system3_strategy_supervision_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_strategy_supervision_trajectory_watch"),
+            ("tighten", 0.1, "system3_strategy_supervision_trajectory_tighten"),
+        ),
+    ),
+    (
+        "latest_system3_moral_reasoning_status",
+        "pass",
+        (
+            ("watch", 0.08, "system3_moral_reasoning_watch"),
+            ("revise", 0.18, "system3_moral_reasoning_revise"),
+        ),
+    ),
+    (
+        "latest_system3_moral_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_moral_trajectory_watch"),
+            ("recenter", 0.1, "system3_moral_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_user_model_evolution_status",
+        "pass",
+        (
+            ("watch", 0.06, "system3_user_model_evolution_watch"),
+            ("revise", 0.14, "system3_user_model_evolution_revise"),
+        ),
+    ),
+    (
+        "latest_system3_user_model_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.05, "system3_user_model_trajectory_watch"),
+            ("recenter", 0.12, "system3_user_model_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_expectation_calibration_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_expectation_calibration_watch"),
+            ("revise", 0.12, "system3_expectation_calibration_revise"),
+        ),
+    ),
+    (
+        "latest_system3_expectation_calibration_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_expectation_calibration_trajectory_watch"),
+            ("reset", 0.1, "system3_expectation_calibration_trajectory_reset"),
+        ),
+    ),
+    (
+        "latest_system3_dependency_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_dependency_governance_watch"),
+            ("revise", 0.12, "system3_dependency_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_dependency_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_dependency_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_dependency_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_autonomy_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_autonomy_governance_watch"),
+            ("revise", 0.12, "system3_autonomy_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_autonomy_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_autonomy_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_autonomy_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_boundary_governance_status",
+        "pass",
+        (
+            ("watch", 0.06, "system3_boundary_governance_watch"),
+            ("revise", 0.14, "system3_boundary_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_boundary_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.05, "system3_boundary_governance_trajectory_watch"),
+            ("recenter", 0.11, "system3_boundary_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_support_governance_status",
+        "pass",
+        (
+            ("watch", 0.06, "system3_support_governance_watch"),
+            ("revise", 0.14, "system3_support_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_support_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.05, "system3_support_governance_trajectory_watch"),
+            ("recenter", 0.11, "system3_support_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_continuity_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_continuity_governance_watch"),
+            ("revise", 0.13, "system3_continuity_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_continuity_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_continuity_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_continuity_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_repair_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_repair_governance_watch"),
+            ("revise", 0.13, "system3_repair_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_repair_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_repair_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_repair_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_attunement_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_attunement_governance_watch"),
+            ("revise", 0.13, "system3_attunement_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_attunement_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_attunement_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_attunement_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_trust_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_trust_governance_watch"),
+            ("revise", 0.13, "system3_trust_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_trust_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_trust_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_trust_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_clarity_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_clarity_governance_watch"),
+            ("revise", 0.13, "system3_clarity_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_clarity_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_clarity_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_clarity_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_pacing_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_pacing_governance_watch"),
+            ("revise", 0.13, "system3_pacing_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_pacing_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_pacing_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_pacing_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_commitment_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_commitment_governance_watch"),
+            ("revise", 0.13, "system3_commitment_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_commitment_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_commitment_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_commitment_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_disclosure_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_disclosure_governance_watch"),
+            ("revise", 0.13, "system3_disclosure_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_disclosure_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_disclosure_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_disclosure_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_reciprocity_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_reciprocity_governance_watch"),
+            ("revise", 0.13, "system3_reciprocity_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_reciprocity_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_reciprocity_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_reciprocity_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_pressure_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_pressure_governance_watch"),
+            ("revise", 0.13, "system3_pressure_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_pressure_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_pressure_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_pressure_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_relational_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_relational_governance_watch"),
+            ("revise", 0.13, "system3_relational_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_relational_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_relational_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_relational_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_safety_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_safety_governance_watch"),
+            ("revise", 0.13, "system3_safety_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_safety_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_safety_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_safety_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_progress_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_progress_governance_watch"),
+            ("revise", 0.13, "system3_progress_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_progress_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_progress_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_progress_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_stability_governance_status",
+        "pass",
+        (
+            ("watch", 0.05, "system3_stability_governance_watch"),
+            ("revise", 0.13, "system3_stability_governance_revise"),
+        ),
+    ),
+    (
+        "latest_system3_stability_governance_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_stability_governance_trajectory_watch"),
+            ("recenter", 0.1, "system3_stability_governance_trajectory_recenter"),
+        ),
+    ),
+    (
+        "latest_system3_growth_transition_status",
+        "stable",
+        (
+            ("watch", 0.05, "system3_growth_transition_watch"),
+            ("redirect", 0.12, "system3_growth_transition_redirect"),
+        ),
+    ),
+    (
+        "latest_system3_growth_transition_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_growth_transition_trajectory_watch"),
+            ("redirect", 0.1, "system3_growth_transition_trajectory_redirect"),
+        ),
+    ),
+    (
+        "latest_system3_version_migration_status",
+        "pass",
+        (
+            ("watch", 0.06, "system3_version_migration_watch"),
+            ("revise", 0.14, "system3_version_migration_revise"),
+        ),
+    ),
+    (
+        "latest_system3_version_migration_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_version_migration_trajectory_watch"),
+            ("hold", 0.1, "system3_version_migration_trajectory_hold"),
+        ),
+    ),
+    (
+        "latest_system3_emotional_debt_status",
+        "low",
+        (
+            ("watch", 0.05, "system3_emotional_debt_watch"),
+            ("elevated", 0.15, "system3_emotional_debt_elevated"),
+        ),
+    ),
+    (
+        "latest_system3_emotional_debt_trajectory_status",
+        "stable",
+        (
+            ("watch", 0.04, "system3_emotional_debt_trajectory_watch"),
+            (
+                "decompression_required",
+                0.1,
+                "system3_emotional_debt_trajectory_decompression",
+            ),
+        ),
+    ),
+)
+
+_TURN_RECORD_PAYLOAD_EVENT_FIELDS: dict[str, str] = {
+    CONFIDENCE_ASSESSMENT_COMPUTED: "confidence_assessment",
+    CONTEXT_FRAME_COMPUTED: "context_frame",
+    RELATIONSHIP_STATE_UPDATED: "relationship_state",
+    REPAIR_ASSESSMENT_COMPUTED: "repair_assessment",
+    MEMORY_BUNDLE_UPDATED: "memory_bundle",
+    MEMORY_WRITE_GUARD_EVALUATED: "memory_write_guard",
+    MEMORY_RETENTION_POLICY_APPLIED: "memory_retention",
+    MEMORY_RECALL_PERFORMED: "memory_recall",
+    MEMORY_FORGETTING_APPLIED: "memory_forgetting",
+    KNOWLEDGE_BOUNDARY_DECIDED: "knowledge_boundary_decision",
+    POLICY_GATE_DECIDED: "policy_gate",
+    REHEARSAL_COMPLETED: "rehearsal_result",
+    REPAIR_PLAN_UPDATED: "repair_plan",
+    EMPOWERMENT_AUDIT_COMPLETED: "empowerment_audit",
+    RESPONSE_DRAFT_PLANNED: "response_draft_plan",
+    RESPONSE_RENDERING_POLICY_DECIDED: "response_rendering_policy",
+    RESPONSE_SEQUENCE_PLANNED: "response_sequence_plan",
+    RUNTIME_COORDINATION_UPDATED: "runtime_coordination_snapshot",
+    GUIDANCE_PLAN_UPDATED: "guidance_plan",
+    CONVERSATION_CADENCE_UPDATED: "conversation_cadence_plan",
+    SESSION_RITUAL_UPDATED: "session_ritual_plan",
+    SOMATIC_ORCHESTRATION_UPDATED: "somatic_orchestration_plan",
+    PROACTIVE_FOLLOWUP_UPDATED: "proactive_followup_directive",
+    PROACTIVE_CADENCE_UPDATED: "proactive_cadence_plan",
+    PROACTIVE_GUARDRAIL_UPDATED: "proactive_guardrail_plan",
+    REENGAGEMENT_MATRIX_ASSESSED: "reengagement_matrix_assessment",
+    REENGAGEMENT_PLAN_UPDATED: "reengagement_plan",
+    PROACTIVE_SCHEDULING_UPDATED: "proactive_scheduling_plan",
+    PROACTIVE_ORCHESTRATION_UPDATED: "proactive_orchestration_plan",
+    PROACTIVE_ACTUATION_UPDATED: "proactive_actuation_plan",
+    PROACTIVE_PROGRESSION_UPDATED: "proactive_progression_plan",
+    PROACTIVE_STAGE_CONTROLLER_UPDATED: "proactive_stage_controller_decision",
+    PROACTIVE_LINE_CONTROLLER_UPDATED: "proactive_line_controller_decision",
+    PROACTIVE_LINE_STATE_UPDATED: "proactive_line_state_decision",
+    PROACTIVE_LINE_TRANSITION_UPDATED: "proactive_line_transition_decision",
+    PROACTIVE_LINE_MACHINE_UPDATED: "proactive_line_machine_decision",
+    PROACTIVE_STAGE_REFRESH_UPDATED: "proactive_stage_refresh_plan",
+    PROACTIVE_STAGE_REPLAN_UPDATED: "proactive_stage_replan_assessment",
+    PROACTIVE_DISPATCH_FEEDBACK_ASSESSED: "proactive_dispatch_feedback_assessment",
+    PROACTIVE_DISPATCH_GATE_UPDATED: "proactive_dispatch_gate_decision",
+    PROACTIVE_DISPATCH_ENVELOPE_UPDATED: "proactive_dispatch_envelope_decision",
+    PROACTIVE_STAGE_STATE_UPDATED: "proactive_stage_state_decision",
+    PROACTIVE_STAGE_TRANSITION_UPDATED: "proactive_stage_transition_decision",
+    PROACTIVE_STAGE_MACHINE_UPDATED: "proactive_stage_machine_decision",
+    PROACTIVE_FOLLOWUP_DISPATCHED: "proactive_followup_dispatch",
+    PROACTIVE_DISPATCH_OUTCOME_RECORDED: "proactive_dispatch_outcome",
+    RESPONSE_NORMALIZED: "response_normalization",
+    RESPONSE_POST_AUDITED: "response_post_audit",
+    RUNTIME_QUALITY_DOCTOR_COMPLETED: "runtime_quality_doctor_report",
+    SYSTEM3_SNAPSHOT_UPDATED: "system3_snapshot",
+    PRIVATE_JUDGMENT_COMPUTED: "private_judgment",
+    LLM_COMPLETION_FAILED: "llm_failure",
+}
+
 
 class EvaluationService:
     def __init__(self, *, stream_service: StreamService) -> None:
@@ -145,6 +595,8 @@ class EvaluationService:
 
     async def evaluate_session(self, *, session_id: str) -> dict[str, Any]:
         events = await self._stream_service.read_stream(stream_id=session_id)
+        if any(is_legacy_lifecycle_event_type(event.event_type) for event in events):
+            raise LegacyLifecycleStreamUnsupportedError(stream_id=session_id)
         started_event = next(
             (
                 event
@@ -182,6 +634,8 @@ class EvaluationService:
             events = await self._stream_service.read_stream(stream_id=session_id)
             if not any(event.event_type == SESSION_STARTED for event in events):
                 continue
+            if any(is_legacy_lifecycle_event_type(event.event_type) for event in events):
+                continue
             evaluation = await self.evaluate_session(session_id=session_id)
             summaries.append(evaluation["summary"])
         return {
@@ -198,113 +652,15 @@ class EvaluationService:
         ]
 
     async def build_strategy_preference_report(self) -> dict[str, Any]:
-        summaries = [
-            summary
-            for summary in await self._list_non_scenario_session_summaries()
-            if summary.get("latest_strategy")
-        ]
+        summaries = await self._list_strategy_preference_summaries()
         records = [self._build_strategy_preference_record(summary) for summary in summaries]
-
-        strategy_totals: dict[str, dict[str, Any]] = {}
-        strata_totals: dict[str, int] = {}
         filtered_records = [record for record in records if not record.quality_floor_pass]
         noisy_records = [record for record in records if record.noise_penalty > 0]
-
-        for record in records:
-            strategy_entry = strategy_totals.setdefault(
-                record.strategy,
-                {
-                    "strategy": record.strategy,
-                    "session_count": 0,
-                    "kept_session_count": 0,
-                    "filtered_session_count": 0,
-                    "denoised_scores": [],
-                    "quality_floor_scores": [],
-                    "duration_signals": [],
-                    "relational_signals": [],
-                    "noise_penalties": [],
-                    "strata": {},
-                },
-            )
-            strategy_entry["session_count"] += 1
-            if record.quality_floor_pass:
-                strategy_entry["kept_session_count"] += 1
-                strategy_entry["denoised_scores"].append(
-                    record.denoised_preference_score
-                )
-            else:
-                strategy_entry["filtered_session_count"] += 1
-            strategy_entry["quality_floor_scores"].append(record.quality_floor_score)
-            strategy_entry["duration_signals"].append(record.duration_signal)
-            strategy_entry["relational_signals"].append(record.relational_signal)
-            strategy_entry["noise_penalties"].append(record.noise_penalty)
-            strategy_entry["strata"][record.context_stratum] = (
-                strategy_entry["strata"].get(record.context_stratum, 0) + 1
-            )
-            strata_totals[record.context_stratum] = (
-                strata_totals.get(record.context_stratum, 0) + 1
-            )
-
-        strategies = []
-        for item in strategy_totals.values():
-            kept = list(item["denoised_scores"])
-            strata = [
-                {"context_stratum": key, "count": value}
-                for key, value in item["strata"].items()
-            ]
-            strata.sort(
-                key=lambda entry: (
-                    int(entry.get("count") or 0),
-                    str(entry.get("context_stratum") or ""),
-                ),
-                reverse=True,
-            )
-            strategies.append(
-                {
-                    "strategy": item["strategy"],
-                    "session_count": item["session_count"],
-                    "kept_session_count": item["kept_session_count"],
-                    "filtered_session_count": item["filtered_session_count"],
-                    "avg_denoised_preference_score": (
-                        round(mean(kept), 3) if kept else None
-                    ),
-                    "avg_quality_floor_score": round(
-                        mean(item["quality_floor_scores"]),
-                        3,
-                    ),
-                    "avg_duration_signal": round(
-                        mean(item["duration_signals"]),
-                        3,
-                    ),
-                    "avg_relational_signal": round(
-                        mean(item["relational_signals"]),
-                        3,
-                    ),
-                    "avg_noise_penalty": round(mean(item["noise_penalties"]), 3),
-                    "dominant_strata": strata[:3],
-                }
-            )
-        strategies.sort(
-            key=lambda item: (
-                item.get("avg_denoised_preference_score") is not None,
-                float(item.get("avg_denoised_preference_score") or 0.0),
-                float(item.get("avg_quality_floor_score") or 0.0),
-                int(item.get("session_count") or 0),
-            ),
-            reverse=True,
+        strategy_totals, strata_totals = self._accumulate_strategy_preference_totals(
+            records
         )
-
-        strata = [
-            {"context_stratum": key, "count": value}
-            for key, value in strata_totals.items()
-        ]
-        strata.sort(
-            key=lambda item: (
-                int(item.get("count") or 0),
-                str(item.get("context_stratum") or ""),
-            ),
-            reverse=True,
-        )
+        strategies = self._build_strategy_preference_strategies(strategy_totals)
+        strata = self._build_strategy_preference_strata(strata_totals)
 
         return {
             "session_count": len(records),
@@ -348,6 +704,116 @@ class EvaluationService:
             "reengagement_learning": await self.build_reengagement_learning_report(),
         }
 
+    async def _list_strategy_preference_summaries(self) -> list[dict[str, Any]]:
+        return [
+            summary
+            for summary in await self._list_non_scenario_session_summaries()
+            if summary.get("latest_strategy")
+        ]
+
+    def _accumulate_strategy_preference_totals(
+        self,
+        records: list[StrategyPreferenceRecord],
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, int]]:
+        strategy_totals: dict[str, dict[str, Any]] = {}
+        strata_totals: dict[str, int] = {}
+        for record in records:
+            strategy_entry = strategy_totals.setdefault(
+                record.strategy,
+                {
+                    "strategy": record.strategy,
+                    "session_count": 0,
+                    "kept_session_count": 0,
+                    "filtered_session_count": 0,
+                    "denoised_scores": [],
+                    "quality_floor_scores": [],
+                    "duration_signals": [],
+                    "relational_signals": [],
+                    "noise_penalties": [],
+                    "strata": {},
+                },
+            )
+            strategy_entry["session_count"] += 1
+            if record.quality_floor_pass:
+                strategy_entry["kept_session_count"] += 1
+                strategy_entry["denoised_scores"].append(
+                    record.denoised_preference_score
+                )
+            else:
+                strategy_entry["filtered_session_count"] += 1
+            strategy_entry["quality_floor_scores"].append(record.quality_floor_score)
+            strategy_entry["duration_signals"].append(record.duration_signal)
+            strategy_entry["relational_signals"].append(record.relational_signal)
+            strategy_entry["noise_penalties"].append(record.noise_penalty)
+            strategy_entry["strata"][record.context_stratum] = (
+                strategy_entry["strata"].get(record.context_stratum, 0) + 1
+            )
+            strata_totals[record.context_stratum] = (
+                strata_totals.get(record.context_stratum, 0) + 1
+            )
+        return strategy_totals, strata_totals
+
+    def _build_strategy_preference_strategies(
+        self,
+        strategy_totals: dict[str, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        strategies = []
+        for item in strategy_totals.values():
+            kept = list(item["denoised_scores"])
+            strata = self._build_strategy_preference_strata(item["strata"])
+            strategies.append(
+                {
+                    "strategy": item["strategy"],
+                    "session_count": item["session_count"],
+                    "kept_session_count": item["kept_session_count"],
+                    "filtered_session_count": item["filtered_session_count"],
+                    "avg_denoised_preference_score": (
+                        round(mean(kept), 3) if kept else None
+                    ),
+                    "avg_quality_floor_score": round(
+                        mean(item["quality_floor_scores"]),
+                        3,
+                    ),
+                    "avg_duration_signal": round(
+                        mean(item["duration_signals"]),
+                        3,
+                    ),
+                    "avg_relational_signal": round(
+                        mean(item["relational_signals"]),
+                        3,
+                    ),
+                    "avg_noise_penalty": round(mean(item["noise_penalties"]), 3),
+                    "dominant_strata": strata[:3],
+                }
+            )
+        strategies.sort(
+            key=lambda item: (
+                item.get("avg_denoised_preference_score") is not None,
+                float(item.get("avg_denoised_preference_score") or 0.0),
+                float(item.get("avg_quality_floor_score") or 0.0),
+                int(item.get("session_count") or 0),
+            ),
+            reverse=True,
+        )
+        return strategies
+
+    def _build_strategy_preference_strata(
+        self,
+        strata_totals: dict[str, int],
+    ) -> list[dict[str, Any]]:
+        strata = [
+            {"context_stratum": key, "count": value}
+            for key, value in strata_totals.items()
+        ]
+        strata.sort(
+            key=lambda item: (
+                int(item.get("count") or 0),
+                str(item.get("context_stratum") or ""),
+            ),
+            reverse=True,
+        )
+        return strata
+
     async def build_reengagement_learning_report(
         self,
         *,
@@ -380,7 +846,67 @@ class EvaluationService:
             for record in records
             if context_stratum and record.context_stratum == context_stratum
         ]
+        strategy_totals, strata_totals = self._accumulate_reengagement_learning_totals(
+            records,
+            context_stratum=context_stratum,
+        )
+        strategies = self._build_reengagement_learning_strategies(strategy_totals)
+        strata = self._build_reengagement_learning_strata(strata_totals)
+        learning_mode = self._resolve_reengagement_learning_mode(
+            strategies,
+            context_stratum=context_stratum,
+        )
 
+        return {
+            "session_count": len(records),
+            "strategy_count": len(strategies),
+            "filtered_session_count": len(filtered_records),
+            "noisy_session_count": len(noisy_records),
+            "matching_context_session_count": len(matching_context_records),
+            "context_stratum": context_stratum,
+            "learning_mode": learning_mode,
+            "methodology": {
+                "quality_floor_filter": (
+                    "Filter out sessions with poor audit quality, low safety, severe "
+                    "output degradation, or repeated runtime failures."
+                ),
+                "main_signal": (
+                    "Prefer session duration and relational quality over raw turn count."
+                ),
+                "context_bias": (
+                    "Prefer matching repair/boundary/dependency context when enough "
+                    "history exists, otherwise fall back to global re-engagement signal."
+                ),
+            },
+            "context_strata": strata,
+            "strategies": strategies,
+            "filtered_sessions": [
+                {
+                    "session_id": record.session_id,
+                    "strategy_key": record.strategy,
+                    "quality_floor_score": record.quality_floor_score,
+                    "filtering_reasons": record.filtering_reasons,
+                }
+                for record in filtered_records[:5]
+            ],
+            "noisy_sessions": [
+                {
+                    "session_id": record.session_id,
+                    "strategy_key": record.strategy,
+                    "noise_penalty": record.noise_penalty,
+                    "turn_count": record.turn_count,
+                    "session_duration_seconds": record.session_duration_seconds,
+                }
+                for record in noisy_records[:5]
+            ],
+        }
+
+    def _accumulate_reengagement_learning_totals(
+        self,
+        records: list[Any],
+        *,
+        context_stratum: str | None,
+    ) -> tuple[dict[str, dict[str, Any]], dict[str, int]]:
         strategy_totals: dict[str, dict[str, Any]] = {}
         strata_totals: dict[str, int] = {}
         for record in records:
@@ -424,7 +950,12 @@ class EvaluationService:
             strata_totals[record.context_stratum] = (
                 strata_totals.get(record.context_stratum, 0) + 1
             )
+        return strategy_totals, strata_totals
 
+    def _build_reengagement_learning_strategies(
+        self,
+        strategy_totals: dict[str, dict[str, Any]],
+    ) -> list[dict[str, Any]]:
         strategies = []
         for item in strategy_totals.values():
             strata = [
@@ -483,7 +1014,12 @@ class EvaluationService:
             ),
             reverse=True,
         )
+        return strategies
 
+    def _build_reengagement_learning_strata(
+        self,
+        strata_totals: dict[str, int],
+    ) -> list[dict[str, Any]]:
         strata = [
             {"context_stratum": key, "count": value}
             for key, value in strata_totals.items()
@@ -495,7 +1031,14 @@ class EvaluationService:
             ),
             reverse=True,
         )
+        return strata
 
+    def _resolve_reengagement_learning_mode(
+        self,
+        strategies: list[dict[str, Any]],
+        *,
+        context_stratum: str | None,
+    ) -> str:
         learning_mode = "cold_start"
         if strategies:
             top_strategy = strategies[0]
@@ -505,50 +1048,7 @@ class EvaluationService:
                 learning_mode = "contextual_reinforcement"
             elif int(top_strategy.get("kept_session_count") or 0) > 0:
                 learning_mode = "global_reinforcement"
-
-        return {
-            "session_count": len(records),
-            "strategy_count": len(strategies),
-            "filtered_session_count": len(filtered_records),
-            "noisy_session_count": len(noisy_records),
-            "matching_context_session_count": len(matching_context_records),
-            "context_stratum": context_stratum,
-            "learning_mode": learning_mode,
-            "methodology": {
-                "quality_floor_filter": (
-                    "Filter out sessions with poor audit quality, low safety, severe "
-                    "output degradation, or repeated runtime failures."
-                ),
-                "main_signal": (
-                    "Prefer session duration and relational quality over raw turn count."
-                ),
-                "context_bias": (
-                    "Prefer matching repair/boundary/dependency context when enough "
-                    "history exists, otherwise fall back to global re-engagement signal."
-                ),
-            },
-            "context_strata": strata,
-            "strategies": strategies,
-            "filtered_sessions": [
-                {
-                    "session_id": record.session_id,
-                    "strategy_key": record.strategy,
-                    "quality_floor_score": record.quality_floor_score,
-                    "filtering_reasons": record.filtering_reasons,
-                }
-                for record in filtered_records[:5]
-            ],
-            "noisy_sessions": [
-                {
-                    "session_id": record.session_id,
-                    "strategy_key": record.strategy,
-                    "noise_penalty": record.noise_penalty,
-                    "turn_count": record.turn_count,
-                    "session_duration_seconds": record.session_duration_seconds,
-                }
-                for record in noisy_records[:5]
-            ],
-        }
+        return learning_mode
 
     def _build_turn_records(self, events: list[StoredEvent]) -> list[TurnRecord]:
         turns: list[TurnRecord] = []
@@ -556,370 +1056,88 @@ class EvaluationService:
 
         for event in events:
             if event.event_type == USER_MESSAGE_RECEIVED:
-                if current_turn is not None:
-                    turns.append(current_turn)
-                current_turn = TurnRecord(
-                    turn_index=len(turns) + 1,
-                    user_message=str(event.payload.get("content", "")),
+                current_turn = self._start_turn_record(
+                    turns=turns,
+                    current_turn=current_turn,
+                    event=event,
                 )
                 continue
 
             if current_turn is None:
                 continue
 
-            if event.event_type == ASSISTANT_MESSAGE_SENT:
-                content = str(event.payload.get("content", ""))
-                if str(event.payload.get("delivery_mode", "")) == "proactive_followup":
-                    current_turn.proactive_followup_message_event_count += 1
-                    if content:
-                        current_turn.proactive_followup_messages.append(content)
-                    continue
-                current_turn.assistant_message_event_count += 1
-                if content:
-                    current_turn.assistant_responses.append(content)
-                    current_turn.assistant_message = (
-                        f"{current_turn.assistant_message} {content}".strip()
-                        if current_turn.assistant_message
-                        else content
-                    )
-            elif event.event_type == CONFIDENCE_ASSESSMENT_COMPUTED:
-                current_turn.confidence_assessment = dict(event.payload)
-            elif event.event_type == CONTEXT_FRAME_COMPUTED:
-                current_turn.context_frame = dict(event.payload)
-            elif event.event_type == RELATIONSHIP_STATE_UPDATED:
-                current_turn.relationship_state = dict(event.payload)
-            elif event.event_type == REPAIR_ASSESSMENT_COMPUTED:
-                current_turn.repair_assessment = dict(event.payload)
-            elif event.event_type == MEMORY_BUNDLE_UPDATED:
-                current_turn.memory_bundle = dict(event.payload)
-            elif event.event_type == MEMORY_WRITE_GUARD_EVALUATED:
-                current_turn.memory_write_guard = dict(event.payload)
-            elif event.event_type == MEMORY_RETENTION_POLICY_APPLIED:
-                current_turn.memory_retention = dict(event.payload)
-            elif event.event_type == MEMORY_RECALL_PERFORMED:
-                current_turn.memory_recall = dict(event.payload)
-            elif event.event_type == MEMORY_FORGETTING_APPLIED:
-                current_turn.memory_forgetting = dict(event.payload)
-            elif event.event_type == KNOWLEDGE_BOUNDARY_DECIDED:
-                current_turn.knowledge_boundary_decision = dict(event.payload)
-            elif event.event_type == POLICY_GATE_DECIDED:
-                current_turn.policy_gate = dict(event.payload)
-            elif event.event_type == REHEARSAL_COMPLETED:
-                current_turn.rehearsal_result = dict(event.payload)
-            elif event.event_type == REPAIR_PLAN_UPDATED:
-                current_turn.repair_plan = dict(event.payload)
-            elif event.event_type == EMPOWERMENT_AUDIT_COMPLETED:
-                current_turn.empowerment_audit = dict(event.payload)
-            elif event.event_type == RESPONSE_DRAFT_PLANNED:
-                current_turn.response_draft_plan = dict(event.payload)
-            elif event.event_type == RESPONSE_RENDERING_POLICY_DECIDED:
-                current_turn.response_rendering_policy = dict(event.payload)
-            elif event.event_type == RESPONSE_SEQUENCE_PLANNED:
-                current_turn.response_sequence_plan = dict(event.payload)
-            elif event.event_type == RUNTIME_COORDINATION_UPDATED:
-                current_turn.runtime_coordination_snapshot = dict(event.payload)
-            elif event.event_type == GUIDANCE_PLAN_UPDATED:
-                current_turn.guidance_plan = dict(event.payload)
-            elif event.event_type == CONVERSATION_CADENCE_UPDATED:
-                current_turn.conversation_cadence_plan = dict(event.payload)
-            elif event.event_type == SESSION_RITUAL_UPDATED:
-                current_turn.session_ritual_plan = dict(event.payload)
-            elif event.event_type == SOMATIC_ORCHESTRATION_UPDATED:
-                current_turn.somatic_orchestration_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_FOLLOWUP_UPDATED:
-                current_turn.proactive_followup_directive = dict(event.payload)
-            elif event.event_type == PROACTIVE_CADENCE_UPDATED:
-                current_turn.proactive_cadence_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED:
-                current_turn.proactive_aggregate_governance_assessment = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_AGGREGATE_CONTROLLER_UPDATED:
-                current_turn.proactive_aggregate_controller_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_ORCHESTRATION_CONTROLLER_UPDATED:
-                current_turn.proactive_orchestration_controller_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_GUARDRAIL_UPDATED:
-                current_turn.proactive_guardrail_plan = dict(event.payload)
-            elif event.event_type == REENGAGEMENT_MATRIX_ASSESSED:
-                current_turn.reengagement_matrix_assessment = dict(event.payload)
-            elif event.event_type == REENGAGEMENT_PLAN_UPDATED:
-                current_turn.reengagement_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_SCHEDULING_UPDATED:
-                current_turn.proactive_scheduling_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_ORCHESTRATION_UPDATED:
-                current_turn.proactive_orchestration_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_ACTUATION_UPDATED:
-                current_turn.proactive_actuation_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_PROGRESSION_UPDATED:
-                current_turn.proactive_progression_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_STAGE_CONTROLLER_UPDATED:
-                current_turn.proactive_stage_controller_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LINE_CONTROLLER_UPDATED:
-                current_turn.proactive_line_controller_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LINE_STATE_UPDATED:
-                current_turn.proactive_line_state_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LINE_TRANSITION_UPDATED:
-                current_turn.proactive_line_transition_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LINE_MACHINE_UPDATED:
-                current_turn.proactive_line_machine_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_STATE_UPDATED:
-                current_turn.proactive_lifecycle_state_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_TRANSITION_UPDATED:
-                current_turn.proactive_lifecycle_transition_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_MACHINE_UPDATED:
-                current_turn.proactive_lifecycle_machine_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_CONTROLLER_UPDATED:
-                current_turn.proactive_lifecycle_controller_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ENVELOPE_UPDATED:
-                current_turn.proactive_lifecycle_envelope_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_SCHEDULER_UPDATED:
-                current_turn.proactive_lifecycle_scheduler_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_WINDOW_UPDATED:
-                current_turn.proactive_lifecycle_window_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_QUEUE_UPDATED:
-                current_turn.proactive_lifecycle_queue_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_DISPATCH_UPDATED:
-                current_turn.proactive_lifecycle_dispatch_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_OUTCOME_UPDATED:
-                current_turn.proactive_lifecycle_outcome_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_RESOLUTION_UPDATED:
-                current_turn.proactive_lifecycle_resolution_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ACTIVATION_UPDATED:
-                current_turn.proactive_lifecycle_activation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_SETTLEMENT_UPDATED:
-                current_turn.proactive_lifecycle_settlement_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CLOSURE_UPDATED:
-                current_turn.proactive_lifecycle_closure_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_AVAILABILITY_UPDATED:
-                current_turn.proactive_lifecycle_availability_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_RETENTION_UPDATED:
-                current_turn.proactive_lifecycle_retention_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ELIGIBILITY_UPDATED:
-                current_turn.proactive_lifecycle_eligibility_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CANDIDATE_UPDATED:
-                current_turn.proactive_lifecycle_candidate_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_SELECTABILITY_UPDATED:
-                current_turn.proactive_lifecycle_selectability_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_REENTRY_UPDATED:
-                current_turn.proactive_lifecycle_reentry_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_REACTIVATION_UPDATED:
-                current_turn.proactive_lifecycle_reactivation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_RESUMPTION_UPDATED:
-                current_turn.proactive_lifecycle_resumption_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_READINESS_UPDATED:
-                current_turn.proactive_lifecycle_readiness_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ARMING_UPDATED:
-                current_turn.proactive_lifecycle_arming_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_TRIGGER_UPDATED:
-                current_turn.proactive_lifecycle_trigger_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_LAUNCH_UPDATED:
-                current_turn.proactive_lifecycle_launch_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_HANDOFF_UPDATED:
-                current_turn.proactive_lifecycle_handoff_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CONTINUATION_UPDATED:
-                current_turn.proactive_lifecycle_continuation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_SUSTAINMENT_UPDATED:
-                current_turn.proactive_lifecycle_sustainment_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_STEWARDSHIP_UPDATED:
-                current_turn.proactive_lifecycle_stewardship_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_GUARDIANSHIP_UPDATED:
-                current_turn.proactive_lifecycle_guardianship_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_OVERSIGHT_UPDATED:
-                current_turn.proactive_lifecycle_oversight_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ASSURANCE_UPDATED:
-                current_turn.proactive_lifecycle_assurance_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ATTESTATION_UPDATED:
-                current_turn.proactive_lifecycle_attestation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_VERIFICATION_UPDATED:
-                current_turn.proactive_lifecycle_verification_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CERTIFICATION_UPDATED:
-                current_turn.proactive_lifecycle_certification_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CONFIRMATION_UPDATED:
-                current_turn.proactive_lifecycle_confirmation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_RATIFICATION_UPDATED:
-                current_turn.proactive_lifecycle_ratification_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ENDORSEMENT_UPDATED:
-                current_turn.proactive_lifecycle_endorsement_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_AUTHORIZATION_UPDATED:
-                current_turn.proactive_lifecycle_authorization_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ENACTMENT_UPDATED:
-                current_turn.proactive_lifecycle_enactment_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_FINALITY_UPDATED:
-                current_turn.proactive_lifecycle_finality_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_COMPLETION_UPDATED:
-                current_turn.proactive_lifecycle_completion_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_CONCLUSION_UPDATED:
-                current_turn.proactive_lifecycle_conclusion_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_DISPOSITION_UPDATED:
-                current_turn.proactive_lifecycle_disposition_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_STANDING_UPDATED:
-                current_turn.proactive_lifecycle_standing_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_RESIDENCY_UPDATED:
-                current_turn.proactive_lifecycle_residency_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_TENURE_UPDATED:
-                current_turn.proactive_lifecycle_tenure_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_PERSISTENCE_UPDATED:
-                current_turn.proactive_lifecycle_persistence_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_LONGEVITY_UPDATED:
-                current_turn.proactive_lifecycle_longevity_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_LEGACY_UPDATED:
-                current_turn.proactive_lifecycle_legacy_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_HERITAGE_UPDATED:
-                current_turn.proactive_lifecycle_heritage_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_LINEAGE_UPDATED:
-                current_turn.proactive_lifecycle_lineage_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_ANCESTRY_UPDATED:
-                current_turn.proactive_lifecycle_ancestry_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_PROVENANCE_UPDATED:
-                current_turn.proactive_lifecycle_provenance_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_ORIGIN_UPDATED:
-                current_turn.proactive_lifecycle_origin_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_ROOT_UPDATED:
-                current_turn.proactive_lifecycle_root_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_FOUNDATION_UPDATED:
-                current_turn.proactive_lifecycle_foundation_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_LIFECYCLE_BEDROCK_UPDATED:
-                current_turn.proactive_lifecycle_bedrock_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_SUBSTRATE_UPDATED:
-                current_turn.proactive_lifecycle_substrate_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_STRATUM_UPDATED:
-                current_turn.proactive_lifecycle_stratum_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_LAYER_UPDATED:
-                current_turn.proactive_lifecycle_layer_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_LIFECYCLE_DURABILITY_UPDATED:
-                current_turn.proactive_lifecycle_durability_decision = dict(
-                    event.payload
-                )
-            elif event.event_type == PROACTIVE_STAGE_REFRESH_UPDATED:
-                current_turn.proactive_stage_refresh_plan = dict(event.payload)
-            elif event.event_type == PROACTIVE_STAGE_REPLAN_UPDATED:
-                current_turn.proactive_stage_replan_assessment = dict(event.payload)
-            elif event.event_type == PROACTIVE_DISPATCH_FEEDBACK_ASSESSED:
-                current_turn.proactive_dispatch_feedback_assessment = dict(event.payload)
-            elif event.event_type == PROACTIVE_DISPATCH_GATE_UPDATED:
-                current_turn.proactive_dispatch_gate_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_DISPATCH_ENVELOPE_UPDATED:
-                current_turn.proactive_dispatch_envelope_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_STAGE_STATE_UPDATED:
-                current_turn.proactive_stage_state_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_STAGE_TRANSITION_UPDATED:
-                current_turn.proactive_stage_transition_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_STAGE_MACHINE_UPDATED:
-                current_turn.proactive_stage_machine_decision = dict(event.payload)
-            elif event.event_type == PROACTIVE_FOLLOWUP_DISPATCHED:
-                current_turn.proactive_followup_dispatch = dict(event.payload)
-            elif event.event_type == RESPONSE_NORMALIZED:
-                current_turn.response_normalization = dict(event.payload)
-            elif event.event_type == RESPONSE_POST_AUDITED:
-                current_turn.response_post_audit = dict(event.payload)
-            elif event.event_type == RUNTIME_QUALITY_DOCTOR_COMPLETED:
-                current_turn.runtime_quality_doctor_report = dict(event.payload)
-            elif event.event_type == SYSTEM3_SNAPSHOT_UPDATED:
-                current_turn.system3_snapshot = dict(event.payload)
-            elif event.event_type == PRIVATE_JUDGMENT_COMPUTED:
-                current_turn.private_judgment = dict(event.payload)
-            elif event.event_type == SESSION_DIRECTIVE_UPDATED:
-                current_turn.session_directive = dict(event.payload.get("directive", {}))
-                current_turn.strategy_decision = dict(event.payload.get("strategy", {}))
-            elif event.event_type == LLM_COMPLETION_FAILED:
-                current_turn.llm_failure = dict(event.payload)
+            if self._apply_turn_message_event(current_turn=current_turn, event=event):
+                continue
+            self._apply_turn_payload_event(current_turn=current_turn, event=event)
 
         if current_turn is not None:
             turns.append(current_turn)
 
         return turns
+
+    def _start_turn_record(
+        self,
+        *,
+        turns: list[TurnRecord],
+        current_turn: TurnRecord | None,
+        event: StoredEvent,
+    ) -> TurnRecord:
+        if current_turn is not None:
+            turns.append(current_turn)
+        return TurnRecord(
+            turn_index=len(turns) + 1,
+            user_message=str(event.payload.get("content", "")),
+        )
+
+    def _apply_turn_message_event(
+        self,
+        *,
+        current_turn: TurnRecord,
+        event: StoredEvent,
+    ) -> bool:
+        if event.event_type != ASSISTANT_MESSAGE_SENT:
+            return False
+        content = str(event.payload.get("content", ""))
+        if str(event.payload.get("delivery_mode", "")) == "proactive_followup":
+            current_turn.proactive_followup_message_event_count += 1
+            if content:
+                current_turn.proactive_followup_messages.append(content)
+            return True
+        current_turn.assistant_message_event_count += 1
+        if content:
+            current_turn.assistant_responses.append(content)
+            current_turn.assistant_message = (
+                f"{current_turn.assistant_message} {content}".strip()
+                if current_turn.assistant_message
+                else content
+            )
+        return True
+
+    def _apply_turn_payload_event(
+        self,
+        *,
+        current_turn: TurnRecord,
+        event: StoredEvent,
+    ) -> None:
+        if event.event_type == PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED:
+            apply_snapshot_to_turn_record(current_turn, dict(event.payload))
+            return
+        if event.event_type == PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED:
+            current_turn.proactive_aggregate_governance_assessment = dict(event.payload)
+            return
+        if event.event_type == PROACTIVE_AGGREGATE_CONTROLLER_UPDATED:
+            current_turn.proactive_aggregate_controller_decision = dict(event.payload)
+            return
+        if event.event_type == PROACTIVE_ORCHESTRATION_CONTROLLER_UPDATED:
+            current_turn.proactive_orchestration_controller_decision = dict(event.payload)
+            return
+        if event.event_type == SESSION_DIRECTIVE_UPDATED:
+            current_turn.session_directive = dict(event.payload.get("directive", {}))
+            current_turn.strategy_decision = dict(event.payload.get("strategy", {}))
+            return
+        field_name = _TURN_RECORD_PAYLOAD_EVENT_FIELDS.get(event.event_type)
+        if field_name is not None:
+            setattr(current_turn, field_name, dict(event.payload))
 
     def _build_preference_record(
         self,
@@ -941,603 +1159,11 @@ class EvaluationService:
         if int(summary.get("llm_failure_count") or 0) > 0:
             quality_floor_score -= 0.2
             filtering_reasons.append("runtime_failures")
-        quality_status = str(summary.get("output_quality_status") or "stable")
-        if quality_status == "watch":
-            quality_floor_score -= 0.2
-            filtering_reasons.append("quality_watch")
-        elif quality_status == "degrading":
-            quality_floor_score -= 0.4
-            filtering_reasons.append("quality_degrading")
-        runtime_quality_status = str(
-            summary.get("latest_runtime_quality_doctor_status") or "pass"
+        quality_floor_score = self._apply_preference_status_penalties(
+            summary=summary,
+            quality_floor_score=quality_floor_score,
+            filtering_reasons=filtering_reasons,
         )
-        if runtime_quality_status == "watch":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("runtime_quality_doctor_watch")
-        elif runtime_quality_status == "revise":
-            quality_floor_score -= 0.2
-            filtering_reasons.append("runtime_quality_doctor_revise")
-        identity_trajectory_status = str(
-            summary.get("latest_system3_identity_trajectory_status") or "stable"
-        )
-        if identity_trajectory_status == "watch":
-            quality_floor_score -= 0.06
-            filtering_reasons.append("system3_identity_trajectory_watch")
-        elif identity_trajectory_status == "recenter":
-            quality_floor_score -= 0.14
-            filtering_reasons.append("system3_identity_trajectory_recenter")
-        strategy_audit_status = str(
-            summary.get("latest_system3_strategy_audit_status") or "pass"
-        )
-        if strategy_audit_status == "watch":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("system3_strategy_audit_watch")
-        elif strategy_audit_status == "revise":
-            quality_floor_score -= 0.2
-            filtering_reasons.append("system3_strategy_audit_revise")
-        strategy_audit_trajectory_status = str(
-            summary.get("latest_system3_strategy_audit_trajectory_status")
-            or "stable"
-        )
-        if strategy_audit_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_strategy_audit_trajectory_watch")
-        elif strategy_audit_trajectory_status == "corrective":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("system3_strategy_audit_trajectory_corrective")
-        strategy_supervision_status = str(
-            summary.get("latest_system3_strategy_supervision_status") or "pass"
-        )
-        if strategy_supervision_status == "watch":
-            quality_floor_score -= 0.08
-            filtering_reasons.append("system3_strategy_supervision_watch")
-        elif strategy_supervision_status == "revise":
-            quality_floor_score -= 0.18
-            filtering_reasons.append("system3_strategy_supervision_revise")
-        strategy_supervision_trajectory_status = str(
-            summary.get("latest_system3_strategy_supervision_trajectory_status")
-            or "stable"
-        )
-        if strategy_supervision_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_strategy_supervision_trajectory_watch")
-        elif strategy_supervision_trajectory_status == "tighten":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_strategy_supervision_trajectory_tighten"
-            )
-        moral_reasoning_status = str(
-            summary.get("latest_system3_moral_reasoning_status") or "pass"
-        )
-        if moral_reasoning_status == "watch":
-            quality_floor_score -= 0.08
-            filtering_reasons.append("system3_moral_reasoning_watch")
-        elif moral_reasoning_status == "revise":
-            quality_floor_score -= 0.18
-            filtering_reasons.append("system3_moral_reasoning_revise")
-        moral_trajectory_status = str(
-            summary.get("latest_system3_moral_trajectory_status") or "stable"
-        )
-        if moral_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_moral_trajectory_watch")
-        elif moral_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("system3_moral_trajectory_recenter")
-        user_model_evolution_status = str(
-            summary.get("latest_system3_user_model_evolution_status") or "pass"
-        )
-        if user_model_evolution_status == "watch":
-            quality_floor_score -= 0.06
-            filtering_reasons.append("system3_user_model_evolution_watch")
-        elif user_model_evolution_status == "revise":
-            quality_floor_score -= 0.14
-            filtering_reasons.append("system3_user_model_evolution_revise")
-        user_model_trajectory_status = str(
-            summary.get("latest_system3_user_model_trajectory_status") or "stable"
-        )
-        if user_model_trajectory_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_user_model_trajectory_watch")
-        elif user_model_trajectory_status == "recenter":
-            quality_floor_score -= 0.12
-            filtering_reasons.append("system3_user_model_trajectory_recenter")
-        expectation_calibration_status = str(
-            summary.get("latest_system3_expectation_calibration_status") or "pass"
-        )
-        if expectation_calibration_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_expectation_calibration_watch")
-        elif expectation_calibration_status == "revise":
-            quality_floor_score -= 0.12
-            filtering_reasons.append("system3_expectation_calibration_revise")
-        expectation_calibration_trajectory_status = str(
-            summary.get("latest_system3_expectation_calibration_trajectory_status")
-            or "stable"
-        )
-        if expectation_calibration_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_expectation_calibration_trajectory_watch"
-            )
-        elif expectation_calibration_trajectory_status == "reset":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_expectation_calibration_trajectory_reset"
-            )
-        dependency_governance_status = str(
-            summary.get("latest_system3_dependency_governance_status") or "pass"
-        )
-        if dependency_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_dependency_governance_watch")
-        elif dependency_governance_status == "revise":
-            quality_floor_score -= 0.12
-            filtering_reasons.append("system3_dependency_governance_revise")
-        dependency_governance_trajectory_status = str(
-            summary.get("latest_system3_dependency_governance_trajectory_status")
-            or "stable"
-        )
-        if dependency_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_dependency_governance_trajectory_watch"
-            )
-        elif dependency_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_dependency_governance_trajectory_recenter"
-            )
-        autonomy_governance_status = str(
-            summary.get("latest_system3_autonomy_governance_status") or "pass"
-        )
-        if autonomy_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_autonomy_governance_watch")
-        elif autonomy_governance_status == "revise":
-            quality_floor_score -= 0.12
-            filtering_reasons.append("system3_autonomy_governance_revise")
-        autonomy_governance_trajectory_status = str(
-            summary.get("latest_system3_autonomy_governance_trajectory_status")
-            or "stable"
-        )
-        if autonomy_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_autonomy_governance_trajectory_watch"
-            )
-        elif autonomy_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_autonomy_governance_trajectory_recenter"
-            )
-        boundary_governance_status = str(
-            summary.get("latest_system3_boundary_governance_status") or "pass"
-        )
-        if boundary_governance_status == "watch":
-            quality_floor_score -= 0.06
-            filtering_reasons.append("system3_boundary_governance_watch")
-        elif boundary_governance_status == "revise":
-            quality_floor_score -= 0.14
-            filtering_reasons.append("system3_boundary_governance_revise")
-        boundary_governance_trajectory_status = str(
-            summary.get("latest_system3_boundary_governance_trajectory_status")
-            or "stable"
-        )
-        if boundary_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append(
-                "system3_boundary_governance_trajectory_watch"
-            )
-        elif boundary_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.11
-            filtering_reasons.append(
-                "system3_boundary_governance_trajectory_recenter"
-            )
-        support_governance_status = str(
-            summary.get("latest_system3_support_governance_status") or "pass"
-        )
-        if support_governance_status == "watch":
-            quality_floor_score -= 0.06
-            filtering_reasons.append("system3_support_governance_watch")
-        elif support_governance_status == "revise":
-            quality_floor_score -= 0.14
-            filtering_reasons.append("system3_support_governance_revise")
-        support_governance_trajectory_status = str(
-            summary.get("latest_system3_support_governance_trajectory_status")
-            or "stable"
-        )
-        if support_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append(
-                "system3_support_governance_trajectory_watch"
-            )
-        elif support_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.11
-            filtering_reasons.append(
-                "system3_support_governance_trajectory_recenter"
-            )
-        continuity_governance_status = str(
-            summary.get("latest_system3_continuity_governance_status") or "pass"
-        )
-        if continuity_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_continuity_governance_watch")
-        elif continuity_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_continuity_governance_revise")
-        continuity_governance_trajectory_status = str(
-            summary.get("latest_system3_continuity_governance_trajectory_status")
-            or "stable"
-        )
-        if continuity_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_continuity_governance_trajectory_watch"
-            )
-        elif continuity_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_continuity_governance_trajectory_recenter"
-            )
-        repair_governance_status = str(
-            summary.get("latest_system3_repair_governance_status") or "pass"
-        )
-        if repair_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_repair_governance_watch")
-        elif repair_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_repair_governance_revise")
-        repair_governance_trajectory_status = str(
-            summary.get("latest_system3_repair_governance_trajectory_status")
-            or "stable"
-        )
-        if repair_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_repair_governance_trajectory_watch"
-            )
-        elif repair_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_repair_governance_trajectory_recenter"
-            )
-        attunement_governance_status = str(
-            summary.get("latest_system3_attunement_governance_status") or "pass"
-        )
-        if attunement_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_attunement_governance_watch")
-        elif attunement_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_attunement_governance_revise")
-        attunement_governance_trajectory_status = str(
-            summary.get("latest_system3_attunement_governance_trajectory_status")
-            or "stable"
-        )
-        if attunement_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_attunement_governance_trajectory_watch"
-            )
-        elif attunement_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_attunement_governance_trajectory_recenter"
-            )
-        trust_governance_status = str(
-            summary.get("latest_system3_trust_governance_status") or "pass"
-        )
-        if trust_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_trust_governance_watch")
-        elif trust_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_trust_governance_revise")
-        trust_governance_trajectory_status = str(
-            summary.get("latest_system3_trust_governance_trajectory_status")
-            or "stable"
-        )
-        if trust_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_trust_governance_trajectory_watch"
-            )
-        elif trust_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_trust_governance_trajectory_recenter"
-            )
-        clarity_governance_status = str(
-            summary.get("latest_system3_clarity_governance_status") or "pass"
-        )
-        if clarity_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_clarity_governance_watch")
-        elif clarity_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_clarity_governance_revise")
-        clarity_governance_trajectory_status = str(
-            summary.get("latest_system3_clarity_governance_trajectory_status")
-            or "stable"
-        )
-        if clarity_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_clarity_governance_trajectory_watch"
-            )
-        elif clarity_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_clarity_governance_trajectory_recenter"
-            )
-        pacing_governance_status = str(
-            summary.get("latest_system3_pacing_governance_status") or "pass"
-        )
-        if pacing_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_pacing_governance_watch")
-        elif pacing_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_pacing_governance_revise")
-        pacing_governance_trajectory_status = str(
-            summary.get("latest_system3_pacing_governance_trajectory_status")
-            or "stable"
-        )
-        if pacing_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_pacing_governance_trajectory_watch"
-            )
-        elif pacing_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_pacing_governance_trajectory_recenter"
-            )
-        commitment_governance_status = str(
-            summary.get("latest_system3_commitment_governance_status") or "pass"
-        )
-        if commitment_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_commitment_governance_watch")
-        elif commitment_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_commitment_governance_revise")
-        commitment_governance_trajectory_status = str(
-            summary.get("latest_system3_commitment_governance_trajectory_status")
-            or "stable"
-        )
-        if commitment_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_commitment_governance_trajectory_watch"
-            )
-        elif commitment_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_commitment_governance_trajectory_recenter"
-            )
-        disclosure_governance_status = str(
-            summary.get("latest_system3_disclosure_governance_status") or "pass"
-        )
-        if disclosure_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_disclosure_governance_watch")
-        elif disclosure_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_disclosure_governance_revise")
-        disclosure_governance_trajectory_status = str(
-            summary.get("latest_system3_disclosure_governance_trajectory_status")
-            or "stable"
-        )
-        if disclosure_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_disclosure_governance_trajectory_watch"
-            )
-        elif disclosure_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_disclosure_governance_trajectory_recenter"
-            )
-        reciprocity_governance_status = str(
-            summary.get("latest_system3_reciprocity_governance_status") or "pass"
-        )
-        if reciprocity_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_reciprocity_governance_watch")
-        elif reciprocity_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_reciprocity_governance_revise")
-        reciprocity_governance_trajectory_status = str(
-            summary.get("latest_system3_reciprocity_governance_trajectory_status")
-            or "stable"
-        )
-        if reciprocity_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_reciprocity_governance_trajectory_watch"
-            )
-        elif reciprocity_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_reciprocity_governance_trajectory_recenter"
-            )
-        pressure_governance_status = str(
-            summary.get("latest_system3_pressure_governance_status") or "pass"
-        )
-        if pressure_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_pressure_governance_watch")
-        elif pressure_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_pressure_governance_revise")
-        pressure_governance_trajectory_status = str(
-            summary.get("latest_system3_pressure_governance_trajectory_status")
-            or "stable"
-        )
-        if pressure_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_pressure_governance_trajectory_watch"
-            )
-        elif pressure_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_pressure_governance_trajectory_recenter"
-            )
-        relational_governance_status = str(
-            summary.get("latest_system3_relational_governance_status") or "pass"
-        )
-        if relational_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_relational_governance_watch")
-        elif relational_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_relational_governance_revise")
-        relational_governance_trajectory_status = str(
-            summary.get("latest_system3_relational_governance_trajectory_status")
-            or "stable"
-        )
-        if relational_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_relational_governance_trajectory_watch"
-            )
-        elif relational_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_relational_governance_trajectory_recenter"
-            )
-        safety_governance_status = str(
-            summary.get("latest_system3_safety_governance_status") or "pass"
-        )
-        if safety_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_safety_governance_watch")
-        elif safety_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_safety_governance_revise")
-        safety_governance_trajectory_status = str(
-            summary.get("latest_system3_safety_governance_trajectory_status")
-            or "stable"
-        )
-        if safety_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_safety_governance_trajectory_watch"
-            )
-        elif safety_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_safety_governance_trajectory_recenter"
-            )
-        progress_governance_status = str(
-            summary.get("latest_system3_progress_governance_status") or "pass"
-        )
-        if progress_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_progress_governance_watch")
-        elif progress_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_progress_governance_revise")
-        progress_governance_trajectory_status = str(
-            summary.get("latest_system3_progress_governance_trajectory_status")
-            or "stable"
-        )
-        if progress_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_progress_governance_trajectory_watch"
-            )
-        elif progress_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_progress_governance_trajectory_recenter"
-            )
-        stability_governance_status = str(
-            summary.get("latest_system3_stability_governance_status") or "pass"
-        )
-        if stability_governance_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_stability_governance_watch")
-        elif stability_governance_status == "revise":
-            quality_floor_score -= 0.13
-            filtering_reasons.append("system3_stability_governance_revise")
-        stability_governance_trajectory_status = str(
-            summary.get("latest_system3_stability_governance_trajectory_status")
-            or "stable"
-        )
-        if stability_governance_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append(
-                "system3_stability_governance_trajectory_watch"
-            )
-        elif stability_governance_trajectory_status == "recenter":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_stability_governance_trajectory_recenter"
-            )
-        growth_transition_status = str(
-            summary.get("latest_system3_growth_transition_status") or "stable"
-        )
-        if growth_transition_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_growth_transition_watch")
-        elif growth_transition_status == "redirect":
-            quality_floor_score -= 0.12
-            filtering_reasons.append("system3_growth_transition_redirect")
-        growth_transition_trajectory_status = str(
-            summary.get("latest_system3_growth_transition_trajectory_status")
-            or "stable"
-        )
-        if growth_transition_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_growth_transition_trajectory_watch")
-        elif growth_transition_trajectory_status == "redirect":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("system3_growth_transition_trajectory_redirect")
-        version_migration_status = str(
-            summary.get("latest_system3_version_migration_status") or "pass"
-        )
-        if version_migration_status == "watch":
-            quality_floor_score -= 0.06
-            filtering_reasons.append("system3_version_migration_watch")
-        elif version_migration_status == "revise":
-            quality_floor_score -= 0.14
-            filtering_reasons.append("system3_version_migration_revise")
-        version_migration_trajectory_status = str(
-            summary.get("latest_system3_version_migration_trajectory_status")
-            or "stable"
-        )
-        if version_migration_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_version_migration_trajectory_watch")
-        elif version_migration_trajectory_status == "hold":
-            quality_floor_score -= 0.1
-            filtering_reasons.append("system3_version_migration_trajectory_hold")
-        emotional_debt_status = str(
-            summary.get("latest_system3_emotional_debt_status") or "low"
-        )
-        if emotional_debt_status == "watch":
-            quality_floor_score -= 0.05
-            filtering_reasons.append("system3_emotional_debt_watch")
-        elif emotional_debt_status == "elevated":
-            quality_floor_score -= 0.15
-            filtering_reasons.append("system3_emotional_debt_elevated")
-        emotional_debt_trajectory_status = str(
-            summary.get("latest_system3_emotional_debt_trajectory_status")
-            or "stable"
-        )
-        if emotional_debt_trajectory_status == "watch":
-            quality_floor_score -= 0.04
-            filtering_reasons.append("system3_emotional_debt_trajectory_watch")
-        elif emotional_debt_trajectory_status == "decompression_required":
-            quality_floor_score -= 0.1
-            filtering_reasons.append(
-                "system3_emotional_debt_trajectory_decompression"
-            )
         if safety and safety < 0.6:
             quality_floor_score -= 0.15
             filtering_reasons.append("low_psychological_safety")
@@ -1577,6 +1203,22 @@ class EvaluationService:
             context_stratum=context_stratum,
             filtering_reasons=filtering_reasons,
         )
+
+    def _apply_preference_status_penalties(
+        self,
+        *,
+        summary: dict[str, Any],
+        quality_floor_score: float,
+        filtering_reasons: list[str],
+    ) -> float:
+        for field_name, default_value, rules in _PREFERENCE_STATUS_RULES:
+            status = str(summary.get(field_name) or default_value)
+            for expected_status, penalty, reason in rules:
+                if status == expected_status:
+                    quality_floor_score -= penalty
+                    filtering_reasons.append(reason)
+                    break
+        return quality_floor_score
 
     def _build_strategy_preference_record(
         self,
@@ -1667,3 +1309,265 @@ class EvaluationService:
             flags.append("steady_progress")
         return "+".join(flags[:3])
 
+    async def build_dispatch_outcome_learning_report(
+        self,
+        *,
+        context_stratum: str | None = None,
+        strategy_keys: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Aggregate dispatch outcomes into a learning report.
+
+        Reads all ``PROACTIVE_DISPATCH_OUTCOME_RECORDED`` events across
+        non-scenario sessions and computes response_rate, positive_outcome_rate,
+        and outcome_score per ``strategy_key x context_stratum`` combination.
+        """
+        requested_keys = {
+            str(k) for k in (strategy_keys or []) if str(k or "").strip()
+        }
+        session_ids = await self._stream_service.list_stream_ids()
+        outcome_events: list[dict[str, Any]] = []
+        for sid in session_ids:
+            events = await self._stream_service.read_stream(stream_id=sid)
+            started = next(
+                (e for e in events if e.event_type == SESSION_STARTED), None
+            )
+            if started is None:
+                continue
+            metadata = dict(started.payload.get("metadata", {}))
+            if metadata.get("source") == "scenario_evaluation":
+                continue
+            for event in events:
+                if event.event_type != PROACTIVE_DISPATCH_OUTCOME_RECORDED:
+                    continue
+                payload = dict(event.payload)
+                sk = str(payload.get("strategy_key") or "")
+                if not sk:
+                    continue
+                if requested_keys and sk not in requested_keys:
+                    continue
+                if (
+                    context_stratum
+                    and str(payload.get("context_stratum") or "") != context_stratum
+                ):
+                    continue
+                outcome_events.append(payload)
+
+        totals: dict[str, dict[str, Any]] = {}
+        for payload in outcome_events:
+            sk = str(payload["strategy_key"])
+            cs = str(payload.get("context_stratum") or "steady_progress")
+            key = f"{sk}::{cs}"
+            entry = totals.setdefault(
+                key,
+                {
+                    "strategy_key": sk,
+                    "context_stratum": cs,
+                    "total": 0,
+                    "responded": 0,
+                    "ignored": 0,
+                    "negative_signal": 0,
+                    "quality_signals": [],
+                    "latencies": [],
+                },
+            )
+            entry["total"] += 1
+            otype = str(payload.get("outcome_type") or "ignored")
+            if otype in entry:
+                entry[otype] += 1
+            qs = payload.get("quality_signal")
+            if qs is not None:
+                entry["quality_signals"].append(float(qs))
+            lat = payload.get("response_latency_seconds")
+            if lat is not None:
+                entry["latencies"].append(float(lat))
+
+        strategies: list[dict[str, Any]] = []
+        for entry in totals.values():
+            total = entry["total"]
+            responded = entry["responded"]
+            negative = entry["negative_signal"]
+            response_rate = responded / total if total else 0.0
+            positive_outcome_rate = (
+                (responded - negative) / total if total else 0.0
+            )
+            avg_quality = (
+                round(mean(entry["quality_signals"]), 3)
+                if entry["quality_signals"]
+                else None
+            )
+            avg_latency = (
+                round(mean(entry["latencies"]), 1)
+                if entry["latencies"]
+                else None
+            )
+            outcome_score = round(
+                response_rate * 0.5 + max(0.0, positive_outcome_rate) * 0.5,
+                3,
+            )
+            strategies.append(
+                {
+                    "strategy_key": entry["strategy_key"],
+                    "context_stratum": entry["context_stratum"],
+                    "total_dispatches": total,
+                    "responded_count": responded,
+                    "ignored_count": entry["ignored"],
+                    "negative_signal_count": negative,
+                    "response_rate": round(response_rate, 3),
+                    "positive_outcome_rate": round(max(0.0, positive_outcome_rate), 3),
+                    "outcome_score": outcome_score,
+                    "avg_quality_signal": avg_quality,
+                    "avg_response_latency_seconds": avg_latency,
+                }
+            )
+        strategies.sort(
+            key=lambda s: (s["outcome_score"], s["total_dispatches"]),
+            reverse=True,
+        )
+        total_dispatches = sum(s["total_dispatches"] for s in strategies)
+        total_responded = sum(s["responded_count"] for s in strategies)
+        return {
+            "total_dispatches": total_dispatches,
+            "total_responded": total_responded,
+            "overall_response_rate": (
+                round(total_responded / total_dispatches, 3) if total_dispatches else 0.0
+            ),
+            "strategy_count": len(strategies),
+            "context_stratum_filter": context_stratum,
+            "strategies": strategies,
+        }
+
+    async def build_stage_parameter_learning_report(
+        self,
+        *,
+        context_stratum: str | None = None,
+    ) -> dict[str, Any]:
+        """Aggregate dispatch outcomes by stage_label to learn per-stage parameters.
+
+        Groups ``PROACTIVE_DISPATCH_OUTCOME_RECORDED`` and nearby
+        ``PROACTIVE_FOLLOWUP_DISPATCHED`` events by ``stage_label x context_stratum``
+        and computes recommended delay, delivery_mode, pressure_mode, and confidence.
+        """
+        session_ids = await self._stream_service.list_stream_ids()
+
+        GroupKey = tuple[str, str]
+        outcome_groups: dict[GroupKey, list[dict[str, Any]]] = defaultdict(list)
+        dispatch_events_by_session: dict[str, list[dict[str, Any]]] = defaultdict(list)
+
+        for sid in session_ids:
+            events = await self._stream_service.read_stream(stream_id=sid)
+            started = next(
+                (e for e in events if e.event_type == SESSION_STARTED), None
+            )
+            if started is None:
+                continue
+            metadata = dict(started.payload.get("metadata", {}))
+            if metadata.get("source") == "scenario_evaluation":
+                continue
+
+            for event in events:
+                if event.event_type == PROACTIVE_FOLLOWUP_DISPATCHED:
+                    dispatch_events_by_session[sid].append(dict(event.payload))
+                elif event.event_type == PROACTIVE_DISPATCH_OUTCOME_RECORDED:
+                    payload = dict(event.payload)
+                    sl = str(payload.get("stage_label") or "")
+                    if not sl:
+                        continue
+                    cs = str(payload.get("context_stratum") or "steady_progress")
+                    if context_stratum and cs != context_stratum:
+                        continue
+                    payload["_session_id"] = sid
+                    outcome_groups[(sl, cs)].append(payload)
+
+        stages: list[dict[str, Any]] = []
+        for (stage_label, cs), outcomes in outcome_groups.items():
+            responded_outcomes = [
+                o for o in outcomes if str(o.get("outcome_type")) == "responded"
+            ]
+            responded_count = len(responded_outcomes)
+            sample_count = len(outcomes)
+
+            latencies = [
+                float(o["response_latency_seconds"])
+                for o in responded_outcomes
+                if o.get("response_latency_seconds") is not None
+            ]
+            avg_latency = mean(latencies) if latencies else 0.0
+            if avg_latency > 7200:
+                learned_extra_delay = 1200
+            elif avg_latency > 3600:
+                learned_extra_delay = 600
+            else:
+                learned_extra_delay = 0
+
+            delivery_mode_counts: dict[str, dict[str, int]] = defaultdict(
+                lambda: {"total": 0, "responded": 0}
+            )
+            pressure_mode_counts: dict[str, dict[str, int]] = defaultdict(
+                lambda: {"total": 0, "responded": 0}
+            )
+            responded_dispatch_ids = {
+                str(o.get("dispatch_event_id"))
+                for o in responded_outcomes
+                if o.get("dispatch_event_id")
+            }
+            for outcome in outcomes:
+                sid = outcome.get("_session_id", "")
+                dispatch_id = str(outcome.get("dispatch_event_id") or "")
+                dispatches = dispatch_events_by_session.get(sid, [])
+                matched = next(
+                    (
+                        d
+                        for d in dispatches
+                        if str(d.get("dispatch_event_id") or d.get("event_id") or "") == dispatch_id
+                    ),
+                    None,
+                )
+                if matched is None:
+                    continue
+                dm = str(matched.get("delivery_mode") or "none")
+                pm = str(matched.get("pressure_mode") or "none")
+                delivery_mode_counts[dm]["total"] += 1
+                pressure_mode_counts[pm]["total"] += 1
+                if dispatch_id in responded_dispatch_ids:
+                    delivery_mode_counts[dm]["responded"] += 1
+                    pressure_mode_counts[pm]["responded"] += 1
+
+            learned_delivery_mode = "none"
+            best_dm_rate = -1.0
+            for dm, counts in delivery_mode_counts.items():
+                rate = counts["responded"] / counts["total"] if counts["total"] else 0.0
+                if rate > best_dm_rate or (rate == best_dm_rate and counts["total"] > 0):
+                    best_dm_rate = rate
+                    learned_delivery_mode = dm
+
+            learned_pressure_mode = "none"
+            best_pm_rate = -1.0
+            for pm, counts in pressure_mode_counts.items():
+                rate = counts["responded"] / counts["total"] if counts["total"] else 0.0
+                if rate > best_pm_rate or (rate == best_pm_rate and counts["total"] > 0):
+                    best_pm_rate = rate
+                    learned_pressure_mode = pm
+
+            confidence = round(min(1.0, responded_count / 10.0), 3)
+
+            stages.append(
+                {
+                    "stage_label": stage_label,
+                    "context_stratum": cs,
+                    "learned_extra_delay_seconds": learned_extra_delay,
+                    "learned_delivery_mode": learned_delivery_mode,
+                    "learned_pressure_mode": learned_pressure_mode,
+                    "confidence": confidence,
+                    "sample_count": sample_count,
+                }
+            )
+
+        stages.sort(
+            key=lambda s: (s["confidence"], s["sample_count"]),
+            reverse=True,
+        )
+        return {
+            "stage_count": len(stages),
+            "context_stratum_filter": context_stratum,
+            "stages": stages,
+        }

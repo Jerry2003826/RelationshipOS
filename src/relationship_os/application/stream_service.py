@@ -61,12 +61,27 @@ class StreamService:
         projector_name: str,
         projector_version: str,
     ) -> dict[str, object]:
+        events = await self._event_store.read_stream(stream_id=stream_id)
+        return self.project_events(
+            stream_id=stream_id,
+            events=events,
+            projector_name=projector_name,
+            projector_version=projector_version,
+        )
+
+    def project_events(
+        self,
+        *,
+        stream_id: str,
+        events: list[StoredEvent],
+        projector_name: str,
+        projector_version: str,
+    ) -> dict[str, object]:
         projector = self._projector_registry.resolve(
             name=projector_name,
             version=projector_version,
         )
         state = projector.initial_state()
-        events = await self._event_store.read_stream(stream_id=stream_id)
         for event in events:
             state = projector.apply(state, event)
         return {
@@ -76,6 +91,31 @@ class StreamService:
             },
             "stream_id": stream_id,
             "state": state,
+        }
+
+    def apply_events(
+        self,
+        *,
+        stream_id: str,
+        state: dict[str, object],
+        events: list[StoredEvent],
+        projector_name: str,
+        projector_version: str,
+    ) -> dict[str, object]:
+        projector = self._projector_registry.resolve(
+            name=projector_name,
+            version=projector_version,
+        )
+        next_state = state
+        for event in events:
+            next_state = projector.apply(next_state, event)
+        return {
+            "projector": {
+                "name": projector_name,
+                "version": projector_version,
+            },
+            "stream_id": stream_id,
+            "state": next_state,
         }
 
     def serialize_event(self, event: StoredEvent) -> dict[str, object]:
@@ -101,13 +141,15 @@ class StreamService:
     ) -> dict[str, object]:
         events = await self._event_store.read_stream(stream_id=stream_id)
         serialized_events = [self.serialize_event(event) for event in events]
-        projection = await self.project_stream(
+        projection = self.project_events(
             stream_id=stream_id,
+            events=events,
             projector_name=projector_name,
             projector_version=projector_version,
         )
-        replay_check = await self.project_stream(
+        replay_check = self.project_events(
             stream_id=stream_id,
+            events=events,
             projector_name=projector_name,
             projector_version=projector_version,
         )

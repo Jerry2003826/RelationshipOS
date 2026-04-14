@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小悠 · 对话</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #18181f;
+      --surface2: #22222c;
+      --border: #2e2e3a;
+      --accent: #7c6cfc;
+      --accent-soft: #a89cf5;
+      --text: #e8e8f0;
+      --text-dim: #888898;
+      --user-bubble: #2a2260;
+      --ai-bubble: #1e1e28;
+      --danger: #f87171;
+      --radius: 16px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ── */
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c6cfc, #a89cf5);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    .header-info { flex: 1; }
+    .header-name { font-weight: 600; font-size: 15px; }
+    .header-status { font-size: 12px; color: var(--text-dim); }
+    .header-status.online::before {
+      content: "● ";
+      color: #4ade80;
+      font-size: 9px;
+      vertical-align: middle;
+    }
+
+    .header-actions { display: flex; gap: 8px; }
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); padding: 6px; border-radius: 8px;
+      font-size: 16px; transition: color .15s, background .15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .btn-icon:hover { color: var(--text); background: var(--surface2); }
+
+    /* ── Session bar ── */
+    #session-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 20px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; color: var(--text-dim);
+      flex-shrink: 0;
+    }
+    #session-bar select {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 4px 8px;
+      font-size: 12px; cursor: pointer; flex: 1; max-width: 200px;
+    }
+    #session-bar select:focus { outline: none; border-color: var(--accent); }
+    .btn-sm {
+      padding: 4px 10px; border-radius: 8px; font-size: 12px;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-dim); cursor: pointer; transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { color: var(--text); border-color: var(--accent-soft); }
+    .btn-sm.primary {
+      background: var(--accent); color: #fff; border-color: var(--accent);
+    }
+    .btn-sm.primary:hover { background: var(--accent-soft); }
+
+    /* ── Messages ── */
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Empty state */
+    .empty-state {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; color: var(--text-dim); text-align: center;
+      padding: 40px;
+    }
+    .empty-icon { font-size: 48px; }
+    .empty-title { font-size: 18px; font-weight: 600; color: var(--text); }
+    .empty-hints { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 8px; }
+    .hint-chip {
+      padding: 6px 14px; border-radius: 20px;
+      border: 1px solid var(--border); background: var(--surface);
+      font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .hint-chip:hover { border-color: var(--accent-soft); color: var(--accent-soft); }
+
+    /* Message row */
+    .msg-row {
+      display: flex; gap: 10px;
+      animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; } }
+
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .msg-avatar {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; margin-top: 2px;
+    }
+    .msg-row.ai .msg-avatar { background: linear-gradient(135deg, #7c6cfc44, #a89cf522); }
+    .msg-row.user .msg-avatar { background: var(--user-bubble); font-size: 12px; }
+
+    .msg-content { max-width: 80%; display: flex; flex-direction: column; gap: 4px; }
+    .msg-row.user .msg-content { align-items: flex-end; }
+
+    .msg-bubble {
+      padding: 10px 14px; border-radius: var(--radius);
+      line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+      font-size: 14.5px;
+    }
+    .msg-row.ai .msg-bubble {
+      background: var(--ai-bubble); border: 1px solid var(--border);
+      border-top-left-radius: 4px;
+    }
+    .msg-row.user .msg-bubble {
+      background: var(--user-bubble); border: 1px solid #3d3480;
+      border-top-right-radius: 4px; color: #d4cfff;
+    }
+
+    .msg-meta { font-size: 11px; color: var(--text-dim); padding: 0 4px; }
+
+    /* Typing indicator */
+    .msg-row.typing .msg-bubble {
+      padding: 12px 16px;
+    }
+    .typing-dots { display: flex; gap: 4px; }
+    .typing-dots span {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-dim);
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: .3; transform: scale(.8); }
+      40% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Error bubble */
+    .msg-bubble.error { background: #2d1515; border-color: #7f2020; color: var(--danger); }
+
+    /* ── Input area ── */
+    #input-area {
+      padding: 16px 20px 20px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      display: flex; gap: 10px; align-items: flex-end;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 12px;
+      transition: border-color .15s;
+    }
+    .input-wrap:focus-within { border-color: var(--accent); }
+
+    #user-input {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--text); font-family: var(--font); font-size: 14.5px;
+      resize: none; max-height: 160px; line-height: 1.6;
+      scrollbar-width: none;
+    }
+    #user-input::placeholder { color: var(--text-dim); }
+    #user-input::-webkit-scrollbar { display: none; }
+
+    #send-btn {
+      flex-shrink: 0; width: 36px; height: 36px;
+      border-radius: 10px; border: none; cursor: pointer;
+      background: var(--accent); color: white;
+      font-size: 16px; display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .1s; align-self: flex-end;
+    }
+    #send-btn:hover:not(:disabled) { background: var(--accent-soft); }
+    #send-btn:active:not(:disabled) { transform: scale(.95); }
+    #send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+    .input-hint { font-size: 11px; color: var(--text-dim); margin-top: 6px; padding: 0 2px; }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(10px);
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 8px 16px; font-size: 13px;
+      color: var(--text-dim); pointer-events: none;
+      opacity: 0; transition: opacity .2s, transform .2s;
+      white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Scrollbar for select ── */
+    select option { background: var(--surface2); }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <header>
+    <div class="avatar">🌸</div>
+    <div class="header-info">
+      <div class="header-name">小悠</div>
+      <div class="header-status online" id="status-text">就绪</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-icon" title="清空当前对话" onclick="clearChat()">🗑️</button>
+      <button class="btn-icon" title="查看控制台" onclick="window.open('/api/v1/console','_blank')">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Session bar -->
+  <div id="session-bar">
+    <span>会话：</span>
+    <select id="session-select" onchange="onSessionChange()">
+      <option value="">加载中…</option>
+    </select>
+    <button class="btn-sm primary" onclick="newSession()">＋ 新会话</button>
+    <button class="btn-sm" onclick="loadSessions()">刷新</button>
+  </div>
+
+  <!-- Messages -->
+  <div id="messages">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">💬</div>
+      <div class="empty-title">开始和小悠聊聊吧</div>
+      <div style="font-size:13px">选择一个会话，或点击「＋ 新会话」开始</div>
+      <div class="empty-hints" id="hint-chips">
+        <div class="hint-chip" onclick="useHint(this)">最近怎么样？</div>
+        <div class="hint-chip" onclick="useHint(this)">我最近有点焦虑</div>
+        <div class="hint-chip" onclick="useHint(this)">聊聊我的工作吧</div>
+        <div class="hint-chip" onclick="useHint(this)">我需要一些建议</div>
+        <div class="hint-chip" onclick="useHint(this)">随便聊聊</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div id="input-area">
+    <div class="input-wrap">
+      <textarea
+        id="user-input"
+        rows="1"
+        placeholder="说点什么…"
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"
+      ></textarea>
+      <button id="send-btn" onclick="sendMessage()" title="发送 (Enter)">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Config ──
+const API_BASE = '/api/v1';
+const HEADERS = { 'Content-Type': 'application/json' };
+
+// ── State ──
+let currentSessionId = null;
+let isLoading = false;
+const messageHistory = []; // {role, text, time}
+
+// ── Init ──
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadSessions();
+});
+
+// ── Session management ──
+async function loadSessions() {
+  try {
+    const r = await fetch(`${API_BASE}/sessions`);
+    const data = await r.json();
+    const sessions = (data.sessions || []).slice(0, 30);
+    const sel = document.getElementById('session-select');
+    sel.innerHTML = '<option value="">— 选择会话 —</option>';
+    sessions.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.session_id || s;
+      opt.textContent = s.session_id || s;
+      sel.appendChild(opt);
+    });
+    if (currentSessionId) sel.value = currentSessionId;
+  } catch (e) {
+    showToast('加载会话列表失败');
+  }
+}
+
+function onSessionChange() {
+  const sel = document.getElementById('session-select');
+  const sid = sel.value;
+  if (!sid) return;
+  currentSessionId = sid;
+  messageHistory.length = 0;
+  clearMessages();
+  loadTranscript(sid);
+}
+
+async function newSession() {
+  const sid = 'chat_' + Date.now();
+  try {
+    setStatus('创建中…');
+    const r = await fetch(`${API_BASE}/sessions`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ session_id: sid }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    currentSessionId = sid;
+    messageHistory.length = 0;
+    clearMessages();
+    await loadSessions();
+    document.getElementById('session-select').value = sid;
+    setStatus('就绪');
+    document.getElementById('user-input').focus();
+    showToast(`已创建会话 ${sid}`);
+  } catch (e) {
+    setStatus('就绪');
+    showToast('创建会话失败：' + e.message);
+  }
+}
+
+async function loadTranscript(sessionId) {
+  try {
+    const r = await fetch(`${API_BASE}/sessions/${sessionId}`);
+    const data = await r.json();
+    const msgs = (data.state?.messages || []);
+    msgs.forEach(m => {
+      appendMessage(m.role === 'user' ? 'user' : 'ai', m.content || m.text || '', { noSave: true });
+    });
+    if (msgs.length === 0) showEmptyState();
+    else hideEmptyState();
+    scrollToBottom();
+  } catch (e) {
+    console.warn('transcript load failed', e);
+  }
+}
+
+// ── Send ──
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('user-input');
+  const text = input.value.trim();
+  if (!text) return;
+  if (!currentSessionId) {
+    showToast('请先选择或创建一个会话');
+    return;
+  }
+
+  input.value = '';
+  autoResize(input);
+  hideEmptyState();
+  appendMessage('user', text);
+  const typingId = showTyping();
+  setLoading(true);
+
+  try {
+    const r = await fetch(`${API_BASE}/sessions/${currentSessionId}/turns`, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({ content: text, generate_reply: true }),
+    });
+
+    removeTyping(typingId);
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ detail: r.statusText }));
+      appendMessage('ai', `❌ 错误：${err.detail || r.statusText}`, { isError: true });
+      return;
+    }
+
+    const data = await r.json();
+    const reply = data.assistant_response || '（无回复）';
+    appendMessage('ai', reply);
+  } catch (e) {
+    removeTyping(typingId);
+    appendMessage('ai', `❌ 网络错误：${e.message}`, { isError: true });
+  } finally {
+    setLoading(false);
+    input.focus();
+  }
+}
+
+// ── DOM helpers ──
+function appendMessage(role, text, opts = {}) {
+  const container = document.getElementById('messages');
+  if (!opts.noSave) messageHistory.push({ role, text, time: new Date() });
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  const avatarEl = document.createElement('div');
+  avatarEl.className = 'msg-avatar';
+  avatarEl.textContent = role === 'ai' ? '🌸' : '🧑';
+
+  const contentEl = document.createElement('div');
+  contentEl.className = 'msg-content';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble' + (opts.isError ? ' error' : '');
+  bubble.textContent = text;
+
+  const meta = document.createElement('div');
+  meta.className = 'msg-meta';
+  meta.textContent = fmtTime(new Date());
+
+  contentEl.appendChild(bubble);
+  contentEl.appendChild(meta);
+  row.appendChild(avatarEl);
+  row.appendChild(contentEl);
+  container.appendChild(row);
+  scrollToBottom();
+}
+
+function showTyping() {
+  const container = document.getElementById('messages');
+  const id = 'typing-' + Date.now();
+  const row = document.createElement('div');
+  row.className = 'msg-row ai typing';
+  row.id = id;
+  row.innerHTML = `
+    <div class="msg-avatar">🌸</div>
+    <div class="msg-content">
+      <div class="msg-bubble">
+        <div class="typing-dots"><span></span><span></span><span></span></div>
+      </div>
+    </div>`;
+  container.appendChild(row);
+  scrollToBottom();
+  return id;
+}
+
+function removeTyping(id) {
+  document.getElementById(id)?.remove();
+}
+
+function clearMessages() {
+  const container = document.getElementById('messages');
+  container.innerHTML = '';
+  showEmptyState();
+}
+
+function showEmptyState() {
+  const es = document.getElementById('empty-state');
+  if (es) {
+    es.style.display = 'flex';
+    document.getElementById('messages').appendChild(es);
+  } else {
+    // Recreate
+    document.getElementById('messages').innerHTML = `
+      <div class="empty-state" id="empty-state">
+        <div class="empty-icon">💬</div>
+        <div class="empty-title">开始和小悠聊聊吧</div>
+        <div style="font-size:13px">说点什么…</div>
+        <div class="empty-hints">
+          <div class="hint-chip" onclick="useHint(this)">最近怎么样？</div>
+          <div class="hint-chip" onclick="useHint(this)">我最近有点焦虑</div>
+          <div class="hint-chip" onclick="useHint(this)">聊聊我的工作吧</div>
+          <div class="hint-chip" onclick="useHint(this)">随便聊聊</div>
+        </div>
+      </div>`;
+  }
+}
+
+function hideEmptyState() {
+  document.getElementById('empty-state')?.remove();
+}
+
+function clearChat() {
+  if (!confirm('清空当前对话消息（仅清除显示，不影响后端数据）？')) return;
+  messageHistory.length = 0;
+  clearMessages();
+}
+
+function scrollToBottom() {
+  const el = document.getElementById('messages');
+  requestAnimationFrame(() => el.scrollTop = el.scrollHeight);
+}
+
+// ── Input helpers ──
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+function useHint(chip) {
+  if (!currentSessionId) {
+    showToast('请先创建或选择一个会话');
+    return;
+  }
+  document.getElementById('user-input').value = chip.textContent;
+  sendMessage();
+}
+
+// ── Status ──
+function setLoading(v) {
+  isLoading = v;
+  document.getElementById('send-btn').disabled = v;
+  setStatus(v ? '思考中…' : '就绪');
+}
+
+function setStatus(text) {
+  document.getElementById('status-text').textContent = text;
+}
+
+// ── Toast ──
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Util ──
+function fmtTime(d) {
+  return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+</script>
+</body>
+</html>

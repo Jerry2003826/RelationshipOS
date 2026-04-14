@@ -55,152 +55,12 @@ PROACTIVE_STAGE_MACHINE_UPDATED = "system.proactive_stage_machine.updated"
 PROACTIVE_LINE_STATE_UPDATED = "system.proactive_line_state.updated"
 PROACTIVE_LINE_TRANSITION_UPDATED = "system.proactive_line_transition.updated"
 PROACTIVE_LINE_MACHINE_UPDATED = "system.proactive_line_machine.updated"
-PROACTIVE_LIFECYCLE_STATE_UPDATED = "system.proactive_lifecycle_state.updated"
-PROACTIVE_LIFECYCLE_TRANSITION_UPDATED = "system.proactive_lifecycle_transition.updated"
-PROACTIVE_LIFECYCLE_MACHINE_UPDATED = "system.proactive_lifecycle_machine.updated"
-PROACTIVE_LIFECYCLE_CONTROLLER_UPDATED = (
-    "system.proactive_lifecycle_controller.updated"
+PROACTIVE_LIFECYCLE_EVENT_PREFIX = "system.proactive_lifecycle_"
+PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED = (
+    "system.proactive_lifecycle_snapshot.updated"
 )
-PROACTIVE_LIFECYCLE_ENVELOPE_UPDATED = (
-    "system.proactive_lifecycle_envelope.updated"
-)
-PROACTIVE_LIFECYCLE_SCHEDULER_UPDATED = (
-    "system.proactive_lifecycle_scheduler.updated"
-)
-PROACTIVE_LIFECYCLE_WINDOW_UPDATED = "system.proactive_lifecycle_window.updated"
-PROACTIVE_LIFECYCLE_QUEUE_UPDATED = "system.proactive_lifecycle_queue.updated"
-PROACTIVE_LIFECYCLE_DISPATCH_UPDATED = "system.proactive_lifecycle_dispatch.updated"
-PROACTIVE_LIFECYCLE_OUTCOME_UPDATED = "system.proactive_lifecycle_outcome.updated"
-PROACTIVE_LIFECYCLE_RESOLUTION_UPDATED = (
-    "system.proactive_lifecycle_resolution.updated"
-)
-PROACTIVE_LIFECYCLE_ACTIVATION_UPDATED = (
-    "system.proactive_lifecycle_activation.updated"
-)
-PROACTIVE_LIFECYCLE_SETTLEMENT_UPDATED = (
-    "system.proactive_lifecycle_settlement.updated"
-)
-PROACTIVE_LIFECYCLE_CLOSURE_UPDATED = (
-    "system.proactive_lifecycle_closure.updated"
-)
-PROACTIVE_LIFECYCLE_AVAILABILITY_UPDATED = (
-    "system.proactive_lifecycle_availability.updated"
-)
-PROACTIVE_LIFECYCLE_RETENTION_UPDATED = (
-    "system.proactive_lifecycle_retention.updated"
-)
-PROACTIVE_LIFECYCLE_ELIGIBILITY_UPDATED = (
-    "system.proactive_lifecycle_eligibility.updated"
-)
-PROACTIVE_LIFECYCLE_CANDIDATE_UPDATED = (
-    "system.proactive_lifecycle_candidate.updated"
-)
-PROACTIVE_LIFECYCLE_SELECTABILITY_UPDATED = (
-    "system.proactive_lifecycle_selectability.updated"
-)
-PROACTIVE_LIFECYCLE_REENTRY_UPDATED = "system.proactive_lifecycle_reentry.updated"
-PROACTIVE_LIFECYCLE_REACTIVATION_UPDATED = (
-    "system.proactive_lifecycle_reactivation.updated"
-)
-PROACTIVE_LIFECYCLE_RESUMPTION_UPDATED = (
-    "system.proactive_lifecycle_resumption.updated"
-)
-PROACTIVE_LIFECYCLE_READINESS_UPDATED = (
-    "system.proactive_lifecycle_readiness.updated"
-)
-PROACTIVE_LIFECYCLE_ARMING_UPDATED = "system.proactive_lifecycle_arming.updated"
-PROACTIVE_LIFECYCLE_TRIGGER_UPDATED = "system.proactive_lifecycle_trigger.updated"
-PROACTIVE_LIFECYCLE_LAUNCH_UPDATED = "system.proactive_lifecycle_launch.updated"
-PROACTIVE_LIFECYCLE_HANDOFF_UPDATED = "system.proactive_lifecycle_handoff.updated"
-PROACTIVE_LIFECYCLE_CONTINUATION_UPDATED = (
-    "system.proactive_lifecycle_continuation.updated"
-)
-PROACTIVE_LIFECYCLE_SUSTAINMENT_UPDATED = (
-    "system.proactive_lifecycle_sustainment.updated"
-)
-PROACTIVE_LIFECYCLE_STEWARDSHIP_UPDATED = (
-    "system.proactive_lifecycle_stewardship.updated"
-)
-PROACTIVE_LIFECYCLE_GUARDIANSHIP_UPDATED = (
-    "system.proactive_lifecycle_guardianship.updated"
-)
-PROACTIVE_LIFECYCLE_OVERSIGHT_UPDATED = (
-    "system.proactive_lifecycle_oversight.updated"
-)
-PROACTIVE_LIFECYCLE_ASSURANCE_UPDATED = (
-    "system.proactive_lifecycle_assurance.updated"
-)
-PROACTIVE_LIFECYCLE_ATTESTATION_UPDATED = (
-    "system.proactive_lifecycle_attestation.updated"
-)
-PROACTIVE_LIFECYCLE_VERIFICATION_UPDATED = (
-    "system.proactive_lifecycle_verification.updated"
-)
-PROACTIVE_LIFECYCLE_CERTIFICATION_UPDATED = (
-    "system.proactive_lifecycle_certification.updated"
-)
-PROACTIVE_LIFECYCLE_CONFIRMATION_UPDATED = (
-    "system.proactive_lifecycle_confirmation.updated"
-)
-PROACTIVE_LIFECYCLE_RATIFICATION_UPDATED = (
-    "system.proactive_lifecycle_ratification.updated"
-)
-PROACTIVE_LIFECYCLE_ENDORSEMENT_UPDATED = (
-    "system.proactive_lifecycle_endorsement.updated"
-)
-PROACTIVE_LIFECYCLE_AUTHORIZATION_UPDATED = (
-    "system.proactive_lifecycle_authorization.updated"
-)
-PROACTIVE_LIFECYCLE_ENACTMENT_UPDATED = (
-    "system.proactive_lifecycle_enactment.updated"
-)
-PROACTIVE_LIFECYCLE_FINALITY_UPDATED = "system.proactive_lifecycle_finality.updated"
-PROACTIVE_LIFECYCLE_COMPLETION_UPDATED = (
-    "system.proactive_lifecycle_completion.updated"
-)
-PROACTIVE_LIFECYCLE_CONCLUSION_UPDATED = (
-    "system.proactive_lifecycle_conclusion.updated"
-)
-PROACTIVE_LIFECYCLE_DISPOSITION_UPDATED = (
-    "system.proactive_lifecycle_disposition.updated"
-)
-PROACTIVE_LIFECYCLE_DURABILITY_UPDATED = (
-    "system.proactive_lifecycle_durability.updated"
-)
-PROACTIVE_LIFECYCLE_LONGEVITY_UPDATED = (
-    "system.proactive_lifecycle_longevity.updated"
-)
-PROACTIVE_LIFECYCLE_LEGACY_UPDATED = "system.proactive_lifecycle_legacy.updated"
-PROACTIVE_LIFECYCLE_HERITAGE_UPDATED = (
-    "system.proactive_lifecycle_heritage.updated"
-)
-PROACTIVE_LIFECYCLE_LINEAGE_UPDATED = (
-    "system.proactive_lifecycle_lineage.updated"
-)
-PROACTIVE_LIFECYCLE_ANCESTRY_UPDATED = (
-    "system.proactive_lifecycle_ancestry.updated"
-)
-PROACTIVE_LIFECYCLE_PROVENANCE_UPDATED = (
-    "system.proactive_lifecycle_provenance.updated"
-)
-PROACTIVE_LIFECYCLE_ORIGIN_UPDATED = "system.proactive_lifecycle_origin.updated"
-PROACTIVE_LIFECYCLE_ROOT_UPDATED = "system.proactive_lifecycle_root.updated"
-PROACTIVE_LIFECYCLE_FOUNDATION_UPDATED = (
-    "system.proactive_lifecycle_foundation.updated"
-)
-PROACTIVE_LIFECYCLE_BEDROCK_UPDATED = "system.proactive_lifecycle_bedrock.updated"
-PROACTIVE_LIFECYCLE_SUBSTRATE_UPDATED = (
-    "system.proactive_lifecycle_substrate.updated"
-)
-PROACTIVE_LIFECYCLE_STRATUM_UPDATED = "system.proactive_lifecycle_stratum.updated"
-PROACTIVE_LIFECYCLE_LAYER_UPDATED = "system.proactive_lifecycle_layer.updated"
-PROACTIVE_LIFECYCLE_PERSISTENCE_UPDATED = (
-    "system.proactive_lifecycle_persistence.updated"
-)
-PROACTIVE_LIFECYCLE_TENURE_UPDATED = "system.proactive_lifecycle_tenure.updated"
-PROACTIVE_LIFECYCLE_RESIDENCY_UPDATED = "system.proactive_lifecycle_residency.updated"
-PROACTIVE_LIFECYCLE_STANDING_UPDATED = "system.proactive_lifecycle_standing.updated"
 PROACTIVE_FOLLOWUP_DISPATCHED = "system.proactive_followup.dispatched"
+PROACTIVE_DISPATCH_OUTCOME_RECORDED = "system.proactive_dispatch_outcome.recorded"
 RESPONSE_POST_AUDITED = "system.response_post_audited"
 RESPONSE_NORMALIZED = "system.response.normalized"
 REPAIR_PLAN_UPDATED = "system.repair_plan.updated"
@@ -221,6 +81,29 @@ SESSION_SNAPSHOT_CREATED = "system.session_snapshot.created"
 SESSION_ARCHIVED = "system.session.archived"
 SCENARIO_BASELINE_SET = "system.scenario_baseline.set"
 SCENARIO_BASELINE_CLEARED = "system.scenario_baseline.cleared"
+
+# User identity and person-centric events
+USER_CREATED = "user.created"
+USER_SESSION_LINKED = "user.session_linked"
+USER_PROFILE_UPDATED = "user.profile_updated"
+SELF_STATE_UPDATED = "user.self_state.updated"
+
+# Single-entity persona and social-world events
+ENTITY_SEEDED = "entity.seeded"
+ENTITY_PERSONA_UPDATED = "entity.persona.updated"
+ENTITY_MOOD_UPDATED = "entity.mood.updated"
+ENTITY_RELATIONSHIP_WORLD_MODEL_UPDATED = "entity.relationship_world_model.updated"
+ENTITY_CONSCIENCE_UPDATED = "entity.conscience.updated"
+ENTITY_DRIVE_UPDATED = "entity.drive.updated"
+ENTITY_GOAL_UPDATED = "entity.goal.updated"
+ENTITY_SELF_NARRATIVE_UPDATED = "entity.self_narrative.updated"
+ENTITY_ENVIRONMENT_APPRAISAL_UPDATED = "entity.environment_appraisal.updated"
+SYSTEM_WORLD_STATE_UPDATED = "system.world_state.updated"
+SYSTEM_ACTION_SURFACE_UPDATED = "system.action_surface.updated"
+ENTITY_ACTION_INTENT_UPDATED = "entity.action_intent.updated"
+ENTITY_ACTION_PLANNED = "entity.action_planned"
+ENTITY_ACTION_EXECUTION_DECIDED = "entity.action_execution_decided"
+ENTITY_ACTION_EXECUTION_RECORDED = "entity.action_execution_recorded"
 
 TRACE_EVENT_TYPES = {
     SESSION_STARTED,
@@ -274,58 +157,9 @@ TRACE_EVENT_TYPES = {
     PROACTIVE_LINE_STATE_UPDATED,
     PROACTIVE_LINE_TRANSITION_UPDATED,
     PROACTIVE_LINE_MACHINE_UPDATED,
-    PROACTIVE_LIFECYCLE_STATE_UPDATED,
-    PROACTIVE_LIFECYCLE_TRANSITION_UPDATED,
-    PROACTIVE_LIFECYCLE_MACHINE_UPDATED,
-    PROACTIVE_LIFECYCLE_CONTROLLER_UPDATED,
-    PROACTIVE_LIFECYCLE_ENVELOPE_UPDATED,
-    PROACTIVE_LIFECYCLE_SCHEDULER_UPDATED,
-    PROACTIVE_LIFECYCLE_WINDOW_UPDATED,
-    PROACTIVE_LIFECYCLE_QUEUE_UPDATED,
-    PROACTIVE_LIFECYCLE_DISPATCH_UPDATED,
-    PROACTIVE_LIFECYCLE_OUTCOME_UPDATED,
-    PROACTIVE_LIFECYCLE_RESOLUTION_UPDATED,
-    PROACTIVE_LIFECYCLE_ACTIVATION_UPDATED,
-    PROACTIVE_LIFECYCLE_SETTLEMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_CLOSURE_UPDATED,
-    PROACTIVE_LIFECYCLE_AVAILABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_RETENTION_UPDATED,
-    PROACTIVE_LIFECYCLE_ELIGIBILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_CANDIDATE_UPDATED,
-    PROACTIVE_LIFECYCLE_SELECTABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_REENTRY_UPDATED,
-    PROACTIVE_LIFECYCLE_REACTIVATION_UPDATED,
-    PROACTIVE_LIFECYCLE_RESUMPTION_UPDATED,
-    PROACTIVE_LIFECYCLE_READINESS_UPDATED,
-    PROACTIVE_LIFECYCLE_ARMING_UPDATED,
-    PROACTIVE_LIFECYCLE_TRIGGER_UPDATED,
-    PROACTIVE_LIFECYCLE_LAUNCH_UPDATED,
-    PROACTIVE_LIFECYCLE_HANDOFF_UPDATED,
-    PROACTIVE_LIFECYCLE_CONTINUATION_UPDATED,
-    PROACTIVE_LIFECYCLE_SUSTAINMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_STEWARDSHIP_UPDATED,
-    PROACTIVE_LIFECYCLE_GUARDIANSHIP_UPDATED,
-    PROACTIVE_LIFECYCLE_OVERSIGHT_UPDATED,
-    PROACTIVE_LIFECYCLE_ASSURANCE_UPDATED,
-    PROACTIVE_LIFECYCLE_ATTESTATION_UPDATED,
-    PROACTIVE_LIFECYCLE_VERIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_CERTIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONFIRMATION_UPDATED,
-    PROACTIVE_LIFECYCLE_RATIFICATION_UPDATED,
-    PROACTIVE_LIFECYCLE_ENDORSEMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_AUTHORIZATION_UPDATED,
-    PROACTIVE_LIFECYCLE_ENACTMENT_UPDATED,
-    PROACTIVE_LIFECYCLE_FINALITY_UPDATED,
-    PROACTIVE_LIFECYCLE_COMPLETION_UPDATED,
-    PROACTIVE_LIFECYCLE_CONCLUSION_UPDATED,
-    PROACTIVE_LIFECYCLE_DISPOSITION_UPDATED,
-    PROACTIVE_LIFECYCLE_DURABILITY_UPDATED,
-    PROACTIVE_LIFECYCLE_LONGEVITY_UPDATED,
-    PROACTIVE_LIFECYCLE_PERSISTENCE_UPDATED,
-    PROACTIVE_LIFECYCLE_TENURE_UPDATED,
-    PROACTIVE_LIFECYCLE_RESIDENCY_UPDATED,
-    PROACTIVE_LIFECYCLE_STANDING_UPDATED,
+    PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED,
     PROACTIVE_FOLLOWUP_DISPATCHED,
+    PROACTIVE_DISPATCH_OUTCOME_RECORDED,
     RESPONSE_POST_AUDITED,
     RESPONSE_NORMALIZED,
     REPAIR_PLAN_UPDATED,
@@ -346,4 +180,29 @@ TRACE_EVENT_TYPES = {
     SESSION_ARCHIVED,
     SCENARIO_BASELINE_SET,
     SCENARIO_BASELINE_CLEARED,
+    USER_CREATED,
+    USER_SESSION_LINKED,
+    USER_PROFILE_UPDATED,
+    SELF_STATE_UPDATED,
+    ENTITY_SEEDED,
+    ENTITY_PERSONA_UPDATED,
+    ENTITY_MOOD_UPDATED,
+    ENTITY_RELATIONSHIP_WORLD_MODEL_UPDATED,
+    ENTITY_CONSCIENCE_UPDATED,
+    ENTITY_DRIVE_UPDATED,
+    ENTITY_GOAL_UPDATED,
+    ENTITY_SELF_NARRATIVE_UPDATED,
+    ENTITY_ENVIRONMENT_APPRAISAL_UPDATED,
+    SYSTEM_WORLD_STATE_UPDATED,
+    SYSTEM_ACTION_SURFACE_UPDATED,
+    ENTITY_ACTION_INTENT_UPDATED,
+    ENTITY_ACTION_PLANNED,
+    ENTITY_ACTION_EXECUTION_DECIDED,
+    ENTITY_ACTION_EXECUTION_RECORDED,
 }
+
+
+def is_trace_event_type(event_type: str) -> bool:
+    return event_type in TRACE_EVENT_TYPES or event_type.startswith(
+        PROACTIVE_LIFECYCLE_EVENT_PREFIX
+    )

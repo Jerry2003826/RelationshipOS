@@ -27,6 +27,14 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
     name = "session-memory"
     version = "v1"
 
+    _EVENT_APPLIERS = {
+        SESSION_STARTED: "_apply_session_started",
+        MEMORY_WRITE_GUARD_EVALUATED: "_apply_write_guard_evaluated",
+        MEMORY_RETENTION_POLICY_APPLIED: "_apply_retention_policy",
+        MEMORY_FORGETTING_APPLIED: "_apply_forgetting",
+        MEMORY_BUNDLE_UPDATED: "_apply_memory_bundle",
+    }
+
     def initial_state(self) -> dict[str, Any]:
         return {
             "session_id": None,
@@ -65,8 +73,8 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
             },
         }
 
-    def apply(self, state: dict[str, Any], event: StoredEvent) -> dict[str, Any]:
-        next_state = {
+    def _clone_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        return {
             **state,
             "working_memory": {
                 "current": list(state["working_memory"]["current"]),
@@ -99,87 +107,68 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
             },
         }
 
-        if event.event_type == SESSION_STARTED:
-            next_state["session_id"] = event.payload.get("session_id", event.stream_id)
-            return next_state
+    def _apply_session_started(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        next_state["session_id"] = event.payload.get("session_id", event.stream_id)
+        return next_state
 
-        if event.event_type == MEMORY_WRITE_GUARD_EVALUATED:
-            next_state["last_write_guard"] = dict(event.payload)
-            next_state["write_guard_blocked_total"] += int(
-                event.payload.get("blocked_count", 0)
-            )
-            return next_state
+    def _apply_write_guard_evaluated(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        next_state["last_write_guard"] = dict(event.payload)
+        next_state["write_guard_blocked_total"] += int(
+            event.payload.get("blocked_count", 0)
+        )
+        return next_state
 
-        if event.event_type == MEMORY_RETENTION_POLICY_APPLIED:
-            next_state["last_retention_policy"] = dict(event.payload)
-            next_state["retention_turn_count"] += 1
-            next_state["pinned_item_count"] += int(event.payload.get("pinned_count", 0))
-            return next_state
+    def _apply_retention_policy(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        next_state["last_retention_policy"] = dict(event.payload)
+        next_state["retention_turn_count"] += 1
+        next_state["pinned_item_count"] += int(event.payload.get("pinned_count", 0))
+        return next_state
 
-        if event.event_type == MEMORY_FORGETTING_APPLIED:
-            evicted_count = int(event.payload.get("evicted_count", 0))
-            next_state["last_forgetting"] = dict(event.payload)
-            next_state["total_evicted_count"] += evicted_count
-            if evicted_count > 0:
-                next_state["forgetting_turn_count"] += 1
-            return next_state
+    def _apply_forgetting(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        evicted_count = int(event.payload.get("evicted_count", 0))
+        next_state["last_forgetting"] = dict(event.payload)
+        next_state["total_evicted_count"] += evicted_count
+        if evicted_count > 0:
+            next_state["forgetting_turn_count"] += 1
+        return next_state
 
-        if event.event_type != MEMORY_BUNDLE_UPDATED:
-            return next_state
-
+    def _apply_memory_bundle(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
         occurred_at = event.occurred_at.isoformat()
-        working_items = _compact_strings(
-            list(event.payload.get("working_memory", [])),
-            limit=4,
-        )
-        episodic_items = _compact_strings(
-            list(event.payload.get("episodic_memory", [])),
-            limit=6,
-        )
-        semantic_items = _compact_strings(
-            list(event.payload.get("semantic_memory", [])),
-            limit=6,
-        )
-        relational_items = _compact_strings(
-            list(event.payload.get("relational_memory", [])),
-            limit=6,
-        )
-        reflective_items = _compact_strings(
-            list(event.payload.get("reflective_memory", [])),
-            limit=6,
-        )
+        layer_items = self._build_memory_bundle_items(event=event)
         context_tags = _extract_context_tags(
-            semantic_items=semantic_items,
-            relational_items=relational_items,
+            semantic_items=layer_items["semantic_memory"],
+            relational_items=layer_items["relational_memory"],
         )
-        retention_policy = dict(next_state.get("last_retention_policy") or {})
-        working_retention = _build_retention_lookup(
-            retention_policy,
-            layer="working_memory",
-        )
-        episodic_retention = _build_retention_lookup(
-            retention_policy,
-            layer="episodic_memory",
-        )
-        semantic_retention = _build_retention_lookup(
-            retention_policy,
-            layer="semantic_memory",
-        )
-        relational_retention = _build_retention_lookup(
-            retention_policy,
-            layer="relational_memory",
-        )
-        reflective_retention = _build_retention_lookup(
-            retention_policy,
-            layer="reflective_memory",
+        retention_lookups = self._build_memory_bundle_retention_lookups(
+            next_state=next_state
         )
         working_retention_summary = _summarize_sequence_retention(
-            items=working_items,
-            retention_lookup=working_retention,
+            items=layer_items["working_memory"],
+            retention_lookup=retention_lookups["working_memory"],
         )
         episodic_retention_summary = _summarize_sequence_retention(
-            items=episodic_items,
-            retention_lookup=episodic_retention,
+            items=layer_items["episodic_memory"],
+            retention_lookup=retention_lookups["episodic_memory"],
         )
 
         next_state["session_id"] = next_state["session_id"] or event.stream_id
@@ -188,18 +177,125 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
         next_state["last_bundle_version"] = event.version
         next_state["latest_bundle"] = dict(event.payload)
 
-        working_history = list(next_state["working_memory"]["history"])
+        next_state["working_memory"] = self._build_working_memory_state(
+            current_state=next_state["working_memory"],
+            items=layer_items["working_memory"],
+            context_tags=context_tags,
+            source_version=event.version,
+            occurred_at=occurred_at,
+            retention_summary=working_retention_summary,
+        )
+
+        next_state["episodic_memory"] = self._build_episodic_memory_state(
+            current_state=next_state["episodic_memory"],
+            items=layer_items["episodic_memory"],
+            context_tags=context_tags,
+            source_version=event.version,
+            occurred_at=occurred_at,
+            retention_summary=episodic_retention_summary,
+        )
+
+        next_state["semantic_memory"] = self._build_aggregated_memory_state(
+            items=layer_items["semantic_memory"],
+            entry_key="concepts",
+            count_key="concept_count",
+            existing=next_state["semantic_memory"]["concepts"],
+            source_version=event.version,
+            occurred_at=occurred_at,
+            context_tags=context_tags,
+            retention_lookup=retention_lookups["semantic_memory"],
+        )
+
+        next_state["relational_memory"] = self._build_aggregated_memory_state(
+            items=layer_items["relational_memory"],
+            entry_key="signals",
+            count_key="signal_count",
+            existing=next_state["relational_memory"]["signals"],
+            source_version=event.version,
+            occurred_at=occurred_at,
+            context_tags=context_tags,
+            retention_lookup=retention_lookups["relational_memory"],
+        )
+
+        next_state["reflective_memory"] = self._build_aggregated_memory_state(
+            items=layer_items["reflective_memory"],
+            entry_key="insights",
+            count_key="insight_count",
+            existing=next_state["reflective_memory"]["insights"],
+            source_version=event.version,
+            occurred_at=occurred_at,
+            context_tags=context_tags,
+            retention_lookup=retention_lookups["reflective_memory"],
+        )
+        return next_state
+
+    def _build_memory_bundle_items(
+        self,
+        *,
+        event: StoredEvent,
+    ) -> dict[str, list[str]]:
+        return {
+            "working_memory": _compact_strings(
+                list(event.payload.get("working_memory", [])),
+                limit=4,
+            ),
+            "episodic_memory": _compact_strings(
+                list(event.payload.get("episodic_memory", [])),
+                limit=6,
+            ),
+            "semantic_memory": _compact_strings(
+                list(event.payload.get("semantic_memory", [])),
+                limit=6,
+            ),
+            "relational_memory": _compact_strings(
+                list(event.payload.get("relational_memory", [])),
+                limit=6,
+            ),
+            "reflective_memory": _compact_strings(
+                list(event.payload.get("reflective_memory", [])),
+                limit=6,
+            ),
+        }
+
+    def _build_memory_bundle_retention_lookups(
+        self,
+        *,
+        next_state: dict[str, Any],
+    ) -> dict[str, dict[str, dict[str, Any]]]:
+        retention_policy = dict(next_state.get("last_retention_policy") or {})
+        return {
+            layer: _build_retention_lookup(retention_policy, layer=layer)
+            for layer in (
+                "working_memory",
+                "episodic_memory",
+                "semantic_memory",
+                "relational_memory",
+                "reflective_memory",
+            )
+        }
+
+    def _build_working_memory_state(
+        self,
+        *,
+        current_state: dict[str, Any],
+        items: list[str],
+        context_tags: list[str],
+        source_version: int,
+        occurred_at: str,
+        retention_summary: dict[str, Any],
+    ) -> dict[str, Any]:
+        working_history = list(current_state["history"])
         working_history.append(
             {
-                "source_version": event.version,
+                "source_version": source_version,
                 "occurred_at": occurred_at,
-                "items": working_items,
+                "items": items,
                 "context_tags": context_tags,
-                **working_retention_summary,
+                **retention_summary,
             }
         )
-        next_state["working_memory"] = {
-            "current": working_items,
+        return {
+            "current": items,
             "history": _trim_retained_sequence(
                 working_history,
                 limit=MAX_WORKING_HISTORY,
@@ -207,17 +303,27 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
             "history_count": len(working_history),
         }
 
-        episodes = list(next_state["episodic_memory"]["episodes"])
+    def _build_episodic_memory_state(
+        self,
+        *,
+        current_state: dict[str, Any],
+        items: list[str],
+        context_tags: list[str],
+        source_version: int,
+        occurred_at: str,
+        retention_summary: dict[str, Any],
+    ) -> dict[str, Any]:
+        episodes = list(current_state["episodes"])
         episodes.append(
             {
-                "source_version": event.version,
+                "source_version": source_version,
                 "occurred_at": occurred_at,
-                "items": episodic_items,
+                "items": items,
                 "context_tags": context_tags,
-                **episodic_retention_summary,
+                **retention_summary,
             }
         )
-        next_state["episodic_memory"] = {
+        return {
             "episodes": _trim_retained_sequence(
                 episodes,
                 limit=MAX_EPISODIC_HISTORY,
@@ -225,55 +331,35 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
             "episode_count": len(episodes),
         }
 
-        next_state["semantic_memory"] = {
-            "concepts": _append_aggregated_items(
-                existing=next_state["semantic_memory"]["concepts"],
-                values=semantic_items,
-                source_version=event.version,
-                occurred_at=occurred_at,
-                context_tags=context_tags,
-                retention_lookup=semantic_retention,
-            ),
-            "concept_count": len(next_state["semantic_memory"]["concepts"]) or len(
-                semantic_items
-            ),
-        }
-        next_state["semantic_memory"]["concept_count"] = len(
-            next_state["semantic_memory"]["concepts"]
+    def _build_aggregated_memory_state(
+        self,
+        *,
+        items: list[str],
+        entry_key: str,
+        count_key: str,
+        existing: list[dict[str, Any]],
+        source_version: int,
+        occurred_at: str,
+        context_tags: list[str],
+        retention_lookup: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        aggregated_items = _append_aggregated_items(
+            existing=existing,
+            values=items,
+            source_version=source_version,
+            occurred_at=occurred_at,
+            context_tags=context_tags,
+            retention_lookup=retention_lookup,
         )
-
-        next_state["relational_memory"] = {
-            "signals": _append_aggregated_items(
-                existing=next_state["relational_memory"]["signals"],
-                values=relational_items,
-                source_version=event.version,
-                occurred_at=occurred_at,
-                context_tags=context_tags,
-                retention_lookup=relational_retention,
-            ),
-            "signal_count": len(next_state["relational_memory"]["signals"]) or len(
-                relational_items
-            ),
+        return {
+            entry_key: aggregated_items,
+            count_key: len(aggregated_items),
         }
-        next_state["relational_memory"]["signal_count"] = len(
-            next_state["relational_memory"]["signals"]
-        )
 
-        next_state["reflective_memory"] = {
-            "insights": _append_aggregated_items(
-                existing=next_state["reflective_memory"]["insights"],
-                values=reflective_items,
-                source_version=event.version,
-                occurred_at=occurred_at,
-                context_tags=context_tags,
-                retention_lookup=reflective_retention,
-            ),
-            "insight_count": len(next_state["reflective_memory"]["insights"]) or len(
-                reflective_items
-            ),
-        }
-        next_state["reflective_memory"]["insight_count"] = len(
-            next_state["reflective_memory"]["insights"]
-        )
-
-        return next_state
+    def apply(self, state: dict[str, Any], event: StoredEvent) -> dict[str, Any]:
+        next_state = self._clone_state(state)
+        applier_name = self._EVENT_APPLIERS.get(event.event_type)
+        if applier_name is None:
+            return next_state
+        applier = getattr(self, applier_name)
+        return applier(next_state, event)

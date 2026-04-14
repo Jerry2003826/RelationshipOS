@@ -5,9 +5,28 @@ from fastapi import APIRouter, Query
 
 from relationship_os.api.dependencies import AuthDep, ContainerDep
 from relationship_os.application.container import RuntimeContainer
-from relationship_os.domain.event_types import TRACE_EVENT_TYPES
+from relationship_os.domain.event_types import is_trace_event_type
 
 router = APIRouter(prefix="/runtime", tags=["runtime"])
+
+
+def _public_projectors(container: RuntimeContainer) -> list[dict[str, str]]:
+    preferred_by_name: dict[str, dict[str, str]] = {}
+    for projector in container.projector_registry.list_projectors():
+        name = str(projector.get("name") or "")
+        version = str(projector.get("version") or "")
+        current = preferred_by_name.get(name)
+        if current is None or (
+            current.get("version") != "v1" and version == "v1"
+        ):
+            preferred_by_name[name] = {
+                "name": name,
+                "version": version,
+            }
+    return [
+        preferred_by_name[name]
+        for name in sorted(preferred_by_name)
+    ]
 
 
 async def build_runtime_overview_payload(
@@ -24,7 +43,7 @@ async def build_runtime_overview_payload(
         "event_store_backend": container.settings.event_store_backend,
         "llm_backend": container.settings.llm_backend,
         "llm_model": container.settings.llm_model,
-        "projectors": container.projector_registry.list_projectors(),
+        "projectors": _public_projectors(container),
         "job_runtime": job_runtime,
         "proactive_followups": proactive_followups,
         "proactive_dispatcher": proactive_dispatcher,
@@ -47,7 +66,7 @@ async def get_runtime_trace(
     trace = [
         container.stream_service.serialize_event(event)
         for event in events
-        if event.event_type in TRACE_EVENT_TYPES
+        if is_trace_event_type(event.event_type)
     ]
     return {
         "stream_id": stream_id,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from relationship_os.application.analyzers import (
+    apply_semantic_hints,
     build_context_frame,
     infer_appraisal,
     infer_attention,
@@ -149,3 +150,31 @@ class TestBuildContextFrame:
     def test_topic_in_common_ground(self) -> None:
         frame = build_context_frame("let's plan the next phase")
         assert frame.topic in frame.common_ground
+
+
+class TestApplySemanticHints:
+    def test_promotes_probe_to_question_and_connection_request(self) -> None:
+        frame = build_context_frame("我在写代码")
+        updated = apply_semantic_hints(
+            frame,
+            intent_label="state_reflection_probe",
+            appraisal="negative",
+            emotional_load="high",
+        )
+
+        assert updated.dialogue_act == "question"
+        assert updated.bid_signal == "connection_request"
+        assert updated.appraisal == "negative"
+        assert updated.attention == "focused"
+
+    def test_social_probe_becomes_soft_bid(self) -> None:
+        frame = build_context_frame("我在写代码")
+        updated = apply_semantic_hints(
+            frame,
+            intent_label="social_disclosure",
+            appraisal="neutral",
+            emotional_load="low",
+        )
+
+        assert updated.dialogue_act == "question"
+        assert updated.bid_signal == "soft_bid"

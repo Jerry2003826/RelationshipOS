@@ -2,6 +2,10 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.errors import legacy_lifecycle_error_response
+from relationship_os.application.analyzers.proactive.lifecycle_projection import (
+    LegacyLifecycleStreamUnsupportedError,
+)
 from relationship_os.application.scenario_evaluation_service import (
     ScenarioBaselineNotFoundError,
     ScenarioNotFoundError,
@@ -32,7 +36,10 @@ async def evaluate_session(
     session_id: str,
     container: ContainerDep,
 ) -> dict[str, object]:
-    return await container.evaluation_service.evaluate_session(session_id=session_id)
+    try:
+        return await container.evaluation_service.evaluate_session(session_id=session_id)
+    except LegacyLifecycleStreamUnsupportedError as exc:
+        return legacy_lifecycle_error_response(exc)
 
 
 @router.get("/strategy-preferences")

@@ -11,12 +11,13 @@
     archives: { url: shell.dataset.archivesUrl, target: "#console-archives" },
     evaluations: { url: shell.dataset.evaluationsUrl, target: "#console-evaluations" },
     scenarios: { url: shell.dataset.scenariosUrl, target: "#console-scenarios" },
+    entity: { url: shell.dataset.entityUrl, target: "#console-entity" },
   };
   const pending = new Map();
   let socket = null;
   let selectedSession = shell.dataset.selectedSession || "";
   let selectedProjectorName = shell.dataset.selectedProjectorName || "session-runtime";
-  let selectedProjectorVersion = shell.dataset.selectedProjectorVersion || "v1";
+  let selectedProjectorVersion = shell.dataset.selectedProjectorVersion || "v2";
 
   function refreshPanel(key) {
     const target = refreshTargets[key];
@@ -89,6 +90,7 @@
         queueRefresh("sessions", () => refreshPanel("sessions"));
         queueRefresh("evaluations", () => refreshPanel("evaluations"));
         queueRefresh("scenarios", () => refreshPanel("scenarios"));
+        queueRefresh("entity", () => refreshPanel("entity"));
         return;
       }
       if (message.type === "job_update") {
@@ -97,6 +99,7 @@
         queueRefresh("sessions", () => refreshPanel("sessions"));
         queueRefresh("evaluations", () => refreshPanel("evaluations"));
         queueRefresh("scenarios", () => refreshPanel("scenarios"));
+        queueRefresh("entity", () => refreshPanel("entity"));
         return;
       }
       if (message.type === "archive_update") {
@@ -104,10 +107,12 @@
         queueRefresh("archives", () => refreshPanel("archives"));
         queueRefresh("sessions", () => refreshPanel("sessions"));
         queueRefresh("scenarios", () => refreshPanel("scenarios"));
+        queueRefresh("entity", () => refreshPanel("entity"));
         return;
       }
       if (message.type === "runtime_overview") {
         queueRefresh("overview", () => refreshPanel("overview"));
+        queueRefresh("entity", () => refreshPanel("entity"));
       }
     });
     socket.addEventListener("close", () => {
@@ -126,7 +131,7 @@
     },
     selectProjector(name, version) {
       selectedProjectorName = name || "session-runtime";
-      selectedProjectorVersion = version || "v1";
+      selectedProjectorVersion = version || shell.dataset.selectedProjectorVersion || "v2";
       if (shell) {
         shell.dataset.selectedProjectorName = selectedProjectorName;
         shell.dataset.selectedProjectorVersion = selectedProjectorVersion;

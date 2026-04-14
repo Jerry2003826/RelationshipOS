@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from relationship_os.application.analyzers import build_proactive_stage_state_decision
+from relationship_os.application.analyzers.proactive.lifecycle_projection import (
+    LegacyLifecycleStreamUnsupportedError,
+)
 from relationship_os.domain.event_types import (
     ASSISTANT_MESSAGE_SENT,
     PROACTIVE_ACTUATION_UPDATED,
@@ -34,6 +37,61 @@ _QUEUE_PRIORITY = {
     "hold": 4,
 }
 
+_GENERIC_LIFECYCLE_PHASES = (
+    "activation",
+    "settlement",
+    "closure",
+    "availability",
+    "retention",
+    "eligibility",
+    "candidate",
+    "selectability",
+    "reentry",
+    "reactivation",
+    "resumption",
+    "readiness",
+    "arming",
+    "trigger",
+    "launch",
+    "handoff",
+    "continuation",
+    "sustainment",
+    "stewardship",
+    "guardianship",
+    "oversight",
+    "assurance",
+    "attestation",
+    "verification",
+    "certification",
+    "confirmation",
+    "ratification",
+    "endorsement",
+    "authorization",
+    "enactment",
+    "finality",
+    "completion",
+    "conclusion",
+    "disposition",
+    "standing",
+    "residency",
+    "tenure",
+    "persistence",
+    "durability",
+    "longevity",
+    "legacy",
+    "heritage",
+    "lineage",
+    "ancestry",
+    "provenance",
+    "origin",
+    "root",
+    "foundation",
+    "bedrock",
+    "substrate",
+    "stratum",
+    "layer",
+)
+
 
 def _parse_datetime(value: object | None) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
@@ -44,4332 +102,806 @@ def _parse_datetime(value: object | None) -> datetime | None:
         return None
 
 
+@dataclass(frozen=True)
+class _FollowupContext:
+    state: dict[str, Any]
+    session: dict[str, Any]
+    session_source: str
+    directive: dict[str, Any]
+    guidance_plan: dict[str, Any]
+    conversation_cadence_plan: dict[str, Any]
+    session_ritual_plan: dict[str, Any]
+    somatic_orchestration_plan: dict[str, Any]
+    proactive_cadence_plan: dict[str, Any]
+    reengagement_matrix_assessment: dict[str, Any]
+    selected_matrix_candidate: dict[str, Any]
+    reengagement_plan: dict[str, Any]
+    proactive_scheduling_plan: dict[str, Any]
+    proactive_guardrail_plan: dict[str, Any]
+    proactive_orchestration_plan: dict[str, Any]
+    proactive_actuation_plan: dict[str, Any]
+    proactive_progression_plan: dict[str, Any]
+    events: list[StoredEvent]
+    latest_proactive_event: StoredEvent | None
+    latest_proactive_scheduling_event: StoredEvent | None
+    latest_proactive_orchestration_event: StoredEvent | None
+    latest_proactive_actuation_event: StoredEvent | None
+    latest_proactive_progression_event: StoredEvent | None
+    latest_proactive_dispatch_gate_event: StoredEvent | None
+    latest_proactive_dispatch_feedback_event: StoredEvent | None
+    latest_proactive_stage_controller_event: StoredEvent | None
+    latest_proactive_line_controller_event: StoredEvent | None
+    latest_session_event: StoredEvent | None
+    latest_user_event: StoredEvent | None
+    latest_assistant_event: StoredEvent | None
+    directive_time: datetime
+    dispatch_events_for_directive: list[StoredEvent]
+    dispatched_stage_count: int
+    stage_labels: list[str]
+    stage_intervals_seconds: list[int]
+    close_after_stage_index: int
+    max_dispatch_count: int
+    stage_index_by_label: dict[str, int]
+    close_loop_stage: str
+
+
+@dataclass(frozen=True)
+class _FollowupLatestEvents:
+    latest_proactive_event: StoredEvent | None
+    latest_proactive_scheduling_event: StoredEvent | None
+    latest_proactive_orchestration_event: StoredEvent | None
+    latest_proactive_actuation_event: StoredEvent | None
+    latest_proactive_progression_event: StoredEvent | None
+    latest_proactive_dispatch_gate_event: StoredEvent | None
+    latest_proactive_dispatch_feedback_event: StoredEvent | None
+    latest_proactive_stage_controller_event: StoredEvent | None
+    latest_proactive_line_controller_event: StoredEvent | None
+    latest_session_event: StoredEvent | None
+    latest_user_event: StoredEvent | None
+    latest_assistant_event: StoredEvent | None
+
+
+@dataclass(frozen=True)
+class _FollowupStageMetadata:
+    directive_time: datetime
+    dispatch_events_for_directive: list[StoredEvent]
+    dispatched_stage_count: int
+    stage_labels: list[str]
+    stage_intervals_seconds: list[int]
+    close_after_stage_index: int
+    max_dispatch_count: int
+    stage_index_by_label: dict[str, int]
+    close_loop_stage: str
+
+
+@dataclass(frozen=True)
+class _StageResolution:
+    directive_status: str
+    window_seconds: int
+    current_stage_index: int
+    current_stage_label: str
+    current_stage_directive: dict[str, Any] | None
+    current_stage_actuation: dict[str, Any] | None
+    current_stage_progression: dict[str, Any] | None
+    current_stage_guardrail: dict[str, Any] | None
+    due_at: datetime | None
+    base_due_at: datetime | None
+    expires_at: datetime | None
+    seconds_until_due: int | None
+    seconds_overdue: int | None
+    window_remaining_seconds: int | None
+    schedule_reason: str | None
+    scheduling_deferred_until: datetime | None
+    progression_advanced: bool
+    progression_reason: str | None
+    queue_status: str
+
+
+@dataclass(frozen=True)
+class _StagePayloadSelection:
+    current_stage_label: str
+    current_stage_directive: dict[str, Any] | None
+    current_stage_actuation: dict[str, Any] | None
+    current_stage_progression: dict[str, Any] | None
+    current_stage_guardrail: dict[str, Any] | None
+
+
+@dataclass(frozen=True)
+class _StageScheduleSnapshot:
+    payload: _StagePayloadSelection
+    due_at: datetime | None
+    base_due_at: datetime | None
+    expires_at: datetime | None
+    seconds_until_due: int | None
+    seconds_overdue: int | None
+    window_remaining_seconds: int | None
+    schedule_reason: str | None
+    scheduling_deferred_until: datetime | None
+    queue_status: str
+
+
+@dataclass(frozen=True)
+class _StageProgressionAdvance:
+    next_stage_index: int
+    progression_anchor_at: datetime
+    progression_reason: str
+
+
+@dataclass(frozen=True)
+class _QueueOverrideState:
+    due_at: datetime | None
+    expires_at: datetime | None
+    seconds_until_due: int | None
+    seconds_overdue: int | None
+    window_remaining_seconds: int | None
+    schedule_reason: str | None
+    scheduling_deferred_until: datetime | None
+    queue_status: str
+    skip_dispatch_override: bool = False
+
+
+@dataclass(frozen=True)
+class _LifecyclePhaseOverride:
+    phase: str
+    decision: str
+    stage_label: str
+    delay_seconds: int
+
+
+@dataclass(frozen=True)
+class _LifecyclePhaseOverrideSpec:
+    phase: str
+    match_blockers: tuple[str, ...]
+    action_blockers: tuple[str, ...] = ()
+    terminate_decisions: tuple[str, ...] = ()
+    hold_decisions: tuple[str, ...] = ()
+    buffer_decisions: tuple[str, ...] = ()
+    skip_decisions: tuple[str, ...] = ()
+    stage_label_key: str = "active_stage_label"
+    match_stage_label: bool = True
+    buffer_reason_tag: str | None = None
+    buffer_remove_tag: str | None = None
+
+
+@dataclass(frozen=True)
+class _ProjectedFollowupStateBundle:
+    projections: dict[str, dict[str, Any]]
+    projected_stage_state: dict[str, Any]
+    projected_line_state: dict[str, Any]
+    projected_line_transition: dict[str, Any]
+    projected_line_machine: dict[str, Any]
+    projected_lifecycle_state: dict[str, Any]
+    projected_lifecycle_transition: dict[str, Any]
+    projected_lifecycle_machine: dict[str, Any]
+    projected_lifecycle_envelope: dict[str, Any]
+    projected_lifecycle_scheduler: dict[str, Any]
+    projected_lifecycle_window: dict[str, Any]
+    projected_lifecycle_queue: dict[str, Any]
+    projected_lifecycle_dispatch: dict[str, Any]
+    projected_lifecycle_outcome: dict[str, Any]
+    projected_lifecycle_resolution: dict[str, Any]
+    lifecycle_phase_overrides: dict[str, _LifecyclePhaseOverride]
+    projected_dispatch_envelope: dict[str, Any]
+    runtime_coordination_snapshot: dict[str, Any]
+    lifecycle_controller_projection: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _FollowupPayloadBundle:
+    dispatch_gate_payload: dict[str, Any]
+    dispatch_feedback_payload: dict[str, Any]
+    stage_controller_payload: dict[str, Any]
+    line_controller_payload: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _ResolvedFollowupQueueBundle:
+    due_at: datetime | None
+    base_due_at: datetime | None
+    expires_at: datetime | None
+    seconds_until_due: int | None
+    seconds_overdue: int | None
+    window_remaining_seconds: int | None
+    schedule_reason: str | None
+    scheduling_deferred_until: datetime | None
+    queue_status: str
+    proactive_stage_state: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class _FollowupAssemblyBundle:
+    session_id: str
+    context: _FollowupContext
+    stage_resolution: _StageResolution
+    projected: _ProjectedFollowupStateBundle
+    payloads: _FollowupPayloadBundle
+    queue: _ResolvedFollowupQueueBundle
+
+
+def _default_lifecycle_phase_override_spec(
+    phase: str,
+    *,
+    match_blockers: tuple[str, ...] = (),
+    action_blockers: tuple[str, ...] = (),
+    terminate_decisions: tuple[str, ...] | None = None,
+    hold_decisions: tuple[str, ...] | None = None,
+    buffer_decisions: tuple[str, ...] | None = None,
+    skip_decisions: tuple[str, ...] | None = None,
+    stage_label_key: str = "active_stage_label",
+    match_stage_label: bool = True,
+    buffer_reason_tag: str | None = None,
+    buffer_remove_tag: str | None = None,
+) -> _LifecyclePhaseOverrideSpec:
+    return _LifecyclePhaseOverrideSpec(
+        phase=phase,
+        match_blockers=match_blockers,
+        action_blockers=action_blockers,
+        terminate_decisions=terminate_decisions
+        or (f"archive_lifecycle_{phase}", f"retire_lifecycle_{phase}"),
+        hold_decisions=hold_decisions or (f"pause_lifecycle_{phase}",),
+        buffer_decisions=buffer_decisions or (f"buffer_lifecycle_{phase}",),
+        skip_decisions=skip_decisions or (f"keep_lifecycle_{phase}",),
+        stage_label_key=stage_label_key,
+        match_stage_label=match_stage_label,
+        buffer_reason_tag=buffer_reason_tag or f"lifecycle_{phase}_buffered",
+        buffer_remove_tag=buffer_remove_tag,
+    )
+
+
+def _build_foundation_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    phase_blockers = {
+        "layer": (),
+        "stratum": ("layer",),
+        "substrate": ("layer", "stratum"),
+        "bedrock": ("layer", "stratum", "substrate"),
+        "foundation": ("layer", "stratum", "substrate", "bedrock"),
+    }
+    return (
+        _default_lifecycle_phase_override_spec(
+            "layer",
+            buffer_remove_tag="lifecycle_stratum_buffered",
+        ),
+        _default_lifecycle_phase_override_spec(
+            "stratum",
+            match_blockers=phase_blockers["stratum"],
+            buffer_remove_tag="lifecycle_substrate_buffered",
+        ),
+        *(
+            _default_lifecycle_phase_override_spec(
+                phase,
+                match_blockers=phase_blockers[phase],
+            )
+            for phase in ("substrate", "bedrock", "foundation")
+        ),
+    )
+
+
+def _build_heritage_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    layer_chain = ("layer", "stratum", "substrate", "bedrock", "foundation")
+    root_blockers = layer_chain
+    origin_blockers = root_blockers + ("root",)
+    provenance_blockers = origin_blockers + ("origin",)
+    ancestry_blockers = provenance_blockers + ("provenance",)
+    heritage_blockers = ancestry_blockers + ("ancestry", "lineage")
+    legacy_blockers = heritage_blockers + ("heritage",)
+    longevity_blockers = legacy_blockers + ("legacy",)
+    durability_blockers = longevity_blockers + ("longevity",)
+    persistence_blockers = durability_blockers + ("durability",)
+    tenure_blockers = persistence_blockers + ("persistence",)
+    residency_blockers = tenure_blockers + ("tenure",)
+    standing_blockers = residency_blockers + ("residency",)
+    disposition_blockers = standing_blockers + ("standing",)
+    return (
+        _default_lifecycle_phase_override_spec("root", match_blockers=root_blockers),
+        _default_lifecycle_phase_override_spec(
+            "origin",
+            match_blockers=origin_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "provenance",
+            match_blockers=provenance_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "ancestry",
+            match_blockers=ancestry_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "lineage",
+            match_blockers=ancestry_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "heritage",
+            match_blockers=heritage_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "legacy",
+            match_blockers=legacy_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "longevity",
+            match_blockers=longevity_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "durability",
+            match_blockers=durability_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "persistence",
+            match_blockers=persistence_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "tenure",
+            match_blockers=tenure_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "residency",
+            match_blockers=residency_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "standing",
+            match_blockers=standing_blockers,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "disposition",
+            match_blockers=disposition_blockers,
+            skip_decisions=("complete_lifecycle_disposition",),
+        ),
+    )
+
+
+def _build_certification_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    return (
+        _default_lifecycle_phase_override_spec(
+            "conclusion",
+            match_blockers=("disposition",),
+            skip_decisions=("complete_lifecycle_conclusion",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "completion",
+            match_blockers=("conclusion",),
+            skip_decisions=("complete_lifecycle_completion",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "finality",
+            match_blockers=("completion",),
+            skip_decisions=("finalize_lifecycle_finality",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "enactment",
+            match_blockers=("finality",),
+            skip_decisions=("enact_lifecycle_enactment",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "authorization",
+            match_blockers=("enactment",),
+            hold_decisions=(),
+            buffer_decisions=(),
+            skip_decisions=(),
+            match_stage_label=False,
+        ),
+        _default_lifecycle_phase_override_spec(
+            "endorsement",
+            match_blockers=("authorization",),
+            skip_decisions=("endorse_lifecycle_endorsement",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "ratification",
+            match_blockers=("endorsement",),
+            skip_decisions=("ratify_lifecycle_ratification",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "confirmation",
+            match_blockers=("ratification",),
+            skip_decisions=("confirm_lifecycle_confirmation",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "certification",
+            match_blockers=("confirmation",),
+            skip_decisions=("certify_lifecycle_certification",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "verification",
+            match_blockers=("certification",),
+            skip_decisions=("verify_lifecycle_verification",),
+        ),
+    )
+
+
+def _build_stewardship_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    return (
+        _default_lifecycle_phase_override_spec(
+            "attestation",
+            action_blockers=("verification",),
+            skip_decisions=("attest_lifecycle_attestation",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "assurance",
+            action_blockers=("attestation",),
+            skip_decisions=("assure_lifecycle_assurance",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "oversight",
+            action_blockers=("attestation", "assurance"),
+            skip_decisions=("oversee_lifecycle_oversight",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "guardianship",
+            action_blockers=("assurance", "oversight"),
+            skip_decisions=("guard_lifecycle_guardianship",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "stewardship",
+            action_blockers=("assurance", "oversight", "guardianship"),
+            skip_decisions=("steward_lifecycle_stewardship",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "sustainment",
+            action_blockers=("guardianship", "stewardship"),
+            skip_decisions=("sustain_lifecycle_sustainment",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "continuation",
+            action_blockers=("sustainment",),
+            skip_decisions=("keep_lifecycle_continuation",),
+        ),
+    )
+
+
+def _build_activation_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    return (
+        _default_lifecycle_phase_override_spec(
+            "handoff",
+            match_blockers=("continuation",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "launch",
+            match_blockers=("handoff",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "trigger",
+            match_blockers=("launch",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "arming",
+            match_blockers=("trigger",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "readiness",
+            match_blockers=("arming",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "resumption",
+            match_blockers=("readiness",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "reactivation",
+            match_blockers=("resumption",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "reentry",
+            match_blockers=("reactivation",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "selectability",
+            match_blockers=("reentry",),
+            skip_decisions=("keep_lifecycle_selectable",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "candidate",
+            match_blockers=("selectability",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "eligibility",
+            match_blockers=("candidate",),
+            skip_decisions=("keep_lifecycle_eligible",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "retention",
+            match_blockers=("eligibility",),
+            skip_decisions=("retain_lifecycle_retention",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "availability",
+            match_blockers=("retention",),
+            terminate_decisions=(
+                "close_loop_lifecycle_availability",
+                "retire_lifecycle_availability",
+            ),
+            skip_decisions=("keep_lifecycle_available",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "closure",
+            match_blockers=("availability",),
+            terminate_decisions=(
+                "close_loop_lifecycle_closure",
+                "retire_lifecycle_closure",
+            ),
+            skip_decisions=("keep_open_lifecycle_closure",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "settlement",
+            match_blockers=("closure",),
+            terminate_decisions=(
+                "close_lifecycle_settlement",
+                "retire_lifecycle_settlement",
+            ),
+            hold_decisions=("hold_lifecycle_settlement",),
+            skip_decisions=("keep_lifecycle_active",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "activation",
+            match_blockers=("settlement",),
+            terminate_decisions=("retire_lifecycle_line",),
+            hold_decisions=("hold_current_lifecycle_stage",),
+            buffer_decisions=("buffer_current_lifecycle_stage",),
+            skip_decisions=("activate_next_lifecycle_stage",),
+        ),
+        _default_lifecycle_phase_override_spec(
+            "resolution",
+            match_blockers=("settlement",),
+            action_blockers=("activation",),
+            terminate_decisions=("retire_lifecycle_resolution",),
+            hold_decisions=("hold_lifecycle_resolution",),
+            buffer_decisions=("buffer_lifecycle_resolution",),
+            skip_decisions=("continue_lifecycle_resolution",),
+            stage_label_key="current_stage_label",
+        ),
+    )
+
+
+def _build_lifecycle_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec, ...]:
+    return (
+        *_build_foundation_phase_override_specs(),
+        *_build_heritage_phase_override_specs(),
+        *_build_certification_phase_override_specs(),
+        *_build_stewardship_phase_override_specs(),
+        *_build_activation_phase_override_specs(),
+    )
+
+
+_LIFECYCLE_PHASE_OVERRIDE_SPECS = _build_lifecycle_phase_override_specs()
+
+
+
 async def build_followup_item(
     *,
     stream_service: StreamService,
     session_id: str,
     reference_time: datetime,
+    runtime_projector_version: str,
 ) -> dict[str, Any] | None:
     """Build a single followup item for a session.
 
     Extracted from ProactiveFollowupService._build_followup_item to keep
     the service class thin while preserving all original logic.
     """
-    projection, events = await asyncio.gather(
-        stream_service.project_stream(
-            stream_id=session_id,
-            projector_name="session-runtime",
-            projector_version="v1",
+    resolved_inputs = await _resolve_followup_inputs(
+        stream_service=stream_service,
+        session_id=session_id,
+        reference_time=reference_time,
+        runtime_projector_version=runtime_projector_version,
+    )
+    if resolved_inputs is None:
+        return None
+    context, stage_resolution = resolved_inputs
+    projected = _collect_projected_followup_state_bundle(context.state)
+    payloads = _collect_followup_payload_bundle(context)
+    queue = _resolve_followup_queue_bundle(
+        context=context,
+        stage_resolution=stage_resolution,
+        projected=projected,
+        payloads=payloads,
+        reference_time=reference_time,
+    )
+    if queue is None:
+        return None
+    return _assemble_followup_item(
+        _FollowupAssemblyBundle(
+            session_id=session_id,
+            context=context,
+            stage_resolution=stage_resolution,
+            projected=projected,
+            payloads=payloads,
+            queue=queue,
+        )
+    )
+
+
+async def _resolve_followup_inputs(
+    *,
+    stream_service: StreamService,
+    session_id: str,
+    reference_time: datetime,
+    runtime_projector_version: str,
+) -> tuple[_FollowupContext, _StageResolution] | None:
+    context = await _load_followup_context(
+        stream_service=stream_service,
+        session_id=session_id,
+        reference_time=reference_time,
+        runtime_projector_version=runtime_projector_version,
+    )
+    if context is None:
+        return None
+    stage_resolution = _resolve_followup_stage(
+        context=context,
+        reference_time=reference_time,
+    )
+    if stage_resolution is None:
+        return None
+    return context, stage_resolution
+
+
+def _collect_projected_followup_state_bundle(
+    state: dict[str, Any],
+) -> _ProjectedFollowupStateBundle:
+    projections = _collect_projected_followup_state(state)
+    return _ProjectedFollowupStateBundle(
+        projections=projections,
+        projected_stage_state=projections["proactive_stage_state_decision"],
+        projected_line_state=projections["proactive_line_state_decision"],
+        projected_line_transition=projections["proactive_line_transition_decision"],
+        projected_line_machine=projections["proactive_line_machine_decision"],
+        projected_lifecycle_state=projections["proactive_lifecycle_state_decision"],
+        projected_lifecycle_transition=projections[
+            "proactive_lifecycle_transition_decision"
+        ],
+        projected_lifecycle_machine=projections[
+            "proactive_lifecycle_machine_decision"
+        ],
+        projected_lifecycle_envelope=projections[
+            "proactive_lifecycle_envelope_decision"
+        ],
+        projected_lifecycle_scheduler=projections[
+            "proactive_lifecycle_scheduler_decision"
+        ],
+        projected_lifecycle_window=projections["proactive_lifecycle_window_decision"],
+        projected_lifecycle_queue=projections["proactive_lifecycle_queue_decision"],
+        projected_lifecycle_dispatch=projections[
+            "proactive_lifecycle_dispatch_decision"
+        ],
+        projected_lifecycle_outcome=projections[
+            "proactive_lifecycle_outcome_decision"
+        ],
+        projected_lifecycle_resolution=projections[
+            "proactive_lifecycle_resolution_decision"
+        ],
+        lifecycle_phase_overrides=_collect_followup_lifecycle_phase_overrides(
+            projections
         ),
-        stream_service.read_stream(stream_id=session_id),
-    )
-    state = dict(projection["state"])
-    session = dict(state.get("session") or {})
-    if not session.get("started"):
-        return None
-    session_source = str((session.get("metadata") or {}).get("source") or "session")
-    if session_source == "scenario_evaluation":
-        return None
-    archive_status = dict(state.get("archive_status") or {})
-    if archive_status.get("archived"):
-        return None
-
-    directive = dict(state.get("proactive_followup_directive") or {})
-    if not directive:
-        return None
-    guidance_plan = dict(state.get("guidance_plan") or {})
-    conversation_cadence_plan = dict(state.get("conversation_cadence_plan") or {})
-    session_ritual_plan = dict(state.get("session_ritual_plan") or {})
-    somatic_orchestration_plan = dict(state.get("somatic_orchestration_plan") or {})
-    proactive_cadence_plan = dict(state.get("proactive_cadence_plan") or {})
-    reengagement_matrix_assessment = dict(
-        state.get("reengagement_matrix_assessment") or {}
-    )
-    selected_matrix_candidate = _selected_matrix_candidate(
-        reengagement_matrix_assessment
-    )
-    reengagement_plan = dict(state.get("reengagement_plan") or {})
-    proactive_scheduling_plan = dict(state.get("proactive_scheduling_plan") or {})
-    proactive_guardrail_plan = dict(state.get("proactive_guardrail_plan") or {})
-    proactive_orchestration_plan = dict(
-        state.get("proactive_orchestration_plan") or {}
-    )
-    proactive_actuation_plan = dict(state.get("proactive_actuation_plan") or {})
-    proactive_progression_plan = dict(state.get("proactive_progression_plan") or {})
-
-    latest_proactive_event = _latest_event(
-        events,
-        event_type=PROACTIVE_FOLLOWUP_UPDATED,
-    )
-    latest_proactive_scheduling_event = _latest_event(
-        events,
-        event_type=PROACTIVE_SCHEDULING_UPDATED,
-    )
-    latest_proactive_orchestration_event = _latest_event(
-        events,
-        event_type=PROACTIVE_ORCHESTRATION_UPDATED,
-    )
-    latest_proactive_actuation_event = _latest_event(
-        events,
-        event_type=PROACTIVE_ACTUATION_UPDATED,
-    )
-    latest_proactive_progression_event = _latest_event(
-        events,
-        event_type=PROACTIVE_PROGRESSION_UPDATED,
-    )
-    latest_proactive_dispatch_gate_event = _latest_event(
-        events,
-        event_type=PROACTIVE_DISPATCH_GATE_UPDATED,
-    )
-    latest_proactive_dispatch_feedback_event = _latest_event(
-        events,
-        event_type=PROACTIVE_DISPATCH_FEEDBACK_ASSESSED,
-    )
-    latest_proactive_stage_controller_event = _latest_event(
-        events,
-        event_type=PROACTIVE_STAGE_CONTROLLER_UPDATED,
-    )
-    latest_proactive_line_controller_event = _latest_event(
-        events,
-        event_type=PROACTIVE_LINE_CONTROLLER_UPDATED,
-    )
-    latest_session_event = _latest_event(
-        events,
-        event_type=SESSION_STARTED,
-    )
-    latest_user_event = _latest_event(events, event_type=USER_MESSAGE_RECEIVED)
-    latest_assistant_event = _latest_event(
-        events,
-        event_type=ASSISTANT_MESSAGE_SENT,
+        projected_dispatch_envelope=dict(
+            state.get("proactive_dispatch_envelope_decision") or {}
+        ),
+        runtime_coordination_snapshot=dict(
+            state.get("runtime_coordination_snapshot") or {}
+        ),
+        lifecycle_controller_projection=dict(
+            state.get("proactive_lifecycle_controller_decision") or {}
+        ),
     )
 
-    directive_time = (
-        latest_proactive_event.occurred_at
-        if latest_proactive_event is not None
-        else (events[-1].occurred_at if events else reference_time)
+
+def _collect_followup_payload_bundle(
+    context: _FollowupContext,
+) -> _FollowupPayloadBundle:
+    return _FollowupPayloadBundle(
+        dispatch_gate_payload=_event_payload(
+            context.latest_proactive_dispatch_gate_event
+        ),
+        dispatch_feedback_payload=_event_payload(
+            context.latest_proactive_dispatch_feedback_event
+        ),
+        stage_controller_payload=_event_payload(
+            context.latest_proactive_stage_controller_event
+        ),
+        line_controller_payload=_event_payload(
+            context.latest_proactive_line_controller_event
+        ),
     )
-    dispatch_events_for_directive = [
-        event
-        for event in events
-        if event.event_type == PROACTIVE_FOLLOWUP_DISPATCHED
-        and latest_proactive_event is not None
-        and event.occurred_at >= latest_proactive_event.occurred_at
-    ]
-    if dispatch_events_for_directive:
-        latest_dispatch_payload = dict(dispatch_events_for_directive[-1].payload)
-        if int(
-            latest_dispatch_payload.get(
-                "proactive_cadence_remaining_after_dispatch",
-                1,
-            )
-            or 0
-        ) <= 0:
-            return None
-    dispatched_stage_count = len(dispatch_events_for_directive)
-    stage_labels = [
-        str(item)
-        for item in list(proactive_cadence_plan.get("stage_labels") or [])
-        if str(item).strip()
-    ]
-    stage_intervals_seconds = [
-        max(0, int(item))
-        for item in list(proactive_cadence_plan.get("stage_intervals_seconds") or [])
-    ]
-    close_after_stage_index = max(
-        0,
-        int(proactive_cadence_plan.get("close_after_stage_index") or 0),
+
+
+def _resolve_followup_queue_bundle(
+    *,
+    context: _FollowupContext,
+    stage_resolution: _StageResolution,
+    projected: _ProjectedFollowupStateBundle,
+    payloads: _FollowupPayloadBundle,
+    reference_time: datetime,
+) -> _ResolvedFollowupQueueBundle | None:
+    lifecycle_override_state = _resolve_followup_lifecycle_queue_override(
+        phase_overrides=projected.lifecycle_phase_overrides,
+        current_stage_label=stage_resolution.current_stage_label,
+        reference_time=reference_time,
+        base_due_at=stage_resolution.base_due_at,
+        due_at=stage_resolution.due_at,
+        expires_at=stage_resolution.expires_at,
+        schedule_reason=stage_resolution.schedule_reason,
+        scheduling_deferred_until=stage_resolution.scheduling_deferred_until,
+        queue_status=stage_resolution.queue_status,
+        seconds_until_due=stage_resolution.seconds_until_due,
+        seconds_overdue=stage_resolution.seconds_overdue,
+        window_remaining_seconds=stage_resolution.window_remaining_seconds,
+        window_seconds=stage_resolution.window_seconds,
     )
-    if not stage_labels:
-        stage_labels = ["first_touch"]
-        stage_intervals_seconds = [max(0, int(directive.get("trigger_after_seconds") or 0))]
-        close_after_stage_index = 1
-    max_dispatch_count = max(
-        1,
-        int(proactive_guardrail_plan.get("max_dispatch_count") or close_after_stage_index),
-    )
-    if close_after_stage_index > 0:
-        max_dispatch_count = min(max_dispatch_count, close_after_stage_index)
-    if dispatched_stage_count >= max_dispatch_count:
+    if lifecycle_override_state is None:
         return None
-    stage_index_by_label = {
-        label: index + 1 for index, label in enumerate(stage_labels)
+    dispatch_override_state = _resolve_followup_dispatch_queue_override(
+        projected_lifecycle_dispatch=projected.projected_lifecycle_dispatch,
+        projected_lifecycle_queue=projected.projected_lifecycle_queue,
+        current_stage_label=stage_resolution.current_stage_label,
+        reference_time=reference_time,
+        base_due_at=stage_resolution.base_due_at,
+        due_at=lifecycle_override_state.due_at,
+        expires_at=lifecycle_override_state.expires_at,
+        schedule_reason=lifecycle_override_state.schedule_reason,
+        scheduling_deferred_until=lifecycle_override_state.scheduling_deferred_until,
+        queue_status=lifecycle_override_state.queue_status,
+        seconds_until_due=lifecycle_override_state.seconds_until_due,
+        seconds_overdue=lifecycle_override_state.seconds_overdue,
+        window_remaining_seconds=lifecycle_override_state.window_remaining_seconds,
+        window_seconds=stage_resolution.window_seconds,
+        skip_lifecycle_dispatch_override=lifecycle_override_state.skip_dispatch_override,
+    )
+    if dispatch_override_state is None:
+        return None
+    proactive_stage_state = _resolve_followup_proactive_stage_state(
+        projected_stage_state=projected.projected_stage_state,
+        projected_dispatch_envelope=projected.projected_dispatch_envelope,
+        current_stage_label=stage_resolution.current_stage_label,
+        current_stage_index=stage_resolution.current_stage_index,
+        max_dispatch_count=context.max_dispatch_count,
+        queue_status=dispatch_override_state.queue_status,
+        schedule_reason=dispatch_override_state.schedule_reason,
+        current_stage_progression=stage_resolution.current_stage_progression,
+        progression_advanced=stage_resolution.progression_advanced,
+        current_stage_directive=stage_resolution.current_stage_directive,
+        reengagement_plan=context.reengagement_plan,
+        dispatch_gate_payload=payloads.dispatch_gate_payload,
+        stage_controller_payload=payloads.stage_controller_payload,
+        line_controller_payload=payloads.line_controller_payload,
+        state=context.state,
+    )
+    return _ResolvedFollowupQueueBundle(
+        due_at=dispatch_override_state.due_at,
+        base_due_at=stage_resolution.base_due_at,
+        expires_at=dispatch_override_state.expires_at,
+        seconds_until_due=dispatch_override_state.seconds_until_due,
+        seconds_overdue=dispatch_override_state.seconds_overdue,
+        window_remaining_seconds=dispatch_override_state.window_remaining_seconds,
+        schedule_reason=dispatch_override_state.schedule_reason,
+        scheduling_deferred_until=dispatch_override_state.scheduling_deferred_until,
+        queue_status=dispatch_override_state.queue_status,
+        proactive_stage_state=proactive_stage_state,
+    )
+
+
+def _assemble_followup_item(bundle: _FollowupAssemblyBundle) -> dict[str, Any]:
+    return {
+        **_build_followup_overview_fields(bundle),
+        **_build_followup_dispatch_and_line_fields(bundle),
+        **_build_followup_lifecycle_core_fields(bundle),
+        **_build_followup_generic_lifecycle_fields(bundle.projected),
+        **_build_followup_schedule_and_timing_fields(bundle),
     }
-    close_loop_stage = str(
-        proactive_progression_plan.get("close_loop_stage")
-        or proactive_orchestration_plan.get("close_loop_stage")
-        or stage_labels[-1]
-    )
-    current_stage_index = dispatched_stage_count + 1
-    current_stage_label = stage_labels[min(current_stage_index - 1, len(stage_labels) - 1)]
-    current_stage_directive = None
-    current_stage_actuation = None
-    current_stage_progression = None
-    current_stage_guardrail = None
 
-    due_at: datetime | None = None
-    base_due_at: datetime | None = None
-    expires_at: datetime | None = None
-    seconds_until_due: int | None = None
-    seconds_overdue: int | None = None
-    window_remaining_seconds: int | None = None
-    schedule_reason: str | None = None
-    scheduling_deferred_until: datetime | None = None
-    progression_anchor_at: datetime | None = None
-    progression_advanced = False
-    progression_reason: str | None = None
-    progression_applied_actions: list[str] = []
 
-    window_seconds = 0
-    directive_status = str(directive.get("status") or "hold")
-    queue_status = "hold"
-    if directive_status == "ready" and bool(directive.get("eligible")):
-        window_seconds = max(
-            0,
-            int(
-                proactive_cadence_plan.get("window_seconds")
-                or directive.get("window_seconds")
-                or 0
-            ),
-        )
-        while current_stage_index <= max_dispatch_count:
-            current_stage_label = stage_labels[
-                min(current_stage_index - 1, len(stage_labels) - 1)
-            ]
-            current_stage_directive = _stage_entry(
-                proactive_orchestration_plan.get("stage_directives"),
-                current_stage_label,
-            )
-            current_stage_actuation = _stage_entry(
-                proactive_actuation_plan.get("stage_actuations"),
-                current_stage_label,
-            )
-            current_stage_progression = _stage_entry(
-                proactive_progression_plan.get("stage_progressions"),
-                current_stage_label,
-            )
-            current_stage_guardrail = _stage_entry(
-                proactive_guardrail_plan.get("stage_guardrails"),
-                current_stage_label,
-            )
-            trigger_after_seconds = stage_intervals_seconds[
-                min(current_stage_index - 1, len(stage_intervals_seconds) - 1)
-            ]
-            (
-                base_due_at,
-                due_at,
-                expires_at,
-                seconds_until_due,
-                seconds_overdue,
-                window_remaining_seconds,
-                schedule_reason,
-                scheduling_deferred_until,
-            ) = _compute_stage_schedule(
-                reference_time=reference_time,
-                directive_time=directive_time,
-                dispatch_events_for_directive=dispatch_events_for_directive,
-                latest_assistant_event=latest_assistant_event,
-                proactive_scheduling_plan=proactive_scheduling_plan,
-                trigger_after_seconds=trigger_after_seconds,
-                window_seconds=window_seconds,
-                progression_anchor_at=progression_anchor_at,
-            )
-            due_at, expires_at, schedule_reason = _apply_matrix_learning_spacing(
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                window_seconds=window_seconds,
-                current_stage_label=current_stage_label,
-                reengagement_matrix_assessment=reengagement_matrix_assessment,
-            )
-            due_at, expires_at, schedule_reason = _apply_stage_guardrail(
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                latest_user_event=latest_user_event,
-                dispatch_events_for_directive=dispatch_events_for_directive,
-                current_stage_guardrail=current_stage_guardrail,
-            )
-            due_at, expires_at, schedule_reason = _apply_stage_controller(
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                window_seconds=window_seconds,
-                current_stage_label=current_stage_label,
-                latest_stage_controller_event=latest_proactive_stage_controller_event,
-            )
-            due_at, expires_at, schedule_reason = _apply_line_controller(
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                window_seconds=window_seconds,
-                current_stage_label=current_stage_label,
-                latest_line_controller_event=latest_proactive_line_controller_event,
-            )
-            due_at, expires_at, schedule_reason = _apply_dispatch_gate(
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                window_seconds=window_seconds,
-                current_stage_label=current_stage_label,
-                dispatch_events_for_directive=dispatch_events_for_directive,
-                latest_dispatch_gate_event=latest_proactive_dispatch_gate_event,
-            )
-            (
-                queue_status,
-                seconds_until_due,
-                seconds_overdue,
-                window_remaining_seconds,
-            ) = _resolve_queue_status(
-                reference_time=reference_time,
-                base_due_at=base_due_at,
-                due_at=due_at,
-                expires_at=expires_at,
-                schedule_reason=schedule_reason,
-                window_seconds=window_seconds,
-            )
-
-            if queue_status != "overdue":
-                break
-
-            max_overdue_seconds = max(
-                0,
-                int((current_stage_progression or {}).get("max_overdue_seconds") or 0),
-            )
-            if (
-                expires_at is None
-                or reference_time
-                <= expires_at + timedelta(seconds=max_overdue_seconds)
-            ):
-                break
-
-            expired_action = str(
-                (current_stage_progression or {}).get("on_expired")
-                or "close_line"
-            )
-            progression_advanced = True
-            if expired_action == "close_line":
-                return None
-
-            if expired_action == "jump_to_close_loop":
-                next_stage_index = stage_index_by_label.get(
-                    close_loop_stage,
-                    close_after_stage_index,
-                )
-            else:
-                next_stage_index = min(
-                    current_stage_index + 1,
-                    close_after_stage_index,
-                )
-
-            if next_stage_index <= current_stage_index:
-                return None
-            if next_stage_index > max_dispatch_count:
-                return None
-
-            next_stage_label = stage_labels[
-                min(next_stage_index - 1, len(stage_labels) - 1)
-            ]
-            progression_applied_actions.append(
-                f"{current_stage_label}:{expired_action}->{next_stage_label}"
-            )
-            progression_reason = " | ".join(progression_applied_actions)
-            current_stage_index = next_stage_index
-            progression_anchor_at = expires_at + timedelta(
-                seconds=max_overdue_seconds
-            )
-
-        if current_stage_index > max_dispatch_count:
-            return None
-
-        current_stage_label = stage_labels[
-            min(current_stage_index - 1, len(stage_labels) - 1)
-        ]
-        current_stage_directive = _stage_entry(
-            proactive_orchestration_plan.get("stage_directives"),
-            current_stage_label,
-        )
-        current_stage_actuation = _stage_entry(
-            proactive_actuation_plan.get("stage_actuations"),
-            current_stage_label,
-        )
-        current_stage_progression = _stage_entry(
-            proactive_progression_plan.get("stage_progressions"),
-            current_stage_label,
-        )
-        current_stage_guardrail = _stage_entry(
-            proactive_guardrail_plan.get("stage_guardrails"),
-            current_stage_label,
-        )
-
-    projected_stage_state = dict(state.get("proactive_stage_state_decision") or {})
-    projected_line_state = dict(state.get("proactive_line_state_decision") or {})
-    projected_line_transition = dict(
-        state.get("proactive_line_transition_decision") or {}
-    )
-    projected_line_machine = dict(state.get("proactive_line_machine_decision") or {})
-    projected_lifecycle_state = dict(
-        state.get("proactive_lifecycle_state_decision") or {}
-    )
-    projected_lifecycle_transition = dict(
-        state.get("proactive_lifecycle_transition_decision") or {}
-    )
-    projected_lifecycle_machine = dict(
-        state.get("proactive_lifecycle_machine_decision") or {}
-    )
-    projected_lifecycle_envelope = dict(
-        state.get("proactive_lifecycle_envelope_decision") or {}
-    )
-    projected_lifecycle_scheduler = dict(
-        state.get("proactive_lifecycle_scheduler_decision") or {}
-    )
-    projected_lifecycle_window = dict(
-        state.get("proactive_lifecycle_window_decision") or {}
-    )
-    projected_lifecycle_queue = dict(
-        state.get("proactive_lifecycle_queue_decision") or {}
-    )
-    projected_lifecycle_dispatch = dict(
-        state.get("proactive_lifecycle_dispatch_decision") or {}
-    )
-    projected_lifecycle_outcome = dict(
-        state.get("proactive_lifecycle_outcome_decision") or {}
-    )
-    projected_lifecycle_resolution = dict(
-        state.get("proactive_lifecycle_resolution_decision") or {}
-    )
-    projected_lifecycle_activation = dict(
-        state.get("proactive_lifecycle_activation_decision") or {}
-    )
-    projected_lifecycle_settlement = dict(
-        state.get("proactive_lifecycle_settlement_decision") or {}
-    )
-    projected_lifecycle_closure = dict(
-        state.get("proactive_lifecycle_closure_decision") or {}
-    )
-    projected_lifecycle_availability = dict(
-        state.get("proactive_lifecycle_availability_decision") or {}
-    )
-    projected_lifecycle_retention = dict(
-        state.get("proactive_lifecycle_retention_decision") or {}
-    )
-    projected_lifecycle_eligibility = dict(
-        state.get("proactive_lifecycle_eligibility_decision") or {}
-    )
-    projected_lifecycle_candidate = dict(
-        state.get("proactive_lifecycle_candidate_decision") or {}
-    )
-    projected_lifecycle_selectability = dict(
-        state.get("proactive_lifecycle_selectability_decision") or {}
-    )
-    projected_lifecycle_reentry = dict(
-        state.get("proactive_lifecycle_reentry_decision") or {}
-    )
-    projected_lifecycle_reactivation = dict(
-        state.get("proactive_lifecycle_reactivation_decision") or {}
-    )
-    projected_lifecycle_resumption = dict(
-        state.get("proactive_lifecycle_resumption_decision") or {}
-    )
-    projected_lifecycle_readiness = dict(
-        state.get("proactive_lifecycle_readiness_decision") or {}
-    )
-    projected_lifecycle_arming = dict(
-        state.get("proactive_lifecycle_arming_decision") or {}
-    )
-    projected_lifecycle_trigger = dict(
-        state.get("proactive_lifecycle_trigger_decision") or {}
-    )
-    projected_lifecycle_launch = dict(
-        state.get("proactive_lifecycle_launch_decision") or {}
-    )
-    projected_lifecycle_handoff = dict(
-        state.get("proactive_lifecycle_handoff_decision") or {}
-    )
-    projected_lifecycle_continuation = dict(
-        state.get("proactive_lifecycle_continuation_decision") or {}
-    )
-    projected_lifecycle_sustainment = dict(
-        state.get("proactive_lifecycle_sustainment_decision") or {}
-    )
-    projected_lifecycle_stewardship = dict(
-        state.get("proactive_lifecycle_stewardship_decision") or {}
-    )
-    projected_lifecycle_guardianship = dict(
-        state.get("proactive_lifecycle_guardianship_decision") or {}
-    )
-    projected_lifecycle_oversight = dict(
-        state.get("proactive_lifecycle_oversight_decision") or {}
-    )
-    projected_lifecycle_assurance = dict(
-        state.get("proactive_lifecycle_assurance_decision") or {}
-    )
-    projected_lifecycle_attestation = dict(
-        state.get("proactive_lifecycle_attestation_decision") or {}
-    )
-    projected_lifecycle_verification = dict(
-        state.get("proactive_lifecycle_verification_decision") or {}
-    )
-    projected_lifecycle_certification = dict(
-        state.get("proactive_lifecycle_certification_decision") or {}
-    )
-    projected_lifecycle_confirmation = dict(
-        state.get("proactive_lifecycle_confirmation_decision") or {}
-    )
-    projected_lifecycle_ratification = dict(
-        state.get("proactive_lifecycle_ratification_decision") or {}
-    )
-    projected_lifecycle_endorsement = dict(
-        state.get("proactive_lifecycle_endorsement_decision") or {}
-    )
-    projected_lifecycle_authorization = dict(
-        state.get("proactive_lifecycle_authorization_decision") or {}
-    )
-    projected_lifecycle_enactment = dict(
-        state.get("proactive_lifecycle_enactment_decision") or {}
-    )
-    projected_lifecycle_finality = dict(
-        state.get("proactive_lifecycle_finality_decision") or {}
-    )
-    projected_lifecycle_completion = dict(
-        state.get("proactive_lifecycle_completion_decision") or {}
-    )
-    projected_lifecycle_conclusion = dict(
-        state.get("proactive_lifecycle_conclusion_decision") or {}
-    )
-    projected_lifecycle_disposition = dict(
-        state.get("proactive_lifecycle_disposition_decision") or {}
-    )
-    projected_lifecycle_standing = dict(
-        state.get("proactive_lifecycle_standing_decision") or {}
-    )
-    projected_lifecycle_residency = dict(
-        state.get("proactive_lifecycle_residency_decision") or {}
-    )
-    projected_lifecycle_tenure = dict(
-        state.get("proactive_lifecycle_tenure_decision") or {}
-    )
-    projected_lifecycle_persistence = dict(
-        state.get("proactive_lifecycle_persistence_decision") or {}
-    )
-    projected_lifecycle_durability = dict(
-        state.get("proactive_lifecycle_durability_decision") or {}
-    )
-    projected_lifecycle_longevity = dict(
-        state.get("proactive_lifecycle_longevity_decision") or {}
-    )
-    projected_lifecycle_legacy = dict(
-        state.get("proactive_lifecycle_legacy_decision") or {}
-    )
-    projected_lifecycle_heritage = dict(
-        state.get("proactive_lifecycle_heritage_decision") or {}
-    )
-    projected_lifecycle_lineage = dict(
-        state.get("proactive_lifecycle_lineage_decision") or {}
-    )
-    projected_lifecycle_ancestry = dict(
-        state.get("proactive_lifecycle_ancestry_decision") or {}
-    )
-    projected_lifecycle_provenance = dict(
-        state.get("proactive_lifecycle_provenance_decision") or {}
-    )
-    projected_lifecycle_origin = dict(
-        state.get("proactive_lifecycle_origin_decision") or {}
-    )
-    projected_lifecycle_root = dict(
-        state.get("proactive_lifecycle_root_decision") or {}
-    )
-    projected_lifecycle_foundation = dict(
-        state.get("proactive_lifecycle_foundation_decision") or {}
-    )
-    projected_lifecycle_bedrock = dict(
-        state.get("proactive_lifecycle_bedrock_decision") or {}
-    )
-    projected_lifecycle_substrate = dict(
-        state.get("proactive_lifecycle_substrate_decision") or {}
-    )
-    projected_lifecycle_stratum = dict(
-        state.get("proactive_lifecycle_stratum_decision") or {}
-    )
-    projected_lifecycle_layer = dict(
-        state.get("proactive_lifecycle_layer_decision") or {}
-    )
-    lifecycle_resolution_decision = str(
-        projected_lifecycle_resolution.get("decision") or ""
-    )
-    lifecycle_resolution_stage_label = str(
-        projected_lifecycle_resolution.get("current_stage_label") or ""
-    )
-    lifecycle_resolution_delay_seconds = max(
-        0,
-        int(projected_lifecycle_resolution.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_activation_decision = str(
-        projected_lifecycle_activation.get("decision") or ""
-    )
-    lifecycle_activation_stage_label = str(
-        projected_lifecycle_activation.get("active_stage_label") or ""
-    )
-    lifecycle_activation_delay_seconds = max(
-        0,
-        int(projected_lifecycle_activation.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_settlement_decision = str(
-        projected_lifecycle_settlement.get("decision") or ""
-    )
-    lifecycle_settlement_stage_label = str(
-        projected_lifecycle_settlement.get("active_stage_label") or ""
-    )
-    lifecycle_settlement_delay_seconds = max(
-        0,
-        int(projected_lifecycle_settlement.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_closure_decision = str(
-        projected_lifecycle_closure.get("decision") or ""
-    )
-    lifecycle_closure_stage_label = str(
-        projected_lifecycle_closure.get("active_stage_label") or ""
-    )
-    lifecycle_closure_delay_seconds = max(
-        0,
-        int(projected_lifecycle_closure.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_availability_decision = str(
-        projected_lifecycle_availability.get("decision") or ""
-    )
-    lifecycle_availability_stage_label = str(
-        projected_lifecycle_availability.get("active_stage_label") or ""
-    )
-    lifecycle_availability_delay_seconds = max(
-        0,
-        int(
-            projected_lifecycle_availability.get("additional_delay_seconds") or 0
-        ),
-    )
-    lifecycle_retention_decision = str(
-        projected_lifecycle_retention.get("decision") or ""
-    )
-    lifecycle_retention_stage_label = str(
-        projected_lifecycle_retention.get("active_stage_label") or ""
-    )
-    lifecycle_retention_delay_seconds = max(
-        0,
-        int(projected_lifecycle_retention.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_eligibility_decision = str(
-        projected_lifecycle_eligibility.get("decision") or ""
-    )
-    lifecycle_eligibility_stage_label = str(
-        projected_lifecycle_eligibility.get("active_stage_label") or ""
-    )
-    lifecycle_eligibility_delay_seconds = max(
-        0,
-        int(projected_lifecycle_eligibility.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_candidate_decision = str(
-        projected_lifecycle_candidate.get("decision") or ""
-    )
-    lifecycle_candidate_stage_label = str(
-        projected_lifecycle_candidate.get("active_stage_label") or ""
-    )
-    lifecycle_candidate_delay_seconds = max(
-        0,
-        int(projected_lifecycle_candidate.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_selectability_decision = str(
-        projected_lifecycle_selectability.get("decision") or ""
-    )
-    lifecycle_selectability_stage_label = str(
-        projected_lifecycle_selectability.get("active_stage_label") or ""
-    )
-    lifecycle_selectability_delay_seconds = max(
-        0,
-        int(
-            projected_lifecycle_selectability.get("additional_delay_seconds") or 0
-        ),
-    )
-    lifecycle_reentry_decision = str(
-        projected_lifecycle_reentry.get("decision") or ""
-    )
-    lifecycle_reentry_stage_label = str(
-        projected_lifecycle_reentry.get("active_stage_label") or ""
-    )
-    lifecycle_reentry_delay_seconds = max(
-        0,
-        int(projected_lifecycle_reentry.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_reactivation_decision = str(
-        projected_lifecycle_reactivation.get("decision") or ""
-    )
-    lifecycle_reactivation_stage_label = str(
-        projected_lifecycle_reactivation.get("active_stage_label") or ""
-    )
-    lifecycle_reactivation_delay_seconds = max(
-        0,
-        int(projected_lifecycle_reactivation.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_resumption_decision = str(
-        projected_lifecycle_resumption.get("decision") or ""
-    )
-    lifecycle_resumption_stage_label = str(
-        projected_lifecycle_resumption.get("active_stage_label") or ""
-    )
-    lifecycle_resumption_delay_seconds = max(
-        0,
-        int(projected_lifecycle_resumption.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_readiness_decision = str(
-        projected_lifecycle_readiness.get("decision") or ""
-    )
-    lifecycle_readiness_stage_label = str(
-        projected_lifecycle_readiness.get("active_stage_label") or ""
-    )
-    lifecycle_readiness_delay_seconds = max(
-        0,
-        int(projected_lifecycle_readiness.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_arming_decision = str(
-        projected_lifecycle_arming.get("decision") or ""
-    )
-    lifecycle_arming_stage_label = str(
-        projected_lifecycle_arming.get("active_stage_label") or ""
-    )
-    lifecycle_arming_delay_seconds = max(
-        0,
-        int(projected_lifecycle_arming.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_trigger_decision = str(
-        projected_lifecycle_trigger.get("decision") or ""
-    )
-    lifecycle_trigger_stage_label = str(
-        projected_lifecycle_trigger.get("active_stage_label") or ""
-    )
-    lifecycle_trigger_delay_seconds = max(
-        0,
-        int(projected_lifecycle_trigger.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_launch_decision = str(
-        projected_lifecycle_launch.get("decision") or ""
-    )
-    lifecycle_launch_stage_label = str(
-        projected_lifecycle_launch.get("active_stage_label") or ""
-    )
-    lifecycle_launch_delay_seconds = max(
-        0,
-        int(projected_lifecycle_launch.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_handoff_decision = str(
-        projected_lifecycle_handoff.get("decision") or ""
-    )
-    lifecycle_handoff_stage_label = str(
-        projected_lifecycle_handoff.get("active_stage_label") or ""
-    )
-    lifecycle_handoff_delay_seconds = max(
-        0,
-        int(projected_lifecycle_handoff.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_continuation_decision = str(
-        projected_lifecycle_continuation.get("decision") or ""
-    )
-    lifecycle_continuation_stage_label = str(
-        projected_lifecycle_continuation.get("active_stage_label") or ""
-    )
-    lifecycle_continuation_delay_seconds = max(
-        0,
-        int(projected_lifecycle_continuation.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_sustainment_decision = str(
-        projected_lifecycle_sustainment.get("decision") or ""
-    )
-    lifecycle_sustainment_stage_label = str(
-        projected_lifecycle_sustainment.get("active_stage_label") or ""
-    )
-    lifecycle_sustainment_delay_seconds = max(
-        0,
-        int(projected_lifecycle_sustainment.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_stewardship_decision = str(
-        projected_lifecycle_stewardship.get("decision") or ""
-    )
-    lifecycle_stewardship_stage_label = str(
-        projected_lifecycle_stewardship.get("active_stage_label") or ""
-    )
-    lifecycle_stewardship_delay_seconds = max(
-        0,
-        int(projected_lifecycle_stewardship.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_guardianship_decision = str(
-        projected_lifecycle_guardianship.get("decision") or ""
-    )
-    lifecycle_guardianship_stage_label = str(
-        projected_lifecycle_guardianship.get("active_stage_label") or ""
-    )
-    lifecycle_guardianship_delay_seconds = max(
-        0,
-        int(projected_lifecycle_guardianship.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_oversight_decision = str(
-        projected_lifecycle_oversight.get("decision") or ""
-    )
-    lifecycle_oversight_stage_label = str(
-        projected_lifecycle_oversight.get("active_stage_label") or ""
-    )
-    lifecycle_oversight_delay_seconds = max(
-        0,
-        int(projected_lifecycle_oversight.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_assurance_decision = str(
-        projected_lifecycle_assurance.get("decision") or ""
-    )
-    lifecycle_assurance_stage_label = str(
-        projected_lifecycle_assurance.get("active_stage_label") or ""
-    )
-    lifecycle_assurance_delay_seconds = max(
-        0,
-        int(projected_lifecycle_assurance.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_attestation_decision = str(
-        projected_lifecycle_attestation.get("decision") or ""
-    )
-    lifecycle_attestation_stage_label = str(
-        projected_lifecycle_attestation.get("active_stage_label") or ""
-    )
-    lifecycle_attestation_delay_seconds = max(
-        0,
-        int(projected_lifecycle_attestation.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_verification_decision = str(
-        projected_lifecycle_verification.get("decision") or ""
-    )
-    lifecycle_verification_stage_label = str(
-        projected_lifecycle_verification.get("active_stage_label") or ""
-    )
-    lifecycle_verification_delay_seconds = max(
-        0,
-        int(projected_lifecycle_verification.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_certification_decision = str(
-        projected_lifecycle_certification.get("decision") or ""
-    )
-    lifecycle_certification_stage_label = str(
-        projected_lifecycle_certification.get("active_stage_label") or ""
-    )
-    lifecycle_certification_delay_seconds = max(
-        0,
-        int(projected_lifecycle_certification.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_confirmation_decision = str(
-        projected_lifecycle_confirmation.get("decision") or ""
-    )
-    lifecycle_confirmation_stage_label = str(
-        projected_lifecycle_confirmation.get("active_stage_label") or ""
-    )
-    lifecycle_confirmation_delay_seconds = max(
-        0,
-        int(projected_lifecycle_confirmation.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_ratification_decision = str(
-        projected_lifecycle_ratification.get("decision") or ""
-    )
-    lifecycle_ratification_stage_label = str(
-        projected_lifecycle_ratification.get("active_stage_label") or ""
-    )
-    lifecycle_ratification_delay_seconds = max(
-        0,
-        int(projected_lifecycle_ratification.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_endorsement_decision = str(
-        projected_lifecycle_endorsement.get("decision") or ""
-    )
-    lifecycle_endorsement_stage_label = str(
-        projected_lifecycle_endorsement.get("active_stage_label") or ""
-    )
-    lifecycle_endorsement_delay_seconds = max(
-        0,
-        int(projected_lifecycle_endorsement.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_authorization_decision = str(
-        projected_lifecycle_authorization.get("decision") or ""
-    )
-    lifecycle_enactment_decision = str(
-        projected_lifecycle_enactment.get("decision") or ""
-    )
-    lifecycle_enactment_stage_label = str(
-        projected_lifecycle_enactment.get("active_stage_label") or ""
-    )
-    lifecycle_enactment_delay_seconds = max(
-        0,
-        int(projected_lifecycle_enactment.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_finality_decision = str(
-        projected_lifecycle_finality.get("decision") or ""
-    )
-    lifecycle_finality_stage_label = str(
-        projected_lifecycle_finality.get("active_stage_label") or ""
-    )
-    lifecycle_finality_delay_seconds = max(
-        0,
-        int(projected_lifecycle_finality.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_completion_decision = str(
-        projected_lifecycle_completion.get("decision") or ""
-    )
-    lifecycle_completion_stage_label = str(
-        projected_lifecycle_completion.get("active_stage_label") or ""
-    )
-    lifecycle_completion_delay_seconds = max(
-        0,
-        int(projected_lifecycle_completion.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_conclusion_decision = str(
-        projected_lifecycle_conclusion.get("decision") or ""
-    )
-    lifecycle_conclusion_stage_label = str(
-        projected_lifecycle_conclusion.get("active_stage_label") or ""
-    )
-    lifecycle_conclusion_delay_seconds = max(
-        0,
-        int(projected_lifecycle_conclusion.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_disposition_decision = str(
-        projected_lifecycle_disposition.get("decision") or ""
-    )
-    lifecycle_disposition_stage_label = str(
-        projected_lifecycle_disposition.get("active_stage_label") or ""
-    )
-    lifecycle_disposition_delay_seconds = max(
-        0,
-        int(projected_lifecycle_disposition.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_standing_decision = str(
-        projected_lifecycle_standing.get("decision") or ""
-    )
-    lifecycle_standing_stage_label = str(
-        projected_lifecycle_standing.get("active_stage_label") or ""
-    )
-    lifecycle_standing_delay_seconds = max(
-        0,
-        int(projected_lifecycle_standing.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_residency_decision = str(
-        projected_lifecycle_residency.get("decision") or ""
-    )
-    lifecycle_residency_stage_label = str(
-        projected_lifecycle_residency.get("active_stage_label") or ""
-    )
-    lifecycle_residency_delay_seconds = max(
-        0,
-        int(projected_lifecycle_residency.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_tenure_decision = str(projected_lifecycle_tenure.get("decision") or "")
-    lifecycle_tenure_stage_label = str(
-        projected_lifecycle_tenure.get("active_stage_label") or ""
-    )
-    lifecycle_tenure_delay_seconds = max(
-        0,
-        int(projected_lifecycle_tenure.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_persistence_decision = str(
-        projected_lifecycle_persistence.get("decision") or ""
-    )
-    lifecycle_persistence_stage_label = str(
-        projected_lifecycle_persistence.get("active_stage_label") or ""
-    )
-    lifecycle_persistence_delay_seconds = max(
-        0,
-        int(projected_lifecycle_persistence.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_durability_decision = str(
-        projected_lifecycle_durability.get("decision") or ""
-    )
-    lifecycle_durability_stage_label = str(
-        projected_lifecycle_durability.get("active_stage_label") or ""
-    )
-    lifecycle_durability_delay_seconds = max(
-        0,
-        int(projected_lifecycle_durability.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_longevity_decision = str(
-        projected_lifecycle_longevity.get("decision") or ""
-    )
-    lifecycle_longevity_stage_label = str(
-        projected_lifecycle_longevity.get("active_stage_label") or ""
-    )
-    lifecycle_longevity_delay_seconds = max(
-        0,
-        int(projected_lifecycle_longevity.get("additional_delay_seconds") or 0),
-    )
-    lifecycle_legacy_decision = str(projected_lifecycle_legacy.get("decision") or "")
-    lifecycle_legacy_stage_label = str(
-        projected_lifecycle_legacy.get("active_stage_label") or ""
-    )
-    lifecycle_legacy_delay_seconds = max(
-        0, int(projected_lifecycle_legacy.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_heritage_decision = str(
-        projected_lifecycle_heritage.get("decision") or ""
-    )
-    lifecycle_heritage_stage_label = str(
-        projected_lifecycle_heritage.get("active_stage_label") or ""
-    )
-    lifecycle_heritage_delay_seconds = max(
-        0, int(projected_lifecycle_heritage.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_lineage_decision = str(
-        projected_lifecycle_lineage.get("decision") or ""
-    )
-    lifecycle_lineage_stage_label = str(
-        projected_lifecycle_lineage.get("active_stage_label") or ""
-    )
-    lifecycle_lineage_delay_seconds = max(
-        0, int(projected_lifecycle_lineage.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_ancestry_decision = str(
-        projected_lifecycle_ancestry.get("decision") or ""
-    )
-    lifecycle_ancestry_stage_label = str(
-        projected_lifecycle_ancestry.get("active_stage_label") or ""
-    )
-    lifecycle_ancestry_delay_seconds = max(
-        0, int(projected_lifecycle_ancestry.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_provenance_decision = str(
-        projected_lifecycle_provenance.get("decision") or ""
-    )
-    lifecycle_provenance_stage_label = str(
-        projected_lifecycle_provenance.get("active_stage_label") or ""
-    )
-    lifecycle_provenance_delay_seconds = max(
-        0, int(projected_lifecycle_provenance.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_origin_decision = str(projected_lifecycle_origin.get("decision") or "")
-    lifecycle_origin_stage_label = str(
-        projected_lifecycle_origin.get("active_stage_label") or ""
-    )
-    lifecycle_origin_delay_seconds = max(
-        0, int(projected_lifecycle_origin.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_root_decision = str(projected_lifecycle_root.get("decision") or "")
-    lifecycle_root_stage_label = str(
-        projected_lifecycle_root.get("active_stage_label") or ""
-    )
-    lifecycle_root_delay_seconds = max(
-        0, int(projected_lifecycle_root.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_foundation_decision = str(
-        projected_lifecycle_foundation.get("decision") or ""
-    )
-    lifecycle_foundation_stage_label = str(
-        projected_lifecycle_foundation.get("active_stage_label") or ""
-    )
-    lifecycle_foundation_delay_seconds = max(
-        0, int(projected_lifecycle_foundation.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_bedrock_decision = str(
-        projected_lifecycle_bedrock.get("decision") or ""
-    )
-    lifecycle_bedrock_stage_label = str(
-        projected_lifecycle_bedrock.get("active_stage_label") or ""
-    )
-    lifecycle_bedrock_delay_seconds = max(
-        0, int(projected_lifecycle_bedrock.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_substrate_decision = str(
-        projected_lifecycle_substrate.get("decision") or ""
-    )
-    lifecycle_substrate_stage_label = str(
-        projected_lifecycle_substrate.get("active_stage_label") or ""
-    )
-    lifecycle_substrate_delay_seconds = max(
-        0, int(projected_lifecycle_substrate.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_stratum_decision = str(
-        projected_lifecycle_stratum.get("decision") or ""
-    )
-    lifecycle_stratum_stage_label = str(
-        projected_lifecycle_stratum.get("active_stage_label") or ""
-    )
-    lifecycle_stratum_delay_seconds = max(
-        0, int(projected_lifecycle_stratum.get("additional_delay_seconds") or 0)
-    )
-    lifecycle_layer_decision = str(
-        projected_lifecycle_layer.get("decision") or ""
-    )
-    lifecycle_layer_stage_label = str(
-        projected_lifecycle_layer.get("active_stage_label") or ""
-    )
-    lifecycle_layer_delay_seconds = max(
-        0, int(projected_lifecycle_layer.get("additional_delay_seconds") or 0)
-    )
-    projected_dispatch_envelope = dict(
-        state.get("proactive_dispatch_envelope_decision") or {}
-    )
-    skip_lifecycle_dispatch_override = False
-    layer_applies = (
-        lifecycle_layer_decision in {
-            "archive_lifecycle_layer",
-            "retire_lifecycle_layer",
-        }
-        or lifecycle_layer_stage_label == current_stage_label
-    )
-    if layer_applies and lifecycle_layer_decision in {
-        "archive_lifecycle_layer",
-        "retire_lifecycle_layer",
-    }:
-        return None
-    if layer_applies and lifecycle_layer_decision == "pause_lifecycle_layer":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif layer_applies and lifecycle_layer_decision == "buffer_lifecycle_layer":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_layer_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            schedule_reason = " | ".join(
-                part
-                for part in str(schedule_reason).split(" | ")
-                if part != "lifecycle_stratum_buffered"
-            )
-            if "lifecycle_layer_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_layer_buffered"
-        else:
-            schedule_reason = "lifecycle_layer_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif layer_applies and lifecycle_layer_decision == "keep_lifecycle_layer":
-        skip_lifecycle_dispatch_override = True
-    stratum_applies = layer_applies or (
-        lifecycle_stratum_decision in {
-            "archive_lifecycle_stratum",
-            "retire_lifecycle_stratum",
-        }
-        or lifecycle_stratum_stage_label == current_stage_label
-    )
-    if (
-        not layer_applies
-        and stratum_applies
-        and lifecycle_stratum_decision in {
-        "archive_lifecycle_stratum",
-        "retire_lifecycle_stratum",
-        }
-    ):
-        return None
-    if (
-        not layer_applies
-        and stratum_applies
-        and lifecycle_stratum_decision == "pause_lifecycle_stratum"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        stratum_applies
-        and lifecycle_stratum_decision == "buffer_lifecycle_stratum"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_stratum_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            schedule_reason = " | ".join(
-                part
-                for part in str(schedule_reason).split(" | ")
-                if part != "lifecycle_substrate_buffered"
-            )
-            if "lifecycle_stratum_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_stratum_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_stratum_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        stratum_applies and lifecycle_stratum_decision == "keep_lifecycle_stratum"
-    ):
-        skip_lifecycle_dispatch_override = True
-    substrate_applies = layer_applies or stratum_applies or (
-        lifecycle_substrate_decision in {
-            "archive_lifecycle_substrate",
-            "retire_lifecycle_substrate",
-        }
-        or lifecycle_substrate_stage_label == current_stage_label
-    )
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and substrate_applies
-        and lifecycle_substrate_decision in {
-        "archive_lifecycle_substrate",
-        "retire_lifecycle_substrate",
-        }
-    ):
-        return None
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        substrate_applies
-        and lifecycle_substrate_decision == "pause_lifecycle_substrate"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        substrate_applies
-        and lifecycle_substrate_decision == "buffer_lifecycle_substrate"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_substrate_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_substrate_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_substrate_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_substrate_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        substrate_applies
-        and lifecycle_substrate_decision == "keep_lifecycle_substrate"
-    ):
-        skip_lifecycle_dispatch_override = True
-    bedrock_applies = layer_applies or stratum_applies or substrate_applies or (
-        lifecycle_bedrock_decision in {
-            "archive_lifecycle_bedrock",
-            "retire_lifecycle_bedrock",
-        }
-        or lifecycle_bedrock_stage_label == current_stage_label
-    )
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and bedrock_applies
-        and lifecycle_bedrock_decision in {
-        "archive_lifecycle_bedrock",
-        "retire_lifecycle_bedrock",
-        }
-    ):
-        return None
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and bedrock_applies
-        and lifecycle_bedrock_decision == "pause_lifecycle_bedrock"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and bedrock_applies
-        and lifecycle_bedrock_decision == "buffer_lifecycle_bedrock"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_bedrock_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_bedrock_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_bedrock_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_bedrock_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and bedrock_applies
-        and lifecycle_bedrock_decision == "keep_lifecycle_bedrock"
-    ):
-        skip_lifecycle_dispatch_override = True
-    foundation_applies = (
-        layer_applies
-        or stratum_applies
-        or substrate_applies
-        or bedrock_applies
-        or (
-        lifecycle_foundation_decision in {
-            "archive_lifecycle_foundation",
-            "retire_lifecycle_foundation",
-        }
-        or lifecycle_foundation_stage_label == current_stage_label
-        )
-    )
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and
-        not bedrock_applies
-        and foundation_applies
-        and lifecycle_foundation_decision in {
-        "archive_lifecycle_foundation",
-        "retire_lifecycle_foundation",
-        }
-    ):
-        return None
-    if (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and
-        not bedrock_applies
-        and foundation_applies
-        and lifecycle_foundation_decision == "pause_lifecycle_foundation"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and
-        not bedrock_applies
-        and foundation_applies
-        and lifecycle_foundation_decision == "buffer_lifecycle_foundation"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_foundation_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_foundation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_foundation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_foundation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not layer_applies
-        and
-        not stratum_applies
-        and
-        not substrate_applies
-        and
-        not bedrock_applies
-        and foundation_applies
-        and lifecycle_foundation_decision == "keep_lifecycle_foundation"
-    ):
-        skip_lifecycle_dispatch_override = True
-    root_applies = (
-        not foundation_applies
-        and (
-            lifecycle_root_decision in {
-                "archive_lifecycle_root",
-                "retire_lifecycle_root",
-            }
-            or lifecycle_root_stage_label == current_stage_label
-        )
-    )
-    if root_applies and lifecycle_root_decision in {
-        "archive_lifecycle_root",
-        "retire_lifecycle_root",
-    }:
-        return None
-    if root_applies and lifecycle_root_decision == "pause_lifecycle_root":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif root_applies and lifecycle_root_decision == "buffer_lifecycle_root":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_root_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_root_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_root_buffered"
-        else:
-            schedule_reason = "lifecycle_root_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif root_applies and lifecycle_root_decision == "keep_lifecycle_root":
-        skip_lifecycle_dispatch_override = True
-    origin_applies = (
-        not foundation_applies
-        and not root_applies
-        and (
-            lifecycle_origin_decision in {
-                "archive_lifecycle_origin",
-                "retire_lifecycle_origin",
-            }
-            or lifecycle_origin_stage_label == current_stage_label
-        )
-    )
-    if origin_applies and lifecycle_origin_decision in {
-        "archive_lifecycle_origin",
-        "retire_lifecycle_origin",
-    }:
-        return None
-    if origin_applies and lifecycle_origin_decision == "pause_lifecycle_origin":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif origin_applies and lifecycle_origin_decision == "buffer_lifecycle_origin":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_origin_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_origin_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_origin_buffered"
-        else:
-            schedule_reason = "lifecycle_origin_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif origin_applies and lifecycle_origin_decision == "keep_lifecycle_origin":
-        skip_lifecycle_dispatch_override = True
-    provenance_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and (
-            lifecycle_provenance_decision in {
-                "archive_lifecycle_provenance",
-                "retire_lifecycle_provenance",
-            }
-            or lifecycle_provenance_stage_label == current_stage_label
-        )
-    )
-    if provenance_applies and lifecycle_provenance_decision in {
-        "archive_lifecycle_provenance",
-        "retire_lifecycle_provenance",
-    }:
-        return None
-    if (
-        provenance_applies
-        and lifecycle_provenance_decision == "pause_lifecycle_provenance"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        provenance_applies
-        and lifecycle_provenance_decision == "buffer_lifecycle_provenance"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_provenance_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_provenance_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_provenance_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_provenance_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif provenance_applies and (
-        lifecycle_provenance_decision == "keep_lifecycle_provenance"
-    ):
-        skip_lifecycle_dispatch_override = True
-    ancestry_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and (
-            lifecycle_ancestry_decision in {
-                "archive_lifecycle_ancestry",
-                "retire_lifecycle_ancestry",
-            }
-            or lifecycle_ancestry_stage_label == current_stage_label
-        )
-    )
-    if ancestry_applies and lifecycle_ancestry_decision in {
-        "archive_lifecycle_ancestry",
-        "retire_lifecycle_ancestry",
-    }:
-        return None
-    if ancestry_applies and lifecycle_ancestry_decision == "pause_lifecycle_ancestry":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        ancestry_applies
-        and lifecycle_ancestry_decision == "buffer_lifecycle_ancestry"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_ancestry_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_ancestry_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_ancestry_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_ancestry_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif ancestry_applies and lifecycle_ancestry_decision == "keep_lifecycle_ancestry":
-        skip_lifecycle_dispatch_override = True
-    lineage_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and (
-            lifecycle_lineage_decision in {
-                "archive_lifecycle_lineage",
-                "retire_lifecycle_lineage",
-            }
-            or lifecycle_lineage_stage_label == current_stage_label
-        )
-    )
-    if lineage_applies and lifecycle_lineage_decision in {
-        "archive_lifecycle_lineage",
-        "retire_lifecycle_lineage",
-    }:
-        return None
-    if lineage_applies and lifecycle_lineage_decision == "pause_lifecycle_lineage":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif lineage_applies and lifecycle_lineage_decision == "buffer_lifecycle_lineage":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_lineage_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_lineage_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_lineage_buffered"
-        else:
-            schedule_reason = "lifecycle_lineage_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif lineage_applies and lifecycle_lineage_decision == "keep_lifecycle_lineage":
-        skip_lifecycle_dispatch_override = True
-    heritage_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and (
-            lifecycle_heritage_decision in {
-                "archive_lifecycle_heritage",
-                "retire_lifecycle_heritage",
-            }
-            or lifecycle_heritage_stage_label == current_stage_label
-        )
-    )
-    if heritage_applies and lifecycle_heritage_decision in {
-        "archive_lifecycle_heritage",
-        "retire_lifecycle_heritage",
-    }:
-        return None
-    if heritage_applies and lifecycle_heritage_decision == "pause_lifecycle_heritage":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        heritage_applies
-        and lifecycle_heritage_decision == "buffer_lifecycle_heritage"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_heritage_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_heritage_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_heritage_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_heritage_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif heritage_applies and lifecycle_heritage_decision == "keep_lifecycle_heritage":
-        skip_lifecycle_dispatch_override = True
-    legacy_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and (
-            lifecycle_legacy_decision in {
-                "archive_lifecycle_legacy",
-                "retire_lifecycle_legacy",
-            }
-            or lifecycle_legacy_stage_label == current_stage_label
-        )
-    )
-    if legacy_applies and lifecycle_legacy_decision in {
-        "archive_lifecycle_legacy",
-        "retire_lifecycle_legacy",
-    }:
-        return None
-    if legacy_applies and lifecycle_legacy_decision == "pause_lifecycle_legacy":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif legacy_applies and lifecycle_legacy_decision == "buffer_lifecycle_legacy":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_legacy_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_legacy_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_legacy_buffered"
-        else:
-            schedule_reason = "lifecycle_legacy_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif legacy_applies and lifecycle_legacy_decision == "keep_lifecycle_legacy":
-        skip_lifecycle_dispatch_override = True
-    longevity_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and (
-            lifecycle_longevity_decision in {
-                "archive_lifecycle_longevity",
-                "retire_lifecycle_longevity",
-            }
-            or lifecycle_longevity_stage_label == current_stage_label
-        )
-    )
-    if longevity_applies and lifecycle_longevity_decision in {
-        "archive_lifecycle_longevity",
-        "retire_lifecycle_longevity",
-    }:
-        return None
-    if longevity_applies and lifecycle_longevity_decision == "pause_lifecycle_longevity":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        longevity_applies
-        and lifecycle_longevity_decision == "buffer_lifecycle_longevity"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_longevity_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_longevity_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_longevity_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_longevity_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif longevity_applies and lifecycle_longevity_decision == "keep_lifecycle_longevity":
-        skip_lifecycle_dispatch_override = True
-    durability_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and (
-            lifecycle_durability_decision in {
-                "archive_lifecycle_durability",
-                "retire_lifecycle_durability",
-            }
-            or lifecycle_durability_stage_label == current_stage_label
-        )
-    )
-    if durability_applies and lifecycle_durability_decision in {
-        "archive_lifecycle_durability",
-        "retire_lifecycle_durability",
-    }:
-        return None
-    if durability_applies and lifecycle_durability_decision == "pause_lifecycle_durability":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        durability_applies
-        and lifecycle_durability_decision == "buffer_lifecycle_durability"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_durability_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_durability_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_durability_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_durability_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif durability_applies and lifecycle_durability_decision == "keep_lifecycle_durability":
-        skip_lifecycle_dispatch_override = True
-    persistence_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and not durability_applies
-        and (
-            lifecycle_persistence_decision in {
-                "archive_lifecycle_persistence",
-                "retire_lifecycle_persistence",
-            }
-            or lifecycle_persistence_stage_label == current_stage_label
-        )
-    )
-    if persistence_applies and lifecycle_persistence_decision in {
-        "archive_lifecycle_persistence",
-        "retire_lifecycle_persistence",
-    }:
-        return None
-    if (
-        persistence_applies
-        and lifecycle_persistence_decision == "pause_lifecycle_persistence"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        persistence_applies
-        and lifecycle_persistence_decision == "buffer_lifecycle_persistence"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_persistence_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_persistence_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_persistence_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_persistence_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        persistence_applies
-        and lifecycle_persistence_decision == "keep_lifecycle_persistence"
-    ):
-        skip_lifecycle_dispatch_override = True
-    tenure_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and not durability_applies
-        and not persistence_applies
-        and (
-            lifecycle_tenure_decision in {
-                "archive_lifecycle_tenure",
-                "retire_lifecycle_tenure",
-            }
-            or lifecycle_tenure_stage_label == current_stage_label
-        )
-    )
-    if tenure_applies and lifecycle_tenure_decision in {
-        "archive_lifecycle_tenure",
-        "retire_lifecycle_tenure",
-    }:
-        return None
-    if tenure_applies and lifecycle_tenure_decision == "pause_lifecycle_tenure":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif tenure_applies and lifecycle_tenure_decision == "buffer_lifecycle_tenure":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_tenure_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_tenure_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_tenure_buffered"
-        else:
-            schedule_reason = "lifecycle_tenure_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif tenure_applies and lifecycle_tenure_decision == "keep_lifecycle_tenure":
-        skip_lifecycle_dispatch_override = True
-    residency_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and not durability_applies
-        and not persistence_applies
-        and not tenure_applies
-        and (
-            lifecycle_residency_decision in {
-                "archive_lifecycle_residency",
-                "retire_lifecycle_residency",
-            }
-            or lifecycle_residency_stage_label == current_stage_label
-        )
-    )
-    if residency_applies and lifecycle_residency_decision in {
-        "archive_lifecycle_residency",
-        "retire_lifecycle_residency",
-    }:
-        return None
-    if (
-        residency_applies
-        and lifecycle_residency_decision == "pause_lifecycle_residency"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        residency_applies
-        and lifecycle_residency_decision == "buffer_lifecycle_residency"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_residency_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_residency_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_residency_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_residency_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        residency_applies
-        and lifecycle_residency_decision == "keep_lifecycle_residency"
-    ):
-        skip_lifecycle_dispatch_override = True
-    standing_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and not durability_applies
-        and not persistence_applies
-        and not tenure_applies
-        and not residency_applies
-        and (
-            lifecycle_standing_decision in {
-                "archive_lifecycle_standing",
-                "retire_lifecycle_standing",
-            }
-            or lifecycle_standing_stage_label == current_stage_label
-        )
-    )
-    if standing_applies and lifecycle_standing_decision in {
-        "archive_lifecycle_standing",
-        "retire_lifecycle_standing",
-    }:
-        return None
-    if standing_applies and lifecycle_standing_decision == "pause_lifecycle_standing":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif standing_applies and lifecycle_standing_decision == "buffer_lifecycle_standing":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_standing_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_standing_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_standing_buffered"
-        else:
-            schedule_reason = "lifecycle_standing_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif standing_applies and lifecycle_standing_decision == "keep_lifecycle_standing":
-        skip_lifecycle_dispatch_override = True
-    disposition_applies = (
-        not foundation_applies
-        and
-        not root_applies
-        and not origin_applies
-        and not provenance_applies
-        and not ancestry_applies
-        and not lineage_applies
-        and not heritage_applies
-        and not legacy_applies
-        and not longevity_applies
-        and not durability_applies
-        and not persistence_applies
-        and not tenure_applies
-        and not residency_applies
-        and not standing_applies
-        and (
-            lifecycle_disposition_decision in {
-                "archive_lifecycle_disposition",
-                "retire_lifecycle_disposition",
-            }
-            or lifecycle_disposition_stage_label == current_stage_label
-        )
-    )
-    if disposition_applies and lifecycle_disposition_decision in {
-        "archive_lifecycle_disposition",
-        "retire_lifecycle_disposition",
-    }:
-        return None
-    if (
-        disposition_applies
-        and lifecycle_disposition_decision == "pause_lifecycle_disposition"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        disposition_applies
-        and lifecycle_disposition_decision == "buffer_lifecycle_disposition"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_disposition_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_disposition_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_disposition_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_disposition_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        disposition_applies
-        and lifecycle_disposition_decision == "complete_lifecycle_disposition"
-    ):
-        skip_lifecycle_dispatch_override = True
-    conclusion_applies = (
-        not disposition_applies
-        and (
-            lifecycle_conclusion_decision in {
-                "archive_lifecycle_conclusion",
-                "retire_lifecycle_conclusion",
-            }
-            or lifecycle_conclusion_stage_label == current_stage_label
-        )
-    )
-    if conclusion_applies and lifecycle_conclusion_decision in {
-        "archive_lifecycle_conclusion",
-        "retire_lifecycle_conclusion",
-    }:
-        return None
-    if (
-        conclusion_applies
-        and lifecycle_conclusion_decision == "pause_lifecycle_conclusion"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        conclusion_applies
-        and lifecycle_conclusion_decision == "buffer_lifecycle_conclusion"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_conclusion_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_conclusion_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_conclusion_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_conclusion_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        conclusion_applies
-        and lifecycle_conclusion_decision == "complete_lifecycle_conclusion"
-    ):
-        skip_lifecycle_dispatch_override = True
-    completion_applies = (
-        not conclusion_applies
-        and (
-            lifecycle_completion_decision in {
-                "archive_lifecycle_completion",
-                "retire_lifecycle_completion",
-            }
-            or lifecycle_completion_stage_label == current_stage_label
-        )
-    )
-    if completion_applies and lifecycle_completion_decision in {
-        "archive_lifecycle_completion",
-        "retire_lifecycle_completion",
-    }:
-        return None
-    if (
-        completion_applies
-        and lifecycle_completion_decision == "pause_lifecycle_completion"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        completion_applies
-        and lifecycle_completion_decision == "buffer_lifecycle_completion"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_completion_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_completion_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_completion_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_completion_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        completion_applies
-        and lifecycle_completion_decision == "complete_lifecycle_completion"
-    ):
-        skip_lifecycle_dispatch_override = True
-    finality_applies = (
-        not completion_applies
-        and (
-        lifecycle_finality_decision in {
-            "archive_lifecycle_finality",
-            "retire_lifecycle_finality",
-        }
-        or lifecycle_finality_stage_label == current_stage_label
-        )
-    )
-    if finality_applies and lifecycle_finality_decision in {
-        "archive_lifecycle_finality",
-        "retire_lifecycle_finality",
-    }:
-        return None
-    if (
-        finality_applies
-        and lifecycle_finality_decision == "pause_lifecycle_finality"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        finality_applies
-        and lifecycle_finality_decision == "buffer_lifecycle_finality"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_finality_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_finality_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_finality_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_finality_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        finality_applies
-        and lifecycle_finality_decision == "finalize_lifecycle_finality"
-    ):
-        skip_lifecycle_dispatch_override = True
-    enactment_applies = (
-        (not finality_applies)
-        and (
-        lifecycle_enactment_decision in {
-            "archive_lifecycle_enactment",
-            "retire_lifecycle_enactment",
-        }
-        or lifecycle_enactment_stage_label == current_stage_label
-        )
-    )
-    if enactment_applies and lifecycle_enactment_decision in {
-        "archive_lifecycle_enactment",
-        "retire_lifecycle_enactment",
-    }:
-        return None
-    if (
-        enactment_applies
-        and lifecycle_enactment_decision == "pause_lifecycle_enactment"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        enactment_applies
-        and lifecycle_enactment_decision == "buffer_lifecycle_enactment"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_enactment_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_enactment_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_enactment_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_enactment_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        enactment_applies
-        and lifecycle_enactment_decision == "enact_lifecycle_enactment"
-    ):
-        skip_lifecycle_dispatch_override = True
-    # Authorization is observable across the lifecycle stack, but it does
-    # not become a non-terminal queue override until we have stronger
-    # semantics than the existing endorsement/progression flow.
-    authorization_applies = (
-        not enactment_applies
-        and lifecycle_authorization_decision in {
-            "archive_lifecycle_authorization",
-            "retire_lifecycle_authorization",
-        }
-    )
-    if authorization_applies and lifecycle_authorization_decision in {
-        "archive_lifecycle_authorization",
-        "retire_lifecycle_authorization",
-    }:
-        return None
-    endorsement_applies = (
-        not authorization_applies
-        and (
-            lifecycle_endorsement_decision in {
-                "archive_lifecycle_endorsement",
-                "retire_lifecycle_endorsement",
-            }
-            or lifecycle_endorsement_stage_label == current_stage_label
-        )
-    )
-    if endorsement_applies and lifecycle_endorsement_decision in {
-        "archive_lifecycle_endorsement",
-        "retire_lifecycle_endorsement",
-    }:
-        return None
-    if (
-        endorsement_applies
-        and lifecycle_endorsement_decision == "pause_lifecycle_endorsement"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        endorsement_applies
-        and lifecycle_endorsement_decision == "buffer_lifecycle_endorsement"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_endorsement_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_endorsement_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_endorsement_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_endorsement_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        endorsement_applies
-        and lifecycle_endorsement_decision == "endorse_lifecycle_endorsement"
-    ):
-        skip_lifecycle_dispatch_override = True
-    ratification_applies = (
-        not endorsement_applies
-        and (
-            lifecycle_ratification_decision in {
-                "archive_lifecycle_ratification",
-                "retire_lifecycle_ratification",
-            }
-            or lifecycle_ratification_stage_label == current_stage_label
-        )
-    )
-    if ratification_applies and lifecycle_ratification_decision in {
-        "archive_lifecycle_ratification",
-        "retire_lifecycle_ratification",
-    }:
-        return None
-    if (
-        ratification_applies
-        and lifecycle_ratification_decision == "pause_lifecycle_ratification"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        ratification_applies
-        and lifecycle_ratification_decision == "buffer_lifecycle_ratification"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_ratification_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_ratification_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_ratification_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_ratification_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        ratification_applies
-        and lifecycle_ratification_decision == "ratify_lifecycle_ratification"
-    ):
-        skip_lifecycle_dispatch_override = True
-    confirmation_applies = (
-        not ratification_applies
-        and (
-            lifecycle_confirmation_decision in {
-                "archive_lifecycle_confirmation",
-                "retire_lifecycle_confirmation",
-            }
-            or lifecycle_confirmation_stage_label == current_stage_label
-        )
-    )
-    if confirmation_applies and lifecycle_confirmation_decision in {
-        "archive_lifecycle_confirmation",
-        "retire_lifecycle_confirmation",
-    }:
-        return None
-    if (
-        confirmation_applies
-        and lifecycle_confirmation_decision == "pause_lifecycle_confirmation"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        confirmation_applies
-        and lifecycle_confirmation_decision == "buffer_lifecycle_confirmation"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_confirmation_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_confirmation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_confirmation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_confirmation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        confirmation_applies
-        and lifecycle_confirmation_decision == "confirm_lifecycle_confirmation"
-    ):
-        skip_lifecycle_dispatch_override = True
-    certification_applies = (
-        not confirmation_applies
-        and (
-            lifecycle_certification_decision in {
-                "archive_lifecycle_certification",
-                "retire_lifecycle_certification",
-            }
-            or lifecycle_certification_stage_label == current_stage_label
-        )
-    )
-    if certification_applies and lifecycle_certification_decision in {
-        "archive_lifecycle_certification",
-        "retire_lifecycle_certification",
-    }:
-        return None
-    if (
-        certification_applies
-        and lifecycle_certification_decision == "pause_lifecycle_certification"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        certification_applies
-        and lifecycle_certification_decision == "buffer_lifecycle_certification"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_certification_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_certification_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_certification_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_certification_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        certification_applies
-        and lifecycle_certification_decision == "certify_lifecycle_certification"
-    ):
-        skip_lifecycle_dispatch_override = True
-    verification_applies = (
-        not certification_applies
-        and (
-            lifecycle_verification_decision in {
-                "archive_lifecycle_verification",
-                "retire_lifecycle_verification",
-            }
-            or lifecycle_verification_stage_label == current_stage_label
-        )
-    )
-    if verification_applies and lifecycle_verification_decision in {
-        "archive_lifecycle_verification",
-        "retire_lifecycle_verification",
-    }:
-        return None
-    if (
-        verification_applies
-        and lifecycle_verification_decision == "pause_lifecycle_verification"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        verification_applies
-        and lifecycle_verification_decision == "buffer_lifecycle_verification"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_verification_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_verification_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_verification_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_verification_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        verification_applies
-        and lifecycle_verification_decision == "verify_lifecycle_verification"
-    ):
-        skip_lifecycle_dispatch_override = True
-    attestation_applies = (
-        lifecycle_attestation_decision in {
-            "archive_lifecycle_attestation",
-            "retire_lifecycle_attestation",
-        }
-        or lifecycle_attestation_stage_label == current_stage_label
-    )
-    if attestation_applies and lifecycle_attestation_decision in {
-        "archive_lifecycle_attestation",
-        "retire_lifecycle_attestation",
-    }:
-        return None
-    if (
-        not verification_applies
-        and attestation_applies
-        and lifecycle_attestation_decision == "pause_lifecycle_attestation"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not verification_applies
-        and attestation_applies
-        and lifecycle_attestation_decision == "buffer_lifecycle_attestation"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_attestation_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_attestation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_attestation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_attestation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not verification_applies
-        and attestation_applies
-        and lifecycle_attestation_decision == "attest_lifecycle_attestation"
-    ):
-        skip_lifecycle_dispatch_override = True
-    assurance_applies = (
-        lifecycle_assurance_decision in {
-            "archive_lifecycle_assurance",
-            "retire_lifecycle_assurance",
-        }
-        or lifecycle_assurance_stage_label == current_stage_label
-    )
-    if assurance_applies and lifecycle_assurance_decision in {
-        "archive_lifecycle_assurance",
-        "retire_lifecycle_assurance",
-    }:
-        return None
-    if (
-        not attestation_applies
-        and assurance_applies
-        and lifecycle_assurance_decision == "pause_lifecycle_assurance"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not attestation_applies
-        and assurance_applies
-        and lifecycle_assurance_decision == "buffer_lifecycle_assurance"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_assurance_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_assurance_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_assurance_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_assurance_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not attestation_applies
-        and assurance_applies
-        and lifecycle_assurance_decision == "assure_lifecycle_assurance"
-    ):
-        skip_lifecycle_dispatch_override = True
-    oversight_applies = (
-        lifecycle_oversight_decision in {
-            "archive_lifecycle_oversight",
-            "retire_lifecycle_oversight",
-        }
-        or lifecycle_oversight_stage_label == current_stage_label
-    )
-    if (
-        not attestation_applies
-        and not assurance_applies
-        and oversight_applies
-        and lifecycle_oversight_decision in {
-        "archive_lifecycle_oversight",
-        "retire_lifecycle_oversight",
-    }
-    ):
-        return None
-    if (
-        not attestation_applies
-        and not assurance_applies
-        and
-        oversight_applies
-        and lifecycle_oversight_decision == "pause_lifecycle_oversight"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not attestation_applies
-        and not assurance_applies
-        and
-        oversight_applies
-        and lifecycle_oversight_decision == "buffer_lifecycle_oversight"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_oversight_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_oversight_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_oversight_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_oversight_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not attestation_applies
-        and not assurance_applies
-        and
-        oversight_applies
-        and lifecycle_oversight_decision == "oversee_lifecycle_oversight"
-    ):
-        skip_lifecycle_dispatch_override = True
-    guardianship_applies = (
-        lifecycle_guardianship_decision in {
-            "archive_lifecycle_guardianship",
-            "retire_lifecycle_guardianship",
-        }
-        or lifecycle_guardianship_stage_label == current_stage_label
-    )
-    if (
-        not assurance_applies
-        and not oversight_applies
-        and guardianship_applies
-        and lifecycle_guardianship_decision in {
-            "archive_lifecycle_guardianship",
-            "retire_lifecycle_guardianship",
-        }
-    ):
-        return None
-    if (
-        not assurance_applies
-        and not oversight_applies
-        and
-        guardianship_applies
-        and lifecycle_guardianship_decision == "pause_lifecycle_guardianship"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not assurance_applies
-        and not oversight_applies
-        and
-        guardianship_applies
-        and lifecycle_guardianship_decision == "buffer_lifecycle_guardianship"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_guardianship_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_guardianship_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_guardianship_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_guardianship_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not assurance_applies
-        and not oversight_applies
-        and
-        guardianship_applies
-        and lifecycle_guardianship_decision == "guard_lifecycle_guardianship"
-    ):
-        skip_lifecycle_dispatch_override = True
-    stewardship_applies = (
-        lifecycle_stewardship_decision in {
-            "archive_lifecycle_stewardship",
-            "retire_lifecycle_stewardship",
-        }
-        or lifecycle_stewardship_stage_label == current_stage_label
-    )
-    if (
-        not assurance_applies
-        and not oversight_applies
-        and not guardianship_applies
-        and stewardship_applies
-        and lifecycle_stewardship_decision in {
-        "archive_lifecycle_stewardship",
-        "retire_lifecycle_stewardship",
-    }):
-        return None
-    if (
-        not assurance_applies
-        and not oversight_applies
-        and not guardianship_applies
-        and
-        stewardship_applies
-        and lifecycle_stewardship_decision == "pause_lifecycle_stewardship"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not assurance_applies
-        and not oversight_applies
-        and not guardianship_applies
-        and
-        stewardship_applies
-        and lifecycle_stewardship_decision == "buffer_lifecycle_stewardship"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_stewardship_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_stewardship_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_stewardship_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_stewardship_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not assurance_applies
-        and not oversight_applies
-        and not guardianship_applies
-        and
-        stewardship_applies
-        and lifecycle_stewardship_decision == "steward_lifecycle_stewardship"
-    ):
-        skip_lifecycle_dispatch_override = True
-    sustainment_applies = (
-        lifecycle_sustainment_decision in {
-            "archive_lifecycle_sustainment",
-            "retire_lifecycle_sustainment",
-        }
-        or lifecycle_sustainment_stage_label == current_stage_label
-    )
-    if (
-        not guardianship_applies
-        and not stewardship_applies
-        and sustainment_applies
-        and lifecycle_sustainment_decision in {
-            "archive_lifecycle_sustainment",
-            "retire_lifecycle_sustainment",
-        }
-    ):
-        return None
-    if (
-        not guardianship_applies
-        and not stewardship_applies
-        and
-        sustainment_applies
-        and lifecycle_sustainment_decision == "pause_lifecycle_sustainment"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not guardianship_applies
-        and not stewardship_applies
-        and
-        sustainment_applies
-        and lifecycle_sustainment_decision == "buffer_lifecycle_sustainment"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_sustainment_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_sustainment_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_sustainment_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_sustainment_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not guardianship_applies
-        and not stewardship_applies
-        and
-        sustainment_applies
-        and lifecycle_sustainment_decision == "sustain_lifecycle_sustainment"
-    ):
-        skip_lifecycle_dispatch_override = True
-    continuation_applies = (
-        lifecycle_continuation_decision in {
-            "archive_lifecycle_continuation",
-            "retire_lifecycle_continuation",
-        }
-        or lifecycle_continuation_stage_label == current_stage_label
-    )
-    if (
-        not sustainment_applies
-        and continuation_applies
-        and lifecycle_continuation_decision in {
-            "archive_lifecycle_continuation",
-            "retire_lifecycle_continuation",
-        }
-    ):
-        return None
-    if (
-        not sustainment_applies
-        and continuation_applies
-        and lifecycle_continuation_decision == "pause_lifecycle_continuation"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not sustainment_applies
-        and
-        continuation_applies
-        and lifecycle_continuation_decision == "buffer_lifecycle_continuation"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_continuation_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_continuation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_continuation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_continuation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not sustainment_applies
-        and
-        continuation_applies
-        and lifecycle_continuation_decision == "keep_lifecycle_continuation"
-    ):
-        skip_lifecycle_dispatch_override = True
-    handoff_applies = (
-        not continuation_applies
-        and (
-            lifecycle_handoff_decision in {
-            "archive_lifecycle_handoff",
-            "retire_lifecycle_handoff",
-        }
-            or lifecycle_handoff_stage_label == current_stage_label
-        )
-    )
-    if handoff_applies and lifecycle_handoff_decision in {
-        "archive_lifecycle_handoff",
-        "retire_lifecycle_handoff",
-    }:
-        return None
-    if handoff_applies and lifecycle_handoff_decision == "pause_lifecycle_handoff":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        handoff_applies
-        and lifecycle_handoff_decision == "buffer_lifecycle_handoff"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_handoff_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_handoff_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_handoff_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_handoff_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif handoff_applies and lifecycle_handoff_decision == "keep_lifecycle_handoff":
-        skip_lifecycle_dispatch_override = True
-    launch_applies = (
-        not handoff_applies
-        and (
-            lifecycle_launch_decision in {
-            "archive_lifecycle_launch",
-            "retire_lifecycle_launch",
-        }
-            or lifecycle_launch_stage_label == current_stage_label
-        )
-    )
-    if launch_applies and lifecycle_launch_decision in {
-        "archive_lifecycle_launch",
-        "retire_lifecycle_launch",
-    }:
-        return None
-    if launch_applies and lifecycle_launch_decision == "pause_lifecycle_launch":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif launch_applies and lifecycle_launch_decision == "buffer_lifecycle_launch":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_launch_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_launch_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_launch_buffered"
-        else:
-            schedule_reason = "lifecycle_launch_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif launch_applies and lifecycle_launch_decision == "keep_lifecycle_launch":
-        skip_lifecycle_dispatch_override = True
-    trigger_applies = (
-        not launch_applies
-        and (
-            lifecycle_trigger_decision in {
-                "archive_lifecycle_trigger",
-                "retire_lifecycle_trigger",
-            }
-            or lifecycle_trigger_stage_label == current_stage_label
-        )
-    )
-    if trigger_applies and lifecycle_trigger_decision in {
-        "archive_lifecycle_trigger",
-        "retire_lifecycle_trigger",
-    }:
-        return None
-    if trigger_applies and lifecycle_trigger_decision == "pause_lifecycle_trigger":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif trigger_applies and lifecycle_trigger_decision == "buffer_lifecycle_trigger":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_trigger_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_trigger_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_trigger_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_trigger_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif trigger_applies and lifecycle_trigger_decision == "keep_lifecycle_trigger":
-        skip_lifecycle_dispatch_override = True
-    arming_applies = (
-        not trigger_applies
-        and (
-            lifecycle_arming_decision in {
-                "archive_lifecycle_arming",
-                "retire_lifecycle_arming",
-            }
-            or lifecycle_arming_stage_label == current_stage_label
-        )
-    )
-    if arming_applies and lifecycle_arming_decision in {
-        "archive_lifecycle_arming",
-        "retire_lifecycle_arming",
-    }:
-        return None
-    if arming_applies and lifecycle_arming_decision == "pause_lifecycle_arming":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif arming_applies and lifecycle_arming_decision == "buffer_lifecycle_arming":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_arming_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_arming_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_arming_buffered"
-        else:
-            schedule_reason = "lifecycle_arming_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif arming_applies and lifecycle_arming_decision == "keep_lifecycle_arming":
-        skip_lifecycle_dispatch_override = True
-    readiness_applies = (
-        not arming_applies
-        and (
-            lifecycle_readiness_decision in {
-                "archive_lifecycle_readiness",
-                "retire_lifecycle_readiness",
-            }
-            or lifecycle_readiness_stage_label == current_stage_label
-        )
-    )
-    if readiness_applies and lifecycle_readiness_decision in {
-        "archive_lifecycle_readiness",
-        "retire_lifecycle_readiness",
-    }:
-        return None
-    if (
-        readiness_applies
-        and lifecycle_readiness_decision == "pause_lifecycle_readiness"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        readiness_applies
-        and lifecycle_readiness_decision == "buffer_lifecycle_readiness"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_readiness_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_readiness_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_readiness_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_readiness_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        readiness_applies
-        and lifecycle_readiness_decision == "keep_lifecycle_readiness"
-    ):
-        skip_lifecycle_dispatch_override = True
-    resumption_applies = (
-        not readiness_applies
-        and (
-        lifecycle_resumption_decision in {
-            "archive_lifecycle_resumption",
-            "retire_lifecycle_resumption",
-        }
-        or lifecycle_resumption_stage_label == current_stage_label
-        )
-    )
-    if resumption_applies and lifecycle_resumption_decision in {
-        "archive_lifecycle_resumption",
-        "retire_lifecycle_resumption",
-    }:
-        return None
-    if (
-        resumption_applies
-        and lifecycle_resumption_decision == "pause_lifecycle_resumption"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        resumption_applies
-        and lifecycle_resumption_decision == "buffer_lifecycle_resumption"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_resumption_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_resumption_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_resumption_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_resumption_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        resumption_applies
-        and lifecycle_resumption_decision == "keep_lifecycle_resumption"
-    ):
-        skip_lifecycle_dispatch_override = True
-    reactivation_applies = (
-        not resumption_applies
-        and (
-        lifecycle_reactivation_decision in {
-            "archive_lifecycle_reactivation",
-            "retire_lifecycle_reactivation",
-        }
-        or lifecycle_reactivation_stage_label == current_stage_label
-        )
-    )
-    if reactivation_applies and lifecycle_reactivation_decision in {
-        "archive_lifecycle_reactivation",
-        "retire_lifecycle_reactivation",
-    }:
-        return None
-    if (
-        reactivation_applies
-        and lifecycle_reactivation_decision == "pause_lifecycle_reactivation"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        reactivation_applies
-        and lifecycle_reactivation_decision == "buffer_lifecycle_reactivation"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_reactivation_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_reactivation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_reactivation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_reactivation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        reactivation_applies
-        and lifecycle_reactivation_decision == "keep_lifecycle_reactivation"
-    ):
-        skip_lifecycle_dispatch_override = True
-    reentry_applies = (
-        not reactivation_applies
-        and (
-            lifecycle_reentry_decision in {
-                "archive_lifecycle_reentry",
-                "retire_lifecycle_reentry",
-            }
-            or lifecycle_reentry_stage_label == current_stage_label
-        )
-    )
-    if reentry_applies and lifecycle_reentry_decision in {
-        "archive_lifecycle_reentry",
-        "retire_lifecycle_reentry",
-    }:
-        return None
-    if reentry_applies and lifecycle_reentry_decision == "pause_lifecycle_reentry":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif reentry_applies and lifecycle_reentry_decision == "buffer_lifecycle_reentry":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_reentry_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_reentry_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_reentry_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_reentry_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif reentry_applies and lifecycle_reentry_decision == "keep_lifecycle_reentry":
-        skip_lifecycle_dispatch_override = True
-    selectability_applies = (
-        not reentry_applies
-        and (
-            lifecycle_selectability_decision in {
-                "archive_lifecycle_selectability",
-                "retire_lifecycle_selectability",
-            }
-            or lifecycle_selectability_stage_label == current_stage_label
-        )
-    )
-    if selectability_applies and lifecycle_selectability_decision in {
-        "archive_lifecycle_selectability",
-        "retire_lifecycle_selectability",
-    }:
-        return None
-    if (
-        selectability_applies
-        and lifecycle_selectability_decision == "pause_lifecycle_selectability"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        selectability_applies
-        and lifecycle_selectability_decision == "buffer_lifecycle_selectability"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(
-                seconds=lifecycle_selectability_delay_seconds
-            )
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_selectability_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_selectability_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_selectability_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        selectability_applies
-        and lifecycle_selectability_decision == "keep_lifecycle_selectable"
-    ):
-        skip_lifecycle_dispatch_override = True
-    candidate_applies = (
-        not selectability_applies
-        and (
-        lifecycle_candidate_decision in {
-            "archive_lifecycle_candidate",
-            "retire_lifecycle_candidate",
-        }
-        or lifecycle_candidate_stage_label == current_stage_label
-        )
-    )
-    if candidate_applies and lifecycle_candidate_decision in {
-        "archive_lifecycle_candidate",
-        "retire_lifecycle_candidate",
-    }:
-        return None
-    if candidate_applies and lifecycle_candidate_decision == "pause_lifecycle_candidate":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        candidate_applies
-        and lifecycle_candidate_decision == "buffer_lifecycle_candidate"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_candidate_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_candidate_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_candidate_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_candidate_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        candidate_applies
-        and lifecycle_candidate_decision == "keep_lifecycle_candidate"
-    ):
-        skip_lifecycle_dispatch_override = True
-    eligibility_applies = (
-        not candidate_applies
-        and (
-        lifecycle_eligibility_decision in {
-            "archive_lifecycle_eligibility",
-            "retire_lifecycle_eligibility",
-        }
-        or lifecycle_eligibility_stage_label == current_stage_label
-        )
-    )
-    if eligibility_applies and lifecycle_eligibility_decision in {
-        "archive_lifecycle_eligibility",
-        "retire_lifecycle_eligibility",
-    }:
-        return None
-    if (
-        eligibility_applies
-        and lifecycle_eligibility_decision == "pause_lifecycle_eligibility"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        eligibility_applies
-        and lifecycle_eligibility_decision == "buffer_lifecycle_eligibility"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_eligibility_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_eligibility_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_eligibility_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_eligibility_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        eligibility_applies
-        and lifecycle_eligibility_decision == "keep_lifecycle_eligible"
-    ):
-        skip_lifecycle_dispatch_override = True
-    retention_applies = (
-        not eligibility_applies
-        and (
-        lifecycle_retention_decision in {
-            "archive_lifecycle_retention",
-            "retire_lifecycle_retention",
-        }
-        or lifecycle_retention_stage_label == current_stage_label
-        )
-    )
-    if retention_applies and lifecycle_retention_decision in {
-        "archive_lifecycle_retention",
-        "retire_lifecycle_retention",
-    }:
-        return None
-    if (
-        retention_applies
-        and lifecycle_retention_decision == "pause_lifecycle_retention"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        retention_applies
-        and lifecycle_retention_decision == "buffer_lifecycle_retention"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_retention_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_retention_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_retention_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_retention_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        retention_applies
-        and lifecycle_retention_decision == "retain_lifecycle_retention"
-    ):
-        skip_lifecycle_dispatch_override = True
-    availability_applies = (
-        not retention_applies
-        and (
-        lifecycle_availability_decision in {
-            "close_loop_lifecycle_availability",
-            "retire_lifecycle_availability",
-        }
-        or lifecycle_availability_stage_label == current_stage_label
-        )
-    )
-    if availability_applies and lifecycle_availability_decision in {
-        "close_loop_lifecycle_availability",
-        "retire_lifecycle_availability",
-    }:
-        return None
-    if (
-        availability_applies
-        and lifecycle_availability_decision == "pause_lifecycle_availability"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        availability_applies
-        and lifecycle_availability_decision == "buffer_lifecycle_availability"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_availability_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_availability_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_availability_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_availability_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        availability_applies
-        and lifecycle_availability_decision == "keep_lifecycle_available"
-    ):
-        skip_lifecycle_dispatch_override = True
-    closure_applies = (
-        not availability_applies
-        and (
-        lifecycle_closure_decision in {
-            "close_loop_lifecycle_closure",
-            "retire_lifecycle_closure",
-        }
-        or lifecycle_closure_stage_label == current_stage_label
-        )
-    )
-    if closure_applies and lifecycle_closure_decision in {
-        "close_loop_lifecycle_closure",
-        "retire_lifecycle_closure",
-    }:
-        return None
-    if closure_applies and lifecycle_closure_decision == "pause_lifecycle_closure":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif closure_applies and lifecycle_closure_decision == "buffer_lifecycle_closure":
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_closure_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_closure_buffered" not in schedule_reason:
-                schedule_reason = f"{schedule_reason} | lifecycle_closure_buffered"
-        else:
-            schedule_reason = "lifecycle_closure_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif closure_applies and lifecycle_closure_decision == "keep_open_lifecycle_closure":
-        skip_lifecycle_dispatch_override = True
-    settlement_applies = (
-        not closure_applies
-        and (
-        lifecycle_settlement_decision in {
-            "close_lifecycle_settlement",
-            "retire_lifecycle_settlement",
-        }
-        or lifecycle_settlement_stage_label == current_stage_label
-        )
-    )
-    if settlement_applies and lifecycle_settlement_decision in {
-        "close_lifecycle_settlement",
-        "retire_lifecycle_settlement",
-    }:
-        return None
-    if settlement_applies and lifecycle_settlement_decision == "hold_lifecycle_settlement":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        settlement_applies
-        and lifecycle_settlement_decision == "buffer_lifecycle_settlement"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_settlement_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_settlement_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_settlement_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_settlement_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        settlement_applies
-        and lifecycle_settlement_decision == "keep_lifecycle_active"
-    ):
-        skip_lifecycle_dispatch_override = True
-    activation_applies = (
-        not settlement_applies
-        and (
-            lifecycle_activation_decision == "retire_lifecycle_line"
-            or lifecycle_activation_stage_label == current_stage_label
-        )
-    )
-    if activation_applies and lifecycle_activation_decision == "retire_lifecycle_line":
-        return None
-    if activation_applies and lifecycle_activation_decision == "hold_current_lifecycle_stage":
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        activation_applies
-        and lifecycle_activation_decision == "buffer_current_lifecycle_stage"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_activation_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_activation_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_activation_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_activation_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        activation_applies
-        and lifecycle_activation_decision == "activate_next_lifecycle_stage"
-    ):
-        skip_lifecycle_dispatch_override = True
-    resolution_applies = (
-        not settlement_applies
-        and (
-            lifecycle_resolution_decision == "retire_lifecycle_resolution"
-            or lifecycle_resolution_stage_label == current_stage_label
-        )
-    )
-    if (
-        not activation_applies
-        and resolution_applies
-        and lifecycle_resolution_decision == "retire_lifecycle_resolution"
-    ):
-        return None
-    if (
-        not activation_applies
-        and resolution_applies
-        and lifecycle_resolution_decision == "hold_lifecycle_resolution"
-    ):
-        queue_status = "hold"
-        seconds_until_due = None
-        seconds_overdue = None
-        window_remaining_seconds = None
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not activation_applies
-        and resolution_applies
-        and lifecycle_resolution_decision == "buffer_lifecycle_resolution"
-    ):
-        if due_at is not None:
-            due_at = due_at + timedelta(seconds=lifecycle_resolution_delay_seconds)
-            if expires_at is not None:
-                expires_at = due_at + timedelta(seconds=window_seconds)
-            scheduling_deferred_until = due_at
-        if schedule_reason:
-            if "lifecycle_resolution_buffered" not in schedule_reason:
-                schedule_reason = (
-                    f"{schedule_reason} | lifecycle_resolution_buffered"
-                )
-        else:
-            schedule_reason = "lifecycle_resolution_buffered"
-        (
-            queue_status,
-            seconds_until_due,
-            seconds_overdue,
-            window_remaining_seconds,
-        ) = _resolve_queue_status(
-            reference_time=reference_time,
-            base_due_at=base_due_at,
-            due_at=due_at,
-            expires_at=expires_at,
-            schedule_reason=schedule_reason,
-            window_seconds=window_seconds,
-        )
-        if queue_status not in {"scheduled", "waiting"}:
-            queue_status = "scheduled"
-        skip_lifecycle_dispatch_override = True
-    elif (
-        not activation_applies
-        and resolution_applies
-        and lifecycle_resolution_decision == "continue_lifecycle_resolution"
-    ):
-        skip_lifecycle_dispatch_override = True
+def _resolve_followup_dispatch_queue_override(
+    *,
+    projected_lifecycle_dispatch: dict[str, Any],
+    projected_lifecycle_queue: dict[str, Any],
+    current_stage_label: str,
+    reference_time: datetime,
+    base_due_at: datetime | None,
+    due_at: datetime | None,
+    expires_at: datetime | None,
+    schedule_reason: str | None,
+    scheduling_deferred_until: datetime | None,
+    queue_status: str,
+    seconds_until_due: int | None,
+    seconds_overdue: int | None,
+    window_remaining_seconds: int | None,
+    window_seconds: int,
+    skip_lifecycle_dispatch_override: bool,
+) -> _QueueOverrideState | None:
     lifecycle_dispatch_decision = str(
         projected_lifecycle_dispatch.get("decision") or ""
     )
@@ -4448,2072 +980,1672 @@ async def build_followup_item(
         if queue_status not in {"due", "overdue"}:
             queue_status = (
                 "overdue"
-                if str(projected_lifecycle_queue.get("queue_status") or "") == "overdue"
+                if str(projected_lifecycle_queue.get("queue_status") or "")
+                == "overdue"
                 else "due"
             )
+    return _QueueOverrideState(
+        due_at=due_at,
+        expires_at=expires_at,
+        seconds_until_due=seconds_until_due,
+        seconds_overdue=seconds_overdue,
+        window_remaining_seconds=window_remaining_seconds,
+        schedule_reason=schedule_reason,
+        scheduling_deferred_until=scheduling_deferred_until,
+        queue_status=queue_status,
+    )
+
+
+def _resolve_followup_proactive_stage_state(
+    *,
+    projected_stage_state: dict[str, Any],
+    projected_dispatch_envelope: dict[str, Any],
+    current_stage_label: str,
+    current_stage_index: int,
+    max_dispatch_count: int,
+    queue_status: str,
+    schedule_reason: str | None,
+    current_stage_progression: dict[str, Any] | None,
+    progression_advanced: bool,
+    current_stage_directive: dict[str, Any] | None,
+    reengagement_plan: dict[str, Any],
+    dispatch_gate_payload: dict[str, Any],
+    stage_controller_payload: dict[str, Any],
+    line_controller_payload: dict[str, Any],
+    state: dict[str, Any],
+) -> dict[str, Any]:
     if (
         projected_stage_state.get("stage_label") == current_stage_label
         and projected_stage_state.get("queue_status") == queue_status
     ):
-        proactive_stage_state = projected_stage_state
-    else:
-        matching_envelope = (
-            projected_dispatch_envelope
-            if projected_dispatch_envelope.get("stage_label") == current_stage_label
-            else {}
+        return projected_stage_state
+    matching_envelope = (
+        projected_dispatch_envelope
+        if projected_dispatch_envelope.get("stage_label") == current_stage_label
+        else {}
+    )
+    return asdict(
+        build_proactive_stage_state_decision(
+            stage_label=current_stage_label,
+            stage_index=current_stage_index,
+            stage_count=max_dispatch_count,
+            queue_status=queue_status,
+            schedule_reason=schedule_reason,
+            progression_action=str(
+                (current_stage_progression or {}).get("on_expired") or "none"
+            ),
+            progression_advanced=progression_advanced,
+            line_state=str(line_controller_payload.get("line_state") or "steady"),
+            current_stage_delivery_mode=str(
+                (current_stage_directive or {}).get("delivery_mode")
+                or "single_message"
+            ),
+            current_stage_autonomy_mode=str(
+                (current_stage_directive or {}).get("autonomy_mode")
+                or "light_invitation"
+            ),
+            current_reengagement_delivery_mode=str(
+                reengagement_plan.get("delivery_mode") or "single_message"
+            ),
+            selected_strategy_key=str(
+                matching_envelope.get("selected_strategy_key")
+                or reengagement_plan.get("strategy_key")
+                or "none"
+            ),
+            selected_pressure_mode=str(
+                matching_envelope.get("selected_pressure_mode")
+                or reengagement_plan.get("pressure_mode")
+                or "none"
+            ),
+            selected_autonomy_signal=str(
+                matching_envelope.get("selected_autonomy_signal")
+                or reengagement_plan.get("autonomy_signal")
+                or "none"
+            ),
+            dispatch_envelope_key=matching_envelope.get("envelope_key"),
+            dispatch_envelope_decision=matching_envelope.get("decision"),
+            dispatch_gate_decision=str(dispatch_gate_payload.get("decision") or ""),
+            aggregate_controller_decision=str(
+                dict(state.get("proactive_aggregate_controller_decision") or {}).get(
+                    "decision"
+                )
+                or ""
+            ),
+            orchestration_controller_decision=str(
+                dict(state.get("proactive_orchestration_controller_decision") or {}).get(
+                    "decision"
+                )
+                or ""
+            ),
+            stage_controller_decision=str(
+                stage_controller_payload.get("decision") or ""
+            ),
+            line_controller_decision=str(line_controller_payload.get("decision") or ""),
         )
-        proactive_stage_state = asdict(
-            build_proactive_stage_state_decision(
-                stage_label=current_stage_label,
-                stage_index=current_stage_index,
-                stage_count=max_dispatch_count,
-                queue_status=queue_status,
-                schedule_reason=schedule_reason,
-                progression_action=str(
-                    (current_stage_progression or {}).get("on_expired") or "none"
-                ),
-                progression_advanced=progression_advanced,
-                line_state=str(
-                    dict(
-                        latest_proactive_line_controller_event.payload
-                        if latest_proactive_line_controller_event is not None
-                        else {}
-                    ).get("line_state")
-                    or "steady"
-                ),
-                current_stage_delivery_mode=str(
-                    (current_stage_directive or {}).get("delivery_mode")
-                    or "single_message"
-                ),
-                current_stage_autonomy_mode=str(
-                    (current_stage_directive or {}).get("autonomy_mode")
-                    or "light_invitation"
-                ),
-                current_reengagement_delivery_mode=str(
-                    reengagement_plan.get("delivery_mode") or "single_message"
-                ),
-                selected_strategy_key=str(
-                    matching_envelope.get("selected_strategy_key")
-                    or reengagement_plan.get("strategy_key")
-                    or "none"
-                ),
-                selected_pressure_mode=str(
-                    matching_envelope.get("selected_pressure_mode")
-                    or reengagement_plan.get("pressure_mode")
-                    or "none"
-                ),
-                selected_autonomy_signal=str(
-                    matching_envelope.get("selected_autonomy_signal")
-                    or reengagement_plan.get("autonomy_signal")
-                    or "none"
-                ),
-                dispatch_envelope_key=matching_envelope.get("envelope_key"),
-                dispatch_envelope_decision=matching_envelope.get("decision"),
-                dispatch_gate_decision=str(
-                    dict(
-                        latest_proactive_dispatch_gate_event.payload
-                        if latest_proactive_dispatch_gate_event is not None
-                        else {}
-                    ).get("decision")
-                    or ""
-                ),
-                aggregate_controller_decision=str(
-                    dict(state.get("proactive_aggregate_controller_decision") or {}).get(
-                        "decision"
-                    )
-                    or ""
-                ),
-                orchestration_controller_decision=str(
-                    dict(
-                        state.get("proactive_orchestration_controller_decision") or {}
-                    ).get("decision")
-                    or ""
-                ),
-                stage_controller_decision=str(
-                    dict(
-                        latest_proactive_stage_controller_event.payload
-                        if latest_proactive_stage_controller_event is not None
-                        else {}
-                    ).get("decision")
-                    or ""
-                ),
-                line_controller_decision=str(
-                    dict(
-                        latest_proactive_line_controller_event.payload
-                        if latest_proactive_line_controller_event is not None
-                        else {}
-                    ).get("decision")
-                    or ""
-                ),
+    )
+
+
+async def _load_followup_context(
+    *,
+    stream_service: StreamService,
+    session_id: str,
+    reference_time: datetime,
+    runtime_projector_version: str,
+) -> _FollowupContext | None:
+    try:
+        state, events = await _load_followup_state_and_events(
+            stream_service=stream_service,
+            session_id=session_id,
+            runtime_projector_version=runtime_projector_version,
+        )
+    except LegacyLifecycleStreamUnsupportedError:
+        return None
+    session_details = _resolve_followup_session_details(state)
+    if session_details is None:
+        return None
+    session, session_source = session_details
+    plan_state = _extract_followup_plan_state(state)
+    directive = plan_state["directive"]
+    if not directive:
+        return None
+    latest_events = _collect_followup_latest_events(events)
+    stage_metadata = _resolve_followup_stage_metadata(
+        events=events,
+        reference_time=reference_time,
+        directive=directive,
+        proactive_cadence_plan=plan_state["proactive_cadence_plan"],
+        proactive_guardrail_plan=plan_state["proactive_guardrail_plan"],
+        proactive_orchestration_plan=plan_state["proactive_orchestration_plan"],
+        proactive_progression_plan=plan_state["proactive_progression_plan"],
+        latest_proactive_event=latest_events.latest_proactive_event,
+    )
+    if stage_metadata is None:
+        return None
+    return _FollowupContext(
+        state=state,
+        session=session,
+        session_source=session_source,
+        directive=directive,
+        guidance_plan=plan_state["guidance_plan"],
+        conversation_cadence_plan=plan_state["conversation_cadence_plan"],
+        session_ritual_plan=plan_state["session_ritual_plan"],
+        somatic_orchestration_plan=plan_state["somatic_orchestration_plan"],
+        proactive_cadence_plan=plan_state["proactive_cadence_plan"],
+        reengagement_matrix_assessment=plan_state["reengagement_matrix_assessment"],
+        selected_matrix_candidate=plan_state["selected_matrix_candidate"],
+        reengagement_plan=plan_state["reengagement_plan"],
+        proactive_scheduling_plan=plan_state["proactive_scheduling_plan"],
+        proactive_guardrail_plan=plan_state["proactive_guardrail_plan"],
+        proactive_orchestration_plan=plan_state["proactive_orchestration_plan"],
+        proactive_actuation_plan=plan_state["proactive_actuation_plan"],
+        proactive_progression_plan=plan_state["proactive_progression_plan"],
+        events=events,
+        latest_proactive_event=latest_events.latest_proactive_event,
+        latest_proactive_scheduling_event=latest_events.latest_proactive_scheduling_event,
+        latest_proactive_orchestration_event=latest_events.latest_proactive_orchestration_event,
+        latest_proactive_actuation_event=latest_events.latest_proactive_actuation_event,
+        latest_proactive_progression_event=latest_events.latest_proactive_progression_event,
+        latest_proactive_dispatch_gate_event=latest_events.latest_proactive_dispatch_gate_event,
+        latest_proactive_dispatch_feedback_event=latest_events.latest_proactive_dispatch_feedback_event,
+        latest_proactive_stage_controller_event=latest_events.latest_proactive_stage_controller_event,
+        latest_proactive_line_controller_event=latest_events.latest_proactive_line_controller_event,
+        latest_session_event=latest_events.latest_session_event,
+        latest_user_event=latest_events.latest_user_event,
+        latest_assistant_event=latest_events.latest_assistant_event,
+        directive_time=stage_metadata.directive_time,
+        dispatch_events_for_directive=stage_metadata.dispatch_events_for_directive,
+        dispatched_stage_count=stage_metadata.dispatched_stage_count,
+        stage_labels=stage_metadata.stage_labels,
+        stage_intervals_seconds=stage_metadata.stage_intervals_seconds,
+        close_after_stage_index=stage_metadata.close_after_stage_index,
+        max_dispatch_count=stage_metadata.max_dispatch_count,
+        stage_index_by_label=stage_metadata.stage_index_by_label,
+        close_loop_stage=stage_metadata.close_loop_stage,
+    )
+
+
+async def _load_followup_state_and_events(
+    *,
+    stream_service: StreamService,
+    session_id: str,
+    runtime_projector_version: str,
+) -> tuple[dict[str, Any], list[StoredEvent]]:
+    projection, events = await asyncio.gather(
+        stream_service.project_stream(
+            stream_id=session_id,
+            projector_name="session-runtime",
+            projector_version=runtime_projector_version,
+        ),
+        stream_service.read_stream(stream_id=session_id),
+    )
+    return dict(projection["state"]), events
+
+
+def _resolve_followup_session_details(
+    state: dict[str, Any],
+) -> tuple[dict[str, Any], str] | None:
+    session = dict(state.get("session") or {})
+    if not session.get("started"):
+        return None
+    session_source = str((session.get("metadata") or {}).get("source") or "session")
+    if session_source == "scenario_evaluation":
+        return None
+    archive_status = dict(state.get("archive_status") or {})
+    if archive_status.get("archived"):
+        return None
+    return session, session_source
+
+
+def _extract_followup_plan_state(state: dict[str, Any]) -> dict[str, Any]:
+    reengagement_matrix_assessment = dict(
+        state.get("reengagement_matrix_assessment") or {}
+    )
+    return {
+        "directive": dict(state.get("proactive_followup_directive") or {}),
+        "guidance_plan": dict(state.get("guidance_plan") or {}),
+        "conversation_cadence_plan": dict(state.get("conversation_cadence_plan") or {}),
+        "session_ritual_plan": dict(state.get("session_ritual_plan") or {}),
+        "somatic_orchestration_plan": dict(state.get("somatic_orchestration_plan") or {}),
+        "proactive_cadence_plan": dict(state.get("proactive_cadence_plan") or {}),
+        "reengagement_matrix_assessment": reengagement_matrix_assessment,
+        "selected_matrix_candidate": _selected_matrix_candidate(
+            reengagement_matrix_assessment
+        ),
+        "reengagement_plan": dict(state.get("reengagement_plan") or {}),
+        "proactive_scheduling_plan": dict(state.get("proactive_scheduling_plan") or {}),
+        "proactive_guardrail_plan": dict(state.get("proactive_guardrail_plan") or {}),
+        "proactive_orchestration_plan": dict(
+            state.get("proactive_orchestration_plan") or {}
+        ),
+        "proactive_actuation_plan": dict(state.get("proactive_actuation_plan") or {}),
+        "proactive_progression_plan": dict(state.get("proactive_progression_plan") or {}),
+    }
+
+
+def _collect_followup_latest_events(
+    events: list[StoredEvent],
+) -> _FollowupLatestEvents:
+    return _FollowupLatestEvents(
+        latest_proactive_event=_latest_event(
+            events,
+            event_type=PROACTIVE_FOLLOWUP_UPDATED,
+        ),
+        latest_proactive_scheduling_event=_latest_event(
+            events,
+            event_type=PROACTIVE_SCHEDULING_UPDATED,
+        ),
+        latest_proactive_orchestration_event=_latest_event(
+            events,
+            event_type=PROACTIVE_ORCHESTRATION_UPDATED,
+        ),
+        latest_proactive_actuation_event=_latest_event(
+            events,
+            event_type=PROACTIVE_ACTUATION_UPDATED,
+        ),
+        latest_proactive_progression_event=_latest_event(
+            events,
+            event_type=PROACTIVE_PROGRESSION_UPDATED,
+        ),
+        latest_proactive_dispatch_gate_event=_latest_event(
+            events,
+            event_type=PROACTIVE_DISPATCH_GATE_UPDATED,
+        ),
+        latest_proactive_dispatch_feedback_event=_latest_event(
+            events,
+            event_type=PROACTIVE_DISPATCH_FEEDBACK_ASSESSED,
+        ),
+        latest_proactive_stage_controller_event=_latest_event(
+            events,
+            event_type=PROACTIVE_STAGE_CONTROLLER_UPDATED,
+        ),
+        latest_proactive_line_controller_event=_latest_event(
+            events,
+            event_type=PROACTIVE_LINE_CONTROLLER_UPDATED,
+        ),
+        latest_session_event=_latest_event(
+            events,
+            event_type=SESSION_STARTED,
+        ),
+        latest_user_event=_latest_event(events, event_type=USER_MESSAGE_RECEIVED),
+        latest_assistant_event=_latest_event(
+            events,
+            event_type=ASSISTANT_MESSAGE_SENT,
+        ),
+    )
+
+
+def _resolve_followup_stage_metadata(
+    *,
+    events: list[StoredEvent],
+    reference_time: datetime,
+    directive: dict[str, Any],
+    proactive_cadence_plan: dict[str, Any],
+    proactive_guardrail_plan: dict[str, Any],
+    proactive_orchestration_plan: dict[str, Any],
+    proactive_progression_plan: dict[str, Any],
+    latest_proactive_event: StoredEvent | None,
+) -> _FollowupStageMetadata | None:
+    directive_time = (
+        latest_proactive_event.occurred_at
+        if latest_proactive_event is not None
+        else (events[-1].occurred_at if events else reference_time)
+    )
+    dispatch_events_for_directive = [
+        event
+        for event in events
+        if event.event_type == PROACTIVE_FOLLOWUP_DISPATCHED
+        and latest_proactive_event is not None
+        and event.occurred_at >= latest_proactive_event.occurred_at
+    ]
+    if dispatch_events_for_directive:
+        latest_dispatch_payload = dict(dispatch_events_for_directive[-1].payload)
+        if int(
+            latest_dispatch_payload.get(
+                "proactive_cadence_remaining_after_dispatch",
+                1,
+            )
+            or 0
+        ) <= 0:
+            return None
+    dispatched_stage_count = len(dispatch_events_for_directive)
+    stage_labels = [
+        str(item)
+        for item in list(proactive_cadence_plan.get("stage_labels") or [])
+        if str(item).strip()
+    ]
+    stage_intervals_seconds = [
+        max(0, int(item))
+        for item in list(proactive_cadence_plan.get("stage_intervals_seconds") or [])
+    ]
+    close_after_stage_index = max(
+        0,
+        int(proactive_cadence_plan.get("close_after_stage_index") or 0),
+    )
+    if not stage_labels:
+        stage_labels = ["first_touch"]
+        stage_intervals_seconds = [
+            max(0, int(directive.get("trigger_after_seconds") or 0))
+        ]
+        close_after_stage_index = 1
+    max_dispatch_count = max(
+        1,
+        int(
+            proactive_guardrail_plan.get("max_dispatch_count")
+            or close_after_stage_index
+        ),
+    )
+    if close_after_stage_index > 0:
+        max_dispatch_count = min(max_dispatch_count, close_after_stage_index)
+    if dispatched_stage_count >= max_dispatch_count:
+        return None
+    stage_index_by_label = {
+        label: index + 1 for index, label in enumerate(stage_labels)
+    }
+    close_loop_stage = str(
+        proactive_progression_plan.get("close_loop_stage")
+        or proactive_orchestration_plan.get("close_loop_stage")
+        or stage_labels[-1]
+    )
+    return _FollowupStageMetadata(
+        directive_time=directive_time,
+        dispatch_events_for_directive=dispatch_events_for_directive,
+        dispatched_stage_count=dispatched_stage_count,
+        stage_labels=stage_labels,
+        stage_intervals_seconds=stage_intervals_seconds,
+        close_after_stage_index=close_after_stage_index,
+        max_dispatch_count=max_dispatch_count,
+        stage_index_by_label=stage_index_by_label,
+        close_loop_stage=close_loop_stage,
+    )
+
+
+def _resolve_followup_stage(
+    *,
+    context: _FollowupContext,
+    reference_time: datetime,
+) -> _StageResolution | None:
+    current_stage_index = context.dispatched_stage_count + 1
+    current_stage_payload = _select_followup_stage_payload(
+        context=context,
+        current_stage_index=current_stage_index,
+    )
+    current_stage_directive = None
+    current_stage_actuation = None
+    current_stage_progression = None
+    current_stage_guardrail = None
+
+    due_at: datetime | None = None
+    base_due_at: datetime | None = None
+    expires_at: datetime | None = None
+    seconds_until_due: int | None = None
+    seconds_overdue: int | None = None
+    window_remaining_seconds: int | None = None
+    schedule_reason: str | None = None
+    scheduling_deferred_until: datetime | None = None
+    progression_anchor_at: datetime | None = None
+    progression_advanced = False
+    progression_reason: str | None = None
+    progression_applied_actions: list[str] = []
+    schedule_snapshot: _StageScheduleSnapshot | None = None
+
+    window_seconds = 0
+    directive_status = str(context.directive.get("status") or "hold")
+    queue_status = "hold"
+    if directive_status == "ready" and bool(context.directive.get("eligible")):
+        window_seconds = max(
+            0,
+            int(
+                context.proactive_cadence_plan.get("window_seconds")
+                or context.directive.get("window_seconds")
+                or 0
+            ),
+        )
+        while current_stage_index <= context.max_dispatch_count:
+            schedule_snapshot = _build_stage_schedule_snapshot(
+                context=context,
+                reference_time=reference_time,
+                current_stage_index=current_stage_index,
+                window_seconds=window_seconds,
+                progression_anchor_at=progression_anchor_at,
+            )
+            if schedule_snapshot.queue_status != "overdue":
+                break
+            progression_advance = _resolve_followup_stage_progression_advance(
+                context=context,
+                reference_time=reference_time,
+                current_stage_index=current_stage_index,
+                schedule_snapshot=schedule_snapshot,
+                progression_applied_actions=progression_applied_actions,
+            )
+            if progression_advance is None:
+                break
+            progression_advanced = True
+            if progression_advance.next_stage_index <= current_stage_index:
+                return None
+            if progression_advance.next_stage_index > context.max_dispatch_count:
+                return None
+            progression_reason = progression_advance.progression_reason
+            current_stage_index = progression_advance.next_stage_index
+            progression_anchor_at = progression_advance.progression_anchor_at
+
+        if current_stage_index > context.max_dispatch_count:
+            return None
+        current_stage_payload = (
+            schedule_snapshot.payload
+            if schedule_snapshot is not None
+            else _select_followup_stage_payload(
+                context=context,
+                current_stage_index=current_stage_index,
             )
         )
+        current_stage_directive = current_stage_payload.current_stage_directive
+        current_stage_actuation = current_stage_payload.current_stage_actuation
+        current_stage_progression = current_stage_payload.current_stage_progression
+        current_stage_guardrail = current_stage_payload.current_stage_guardrail
+        if schedule_snapshot is not None:
+            due_at = schedule_snapshot.due_at
+            base_due_at = schedule_snapshot.base_due_at
+            expires_at = schedule_snapshot.expires_at
+            seconds_until_due = schedule_snapshot.seconds_until_due
+            seconds_overdue = schedule_snapshot.seconds_overdue
+            window_remaining_seconds = schedule_snapshot.window_remaining_seconds
+            schedule_reason = schedule_snapshot.schedule_reason
+            scheduling_deferred_until = schedule_snapshot.scheduling_deferred_until
+            queue_status = schedule_snapshot.queue_status
 
+    return _StageResolution(
+        directive_status=directive_status,
+        window_seconds=window_seconds,
+        current_stage_index=current_stage_index,
+        current_stage_label=current_stage_payload.current_stage_label,
+        current_stage_directive=current_stage_directive,
+        current_stage_actuation=current_stage_actuation,
+        current_stage_progression=current_stage_progression,
+        current_stage_guardrail=current_stage_guardrail,
+        due_at=due_at,
+        base_due_at=base_due_at,
+        expires_at=expires_at,
+        seconds_until_due=seconds_until_due,
+        seconds_overdue=seconds_overdue,
+        window_remaining_seconds=window_remaining_seconds,
+        schedule_reason=schedule_reason,
+        scheduling_deferred_until=scheduling_deferred_until,
+        progression_advanced=progression_advanced,
+        progression_reason=progression_reason,
+        queue_status=queue_status,
+    )
+
+
+def _select_followup_stage_payload(
+    *,
+    context: _FollowupContext,
+    current_stage_index: int,
+) -> _StagePayloadSelection:
+    current_stage_label = context.stage_labels[
+        min(current_stage_index - 1, len(context.stage_labels) - 1)
+    ]
+    return _StagePayloadSelection(
+        current_stage_label=current_stage_label,
+        current_stage_directive=_stage_entry(
+            context.proactive_orchestration_plan.get("stage_directives"),
+            current_stage_label,
+        ),
+        current_stage_actuation=_stage_entry(
+            context.proactive_actuation_plan.get("stage_actuations"),
+            current_stage_label,
+        ),
+        current_stage_progression=_stage_entry(
+            context.proactive_progression_plan.get("stage_progressions"),
+            current_stage_label,
+        ),
+        current_stage_guardrail=_stage_entry(
+            context.proactive_guardrail_plan.get("stage_guardrails"),
+            current_stage_label,
+        ),
+    )
+
+
+def _build_stage_schedule_snapshot(
+    *,
+    context: _FollowupContext,
+    reference_time: datetime,
+    current_stage_index: int,
+    window_seconds: int,
+    progression_anchor_at: datetime | None,
+) -> _StageScheduleSnapshot:
+    payload = _select_followup_stage_payload(
+        context=context,
+        current_stage_index=current_stage_index,
+    )
+    trigger_after_seconds = context.stage_intervals_seconds[
+        min(
+            current_stage_index - 1,
+            len(context.stage_intervals_seconds) - 1,
+        )
+    ]
+    (
+        base_due_at,
+        due_at,
+        expires_at,
+        seconds_until_due,
+        seconds_overdue,
+        window_remaining_seconds,
+        schedule_reason,
+        scheduling_deferred_until,
+    ) = _compute_stage_schedule(
+        reference_time=reference_time,
+        directive_time=context.directive_time,
+        dispatch_events_for_directive=context.dispatch_events_for_directive,
+        latest_assistant_event=context.latest_assistant_event,
+        proactive_scheduling_plan=context.proactive_scheduling_plan,
+        trigger_after_seconds=trigger_after_seconds,
+        window_seconds=window_seconds,
+        progression_anchor_at=progression_anchor_at,
+    )
+    due_at, expires_at, schedule_reason = _apply_matrix_learning_spacing(
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+        current_stage_label=payload.current_stage_label,
+        reengagement_matrix_assessment=context.reengagement_matrix_assessment,
+    )
+    due_at, expires_at, schedule_reason = _apply_stage_guardrail(
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        latest_user_event=context.latest_user_event,
+        dispatch_events_for_directive=context.dispatch_events_for_directive,
+        current_stage_guardrail=payload.current_stage_guardrail,
+    )
+    due_at, expires_at, schedule_reason = _apply_stage_controller(
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+        current_stage_label=payload.current_stage_label,
+        latest_stage_controller_event=context.latest_proactive_stage_controller_event,
+    )
+    due_at, expires_at, schedule_reason = _apply_line_controller(
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+        current_stage_label=payload.current_stage_label,
+        latest_line_controller_event=context.latest_proactive_line_controller_event,
+    )
+    due_at, expires_at, schedule_reason = _apply_dispatch_gate(
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+        current_stage_label=payload.current_stage_label,
+        dispatch_events_for_directive=context.dispatch_events_for_directive,
+        latest_dispatch_gate_event=context.latest_proactive_dispatch_gate_event,
+    )
+    (
+        queue_status,
+        seconds_until_due,
+        seconds_overdue,
+        window_remaining_seconds,
+    ) = _resolve_queue_status(
+        reference_time=reference_time,
+        base_due_at=base_due_at,
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+    )
+    return _StageScheduleSnapshot(
+        payload=payload,
+        due_at=due_at,
+        base_due_at=base_due_at,
+        expires_at=expires_at,
+        seconds_until_due=seconds_until_due,
+        seconds_overdue=seconds_overdue,
+        window_remaining_seconds=window_remaining_seconds,
+        schedule_reason=schedule_reason,
+        scheduling_deferred_until=scheduling_deferred_until,
+        queue_status=queue_status,
+    )
+
+
+def _resolve_followup_stage_progression_advance(
+    *,
+    context: _FollowupContext,
+    reference_time: datetime,
+    current_stage_index: int,
+    schedule_snapshot: _StageScheduleSnapshot,
+    progression_applied_actions: list[str],
+) -> _StageProgressionAdvance | None:
+    max_overdue_seconds = max(
+        0,
+        int(
+            (schedule_snapshot.payload.current_stage_progression or {}).get(
+                "max_overdue_seconds"
+            )
+            or 0
+        ),
+    )
+    if (
+        schedule_snapshot.expires_at is None
+        or reference_time
+        <= schedule_snapshot.expires_at + timedelta(seconds=max_overdue_seconds)
+    ):
+        return None
+    expired_action = str(
+        (schedule_snapshot.payload.current_stage_progression or {}).get("on_expired")
+        or "close_line"
+    )
+    if expired_action == "close_line":
+        return _StageProgressionAdvance(
+            next_stage_index=current_stage_index,
+            progression_anchor_at=schedule_snapshot.expires_at
+            + timedelta(seconds=max_overdue_seconds),
+            progression_reason="",
+        )
+    if expired_action == "jump_to_close_loop":
+        next_stage_index = context.stage_index_by_label.get(
+            context.close_loop_stage,
+            context.close_after_stage_index,
+        )
+    else:
+        next_stage_index = min(
+            current_stage_index + 1,
+            context.close_after_stage_index,
+        )
+    next_stage_label = context.stage_labels[
+        min(next_stage_index - 1, len(context.stage_labels) - 1)
+    ]
+    progression_applied_actions.append(
+        f"{schedule_snapshot.payload.current_stage_label}:{expired_action}->{next_stage_label}"
+    )
+    return _StageProgressionAdvance(
+        next_stage_index=next_stage_index,
+        progression_anchor_at=schedule_snapshot.expires_at
+        + timedelta(seconds=max_overdue_seconds),
+        progression_reason=" | ".join(progression_applied_actions),
+    )
+
+
+def _collect_projected_followup_state(
+    state: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    keys = [
+        "proactive_stage_state_decision",
+        "proactive_line_state_decision",
+        "proactive_line_transition_decision",
+        "proactive_line_machine_decision",
+        "proactive_lifecycle_state_decision",
+        "proactive_lifecycle_transition_decision",
+        "proactive_lifecycle_machine_decision",
+        "proactive_lifecycle_envelope_decision",
+        "proactive_lifecycle_scheduler_decision",
+        "proactive_lifecycle_window_decision",
+        "proactive_lifecycle_queue_decision",
+        "proactive_lifecycle_dispatch_decision",
+        "proactive_lifecycle_outcome_decision",
+        "proactive_lifecycle_resolution_decision",
+        "proactive_dispatch_envelope_decision",
+        *[
+            f"proactive_lifecycle_{phase}_decision"
+            for phase in _GENERIC_LIFECYCLE_PHASES
+        ],
+    ]
+    return {key: dict(state.get(key) or {}) for key in keys}
+
+
+def _collect_followup_lifecycle_phase_overrides(
+    projected: dict[str, dict[str, Any]],
+) -> dict[str, _LifecyclePhaseOverride]:
+    overrides: dict[str, _LifecyclePhaseOverride] = {}
+    for spec in _LIFECYCLE_PHASE_OVERRIDE_SPECS:
+        phase_projection = projected[f"proactive_lifecycle_{spec.phase}_decision"]
+        overrides[spec.phase] = _LifecyclePhaseOverride(
+            phase=spec.phase,
+            decision=str(phase_projection.get("decision") or ""),
+            stage_label=str(phase_projection.get(spec.stage_label_key) or ""),
+            delay_seconds=max(
+                0,
+                int(phase_projection.get("additional_delay_seconds") or 0),
+            ),
+        )
+    return overrides
+
+
+def _apply_followup_buffer_queue_override(
+    *,
+    reason_tag: str,
+    remove_reason_tag: str | None,
+    delay_seconds: int,
+    reference_time: datetime,
+    base_due_at: datetime | None,
+    due_at: datetime | None,
+    expires_at: datetime | None,
+    schedule_reason: str | None,
+    scheduling_deferred_until: datetime | None,
+    window_seconds: int,
+) -> tuple[
+    datetime | None,
+    datetime | None,
+    int | None,
+    int | None,
+    int | None,
+    str | None,
+    datetime | None,
+    str,
+]:
+    if due_at is not None:
+        due_at = due_at + timedelta(seconds=delay_seconds)
+        if expires_at is not None:
+            expires_at = due_at + timedelta(seconds=window_seconds)
+        scheduling_deferred_until = due_at
+    had_schedule_reason = bool(schedule_reason)
+    if remove_reason_tag is not None and schedule_reason:
+        schedule_reason = " | ".join(
+            part
+            for part in str(schedule_reason).split(" | ")
+            if part != remove_reason_tag
+        )
+    if had_schedule_reason:
+        if reason_tag not in str(schedule_reason):
+            schedule_reason = f"{schedule_reason} | {reason_tag}"
+    else:
+        schedule_reason = reason_tag
+    (
+        queue_status,
+        seconds_until_due,
+        seconds_overdue,
+        window_remaining_seconds,
+    ) = _resolve_queue_status(
+        reference_time=reference_time,
+        base_due_at=base_due_at,
+        due_at=due_at,
+        expires_at=expires_at,
+        schedule_reason=schedule_reason,
+        window_seconds=window_seconds,
+    )
+    if queue_status not in {"scheduled", "waiting"}:
+        queue_status = "scheduled"
+    return (
+        due_at,
+        expires_at,
+        seconds_until_due,
+        seconds_overdue,
+        window_remaining_seconds,
+        schedule_reason,
+        scheduling_deferred_until,
+        queue_status,
+    )
+
+
+def _resolve_followup_lifecycle_queue_override(
+    *,
+    phase_overrides: dict[str, _LifecyclePhaseOverride],
+    current_stage_label: str,
+    reference_time: datetime,
+    base_due_at: datetime | None,
+    due_at: datetime | None,
+    expires_at: datetime | None,
+    schedule_reason: str | None,
+    scheduling_deferred_until: datetime | None,
+    queue_status: str,
+    seconds_until_due: int | None,
+    seconds_overdue: int | None,
+    window_remaining_seconds: int | None,
+    window_seconds: int,
+) -> _QueueOverrideState | None:
+    matched: dict[str, bool] = {}
+    skip_dispatch_override = False
+    for spec in _LIFECYCLE_PHASE_OVERRIDE_SPECS:
+        override = phase_overrides[spec.phase]
+        matches_current_stage = (
+            spec.match_stage_label and override.stage_label == current_stage_label
+        )
+        raw_match = (
+            override.decision in spec.terminate_decisions or matches_current_stage
+        ) and not any(matched.get(phase, False) for phase in spec.match_blockers)
+        matched[spec.phase] = raw_match
+        if not raw_match or any(
+            matched.get(phase, False) for phase in spec.action_blockers
+        ):
+            continue
+        if override.decision in spec.terminate_decisions:
+            return None
+        if override.decision in spec.hold_decisions:
+            queue_status = "hold"
+            seconds_until_due = None
+            seconds_overdue = None
+            window_remaining_seconds = None
+            skip_dispatch_override = True
+            continue
+        if override.decision in spec.buffer_decisions:
+            (
+                due_at,
+                expires_at,
+                seconds_until_due,
+                seconds_overdue,
+                window_remaining_seconds,
+                schedule_reason,
+                scheduling_deferred_until,
+                queue_status,
+            ) = _apply_followup_buffer_queue_override(
+                reason_tag=str(spec.buffer_reason_tag),
+                remove_reason_tag=spec.buffer_remove_tag,
+                delay_seconds=override.delay_seconds,
+                reference_time=reference_time,
+                base_due_at=base_due_at,
+                due_at=due_at,
+                expires_at=expires_at,
+                schedule_reason=schedule_reason,
+                scheduling_deferred_until=scheduling_deferred_until,
+                window_seconds=window_seconds,
+            )
+            skip_dispatch_override = True
+            continue
+        if override.decision in spec.skip_decisions:
+            skip_dispatch_override = True
+    return _QueueOverrideState(
+        due_at=due_at,
+        expires_at=expires_at,
+        seconds_until_due=seconds_until_due,
+        seconds_overdue=seconds_overdue,
+        window_remaining_seconds=window_remaining_seconds,
+        schedule_reason=schedule_reason,
+        scheduling_deferred_until=scheduling_deferred_until,
+        queue_status=queue_status,
+        skip_dispatch_override=skip_dispatch_override,
+    )
+
+
+def _event_payload(event: StoredEvent | None) -> dict[str, Any]:
+    return dict(event.payload if event is not None else {})
+
+
+def _build_followup_overview_fields(
+    bundle: _FollowupAssemblyBundle,
+) -> dict[str, Any]:
+    context = bundle.context
+    stage_resolution = bundle.stage_resolution
+    queue = bundle.queue
     return {
-        "session_id": session_id,
-        "session_source": session_source,
-        "queue_status": queue_status,
-        "directive_status": directive_status,
-        "style": directive.get("style"),
-        "eligible": bool(directive.get("eligible")),
-        "guidance_mode": guidance_plan.get("mode"),
-        "guidance_pacing": guidance_plan.get("pacing"),
-        "guidance_agency_mode": guidance_plan.get("agency_mode"),
-        "guidance_ritual_action": guidance_plan.get("ritual_action"),
-        "guidance_handoff_mode": guidance_plan.get("handoff_mode"),
-        "guidance_carryover_mode": guidance_plan.get("carryover_mode"),
-        "cadence_status": conversation_cadence_plan.get("status"),
-        "cadence_turn_shape": conversation_cadence_plan.get("turn_shape"),
-        "cadence_followup_tempo": conversation_cadence_plan.get("followup_tempo"),
-        "cadence_user_space_mode": conversation_cadence_plan.get(
+        "session_id": bundle.session_id,
+        "session_source": context.session_source,
+        "queue_status": queue.queue_status,
+        "directive_status": stage_resolution.directive_status,
+        "style": context.directive.get("style"),
+        "eligible": bool(context.directive.get("eligible")),
+        "guidance_mode": context.guidance_plan.get("mode"),
+        "guidance_pacing": context.guidance_plan.get("pacing"),
+        "guidance_agency_mode": context.guidance_plan.get("agency_mode"),
+        "guidance_ritual_action": context.guidance_plan.get("ritual_action"),
+        "guidance_handoff_mode": context.guidance_plan.get("handoff_mode"),
+        "guidance_carryover_mode": context.guidance_plan.get("carryover_mode"),
+        "cadence_status": context.conversation_cadence_plan.get("status"),
+        "cadence_turn_shape": context.conversation_cadence_plan.get("turn_shape"),
+        "cadence_followup_tempo": context.conversation_cadence_plan.get(
+            "followup_tempo"
+        ),
+        "cadence_user_space_mode": context.conversation_cadence_plan.get(
             "user_space_mode"
         ),
-        "cadence_transition_intent": conversation_cadence_plan.get(
+        "cadence_transition_intent": context.conversation_cadence_plan.get(
             "transition_intent"
         ),
-        "cadence_next_checkpoint": conversation_cadence_plan.get(
+        "cadence_next_checkpoint": context.conversation_cadence_plan.get(
             "next_checkpoint"
         ),
-        "ritual_phase": session_ritual_plan.get("phase"),
-        "ritual_opening_move": session_ritual_plan.get("opening_move"),
-        "ritual_bridge_move": session_ritual_plan.get("bridge_move"),
-        "ritual_closing_move": session_ritual_plan.get("closing_move"),
-        "ritual_continuity_anchor": session_ritual_plan.get("continuity_anchor"),
-        "ritual_somatic_shortcut": session_ritual_plan.get("somatic_shortcut"),
-        "somatic_orchestration_status": somatic_orchestration_plan.get("status"),
-        "somatic_orchestration_mode": somatic_orchestration_plan.get("primary_mode"),
-        "somatic_orchestration_body_anchor": somatic_orchestration_plan.get(
+        "ritual_phase": context.session_ritual_plan.get("phase"),
+        "ritual_opening_move": context.session_ritual_plan.get("opening_move"),
+        "ritual_bridge_move": context.session_ritual_plan.get("bridge_move"),
+        "ritual_closing_move": context.session_ritual_plan.get("closing_move"),
+        "ritual_continuity_anchor": context.session_ritual_plan.get(
+            "continuity_anchor"
+        ),
+        "ritual_somatic_shortcut": context.session_ritual_plan.get(
+            "somatic_shortcut"
+        ),
+        "somatic_orchestration_status": context.somatic_orchestration_plan.get(
+            "status"
+        ),
+        "somatic_orchestration_mode": context.somatic_orchestration_plan.get(
+            "primary_mode"
+        ),
+        "somatic_orchestration_body_anchor": context.somatic_orchestration_plan.get(
             "body_anchor"
         ),
-        "somatic_orchestration_followup_style": somatic_orchestration_plan.get(
-            "followup_style"
+        "somatic_orchestration_followup_style": (
+            context.somatic_orchestration_plan.get("followup_style")
         ),
         "somatic_orchestration_allow_in_followup": (
-            somatic_orchestration_plan.get("allow_in_followup")
+            context.somatic_orchestration_plan.get("allow_in_followup")
         ),
-        "reengagement_matrix_key": reengagement_matrix_assessment.get("matrix_key"),
-        "reengagement_matrix_selected_strategy": reengagement_matrix_assessment.get(
+        "reengagement_matrix_key": context.reengagement_matrix_assessment.get(
+            "matrix_key"
+        ),
+        "reengagement_matrix_selected_strategy": context.reengagement_matrix_assessment.get(
             "selected_strategy_key"
         ),
-        "reengagement_matrix_selected_score": reengagement_matrix_assessment.get(
+        "reengagement_matrix_selected_score": context.reengagement_matrix_assessment.get(
             "selected_score"
         ),
         "reengagement_matrix_blocked_count": int(
-            reengagement_matrix_assessment.get("blocked_count") or 0
+            context.reengagement_matrix_assessment.get("blocked_count") or 0
         ),
-        "reengagement_matrix_learning_mode": reengagement_matrix_assessment.get(
+        "reengagement_matrix_learning_mode": context.reengagement_matrix_assessment.get(
             "learning_mode"
         ),
         "reengagement_matrix_learning_context_stratum": (
-            reengagement_matrix_assessment.get("learning_context_stratum")
+            context.reengagement_matrix_assessment.get(
+                "learning_context_stratum"
+            )
         ),
         "reengagement_matrix_learning_signal_count": int(
-            reengagement_matrix_assessment.get("learning_signal_count") or 0
+            context.reengagement_matrix_assessment.get("learning_signal_count")
+            or 0
         ),
         "reengagement_matrix_selected_supporting_session_count": int(
-            selected_matrix_candidate.get("supporting_session_count") or 0
+            context.selected_matrix_candidate.get("supporting_session_count") or 0
         ),
         "reengagement_matrix_selected_contextual_supporting_session_count": int(
-            selected_matrix_candidate.get("contextual_supporting_session_count") or 0
+            context.selected_matrix_candidate.get(
+                "contextual_supporting_session_count"
+            )
+            or 0
         ),
-        "reengagement_ritual_mode": reengagement_plan.get("ritual_mode"),
-        "reengagement_delivery_mode": reengagement_plan.get("delivery_mode"),
-        "reengagement_strategy_key": reengagement_plan.get("strategy_key"),
-        "reengagement_relational_move": reengagement_plan.get("relational_move"),
-        "reengagement_pressure_mode": reengagement_plan.get("pressure_mode"),
-        "reengagement_autonomy_signal": reengagement_plan.get("autonomy_signal"),
-        "reengagement_sequence_objective": reengagement_plan.get(
+        "reengagement_ritual_mode": context.reengagement_plan.get("ritual_mode"),
+        "reengagement_delivery_mode": context.reengagement_plan.get(
+            "delivery_mode"
+        ),
+        "reengagement_strategy_key": context.reengagement_plan.get(
+            "strategy_key"
+        ),
+        "reengagement_relational_move": context.reengagement_plan.get(
+            "relational_move"
+        ),
+        "reengagement_pressure_mode": context.reengagement_plan.get(
+            "pressure_mode"
+        ),
+        "reengagement_autonomy_signal": context.reengagement_plan.get(
+            "autonomy_signal"
+        ),
+        "reengagement_sequence_objective": context.reengagement_plan.get(
             "sequence_objective"
         ),
-        "reengagement_somatic_action": reengagement_plan.get("somatic_action"),
-        "proactive_dispatch_gate_key": (
-            dict(
-                latest_proactive_dispatch_gate_event.payload
-                if latest_proactive_dispatch_gate_event is not None
-                else {}
-            ).get("gate_key")
+        "reengagement_somatic_action": context.reengagement_plan.get(
+            "somatic_action"
         ),
-        "proactive_dispatch_gate_decision": (
-            dict(
-                latest_proactive_dispatch_gate_event.payload
-                if latest_proactive_dispatch_gate_event is not None
-                else {}
-            ).get("decision")
+    }
+
+
+def _build_followup_dispatch_and_line_fields(
+    bundle: _FollowupAssemblyBundle,
+) -> dict[str, Any]:
+    payloads = bundle.payloads
+    queue = bundle.queue
+    projected = bundle.projected
+    return {
+        "proactive_dispatch_gate_key": payloads.dispatch_gate_payload.get("gate_key"),
+        "proactive_dispatch_gate_decision": payloads.dispatch_gate_payload.get(
+            "decision"
         ),
         "proactive_dispatch_gate_retry_after_seconds": int(
-            dict(
-                latest_proactive_dispatch_gate_event.payload
-                if latest_proactive_dispatch_gate_event is not None
-                else {}
-            ).get("retry_after_seconds")
-            or 0
+            payloads.dispatch_gate_payload.get("retry_after_seconds") or 0
         ),
-        "proactive_dispatch_gate_strategy_key": (
-            dict(
-                latest_proactive_dispatch_gate_event.payload
-                if latest_proactive_dispatch_gate_event is not None
-                else {}
-            ).get("selected_strategy_key")
+        "proactive_dispatch_gate_strategy_key": payloads.dispatch_gate_payload.get(
+            "selected_strategy_key"
         ),
-        "proactive_dispatch_feedback_key": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("feedback_key")
+        "proactive_dispatch_feedback_key": payloads.dispatch_feedback_payload.get(
+            "feedback_key"
         ),
         "proactive_dispatch_feedback_changed": bool(
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("changed")
+            payloads.dispatch_feedback_payload.get("changed")
         ),
         "proactive_dispatch_feedback_dispatch_count": int(
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("dispatch_count")
-            or 0
+            payloads.dispatch_feedback_payload.get("dispatch_count") or 0
         ),
         "proactive_dispatch_feedback_gate_defer_count": int(
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("gate_defer_count")
-            or 0
+            payloads.dispatch_feedback_payload.get("gate_defer_count") or 0
         ),
-        "proactive_dispatch_feedback_strategy_key": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("selected_strategy_key")
+        "proactive_dispatch_feedback_strategy_key": payloads.dispatch_feedback_payload.get(
+            "selected_strategy_key"
         ),
-        "proactive_dispatch_feedback_pressure_mode": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("selected_pressure_mode")
+        "proactive_dispatch_feedback_pressure_mode": payloads.dispatch_feedback_payload.get(
+            "selected_pressure_mode"
         ),
-        "proactive_dispatch_feedback_autonomy_signal": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("selected_autonomy_signal")
+        "proactive_dispatch_feedback_autonomy_signal": payloads.dispatch_feedback_payload.get(
+            "selected_autonomy_signal"
         ),
-        "proactive_dispatch_feedback_delivery_mode": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("selected_delivery_mode")
+        "proactive_dispatch_feedback_delivery_mode": payloads.dispatch_feedback_payload.get(
+            "selected_delivery_mode"
         ),
-        "proactive_dispatch_feedback_sequence_objective": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("selected_sequence_objective")
+        "proactive_dispatch_feedback_sequence_objective": payloads.dispatch_feedback_payload.get(
+            "selected_sequence_objective"
         ),
-        "proactive_dispatch_feedback_prior_stage_label": (
-            dict(
-                latest_proactive_dispatch_feedback_event.payload
-                if latest_proactive_dispatch_feedback_event is not None
-                else {}
-            ).get("prior_stage_label")
+        "proactive_dispatch_feedback_prior_stage_label": payloads.dispatch_feedback_payload.get(
+            "prior_stage_label"
         ),
-        "proactive_stage_state_key": proactive_stage_state.get("state_key"),
-        "proactive_stage_state_mode": proactive_stage_state.get("state_mode"),
-        "proactive_stage_state_source": proactive_stage_state.get("primary_source"),
-        "proactive_stage_state_queue_status": proactive_stage_state.get(
+        "proactive_stage_state_key": queue.proactive_stage_state.get("state_key"),
+        "proactive_stage_state_mode": queue.proactive_stage_state.get("state_mode"),
+        "proactive_stage_state_source": queue.proactive_stage_state.get(
+            "primary_source"
+        ),
+        "proactive_stage_state_queue_status": queue.proactive_stage_state.get(
             "queue_status"
         ),
         "proactive_stage_state_changed": bool(
-            proactive_stage_state.get("changed")
+            queue.proactive_stage_state.get("changed")
         ),
-        "proactive_stage_controller_key": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("controller_key")
+        "proactive_stage_controller_key": payloads.stage_controller_payload.get(
+            "controller_key"
         ),
-        "proactive_stage_controller_decision": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("decision")
+        "proactive_stage_controller_decision": payloads.stage_controller_payload.get(
+            "decision"
         ),
         "proactive_stage_controller_changed": bool(
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("changed")
+            payloads.stage_controller_payload.get("changed")
         ),
-        "proactive_stage_controller_target_stage_label": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("target_stage_label")
+        "proactive_stage_controller_target_stage_label": payloads.stage_controller_payload.get(
+            "target_stage_label"
         ),
         "proactive_stage_controller_additional_delay_seconds": int(
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("additional_delay_seconds")
-            or 0
+            payloads.stage_controller_payload.get("additional_delay_seconds") or 0
         ),
-        "proactive_stage_controller_strategy_key": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("selected_strategy_key")
+        "proactive_stage_controller_strategy_key": payloads.stage_controller_payload.get(
+            "selected_strategy_key"
         ),
-        "proactive_stage_controller_pressure_mode": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("selected_pressure_mode")
+        "proactive_stage_controller_pressure_mode": payloads.stage_controller_payload.get(
+            "selected_pressure_mode"
         ),
-        "proactive_stage_controller_autonomy_signal": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("selected_autonomy_signal")
+        "proactive_stage_controller_autonomy_signal": payloads.stage_controller_payload.get(
+            "selected_autonomy_signal"
         ),
-        "proactive_stage_controller_delivery_mode": (
-            dict(
-                latest_proactive_stage_controller_event.payload
-                if latest_proactive_stage_controller_event is not None
-                else {}
-            ).get("selected_delivery_mode")
+        "proactive_stage_controller_delivery_mode": payloads.stage_controller_payload.get(
+            "selected_delivery_mode"
         ),
-        "proactive_line_controller_key": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("controller_key")
+        "proactive_line_controller_key": payloads.line_controller_payload.get(
+            "controller_key"
         ),
-        "proactive_line_controller_line_state": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("line_state")
+        "proactive_line_controller_line_state": payloads.line_controller_payload.get(
+            "line_state"
         ),
-        "proactive_line_controller_decision": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("decision")
+        "proactive_line_controller_decision": payloads.line_controller_payload.get(
+            "decision"
         ),
         "proactive_line_controller_changed": bool(
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("changed")
+            payloads.line_controller_payload.get("changed")
         ),
         "proactive_line_controller_affected_stage_labels": list(
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("affected_stage_labels")
-            or []
+            payloads.line_controller_payload.get("affected_stage_labels") or []
         ),
         "proactive_line_controller_additional_delay_seconds": int(
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("additional_delay_seconds")
-            or 0
+            payloads.line_controller_payload.get("additional_delay_seconds") or 0
         ),
-        "proactive_line_controller_pressure_mode": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("selected_pressure_mode")
+        "proactive_line_controller_pressure_mode": payloads.line_controller_payload.get(
+            "selected_pressure_mode"
         ),
-        "proactive_line_controller_autonomy_signal": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("selected_autonomy_signal")
+        "proactive_line_controller_autonomy_signal": payloads.line_controller_payload.get(
+            "selected_autonomy_signal"
         ),
-        "proactive_line_controller_delivery_mode": (
-            dict(
-                latest_proactive_line_controller_event.payload
-                if latest_proactive_line_controller_event is not None
-                else {}
-            ).get("selected_delivery_mode")
+        "proactive_line_controller_delivery_mode": payloads.line_controller_payload.get(
+            "selected_delivery_mode"
         ),
-        "proactive_line_state_key": projected_line_state.get("line_key"),
-        "proactive_line_state_mode": projected_line_state.get("line_state"),
-        "proactive_line_state_lifecycle": projected_line_state.get(
+        "proactive_line_state_key": projected.projected_line_state.get("line_key"),
+        "proactive_line_state_mode": projected.projected_line_state.get("line_state"),
+        "proactive_line_state_lifecycle": projected.projected_line_state.get(
             "lifecycle_mode"
         ),
-        "proactive_line_state_actionability": projected_line_state.get(
+        "proactive_line_state_actionability": projected.projected_line_state.get(
             "actionability"
         ),
-        "proactive_line_transition_key": projected_line_transition.get(
+        "proactive_line_transition_key": projected.projected_line_transition.get(
             "transition_key"
         ),
-        "proactive_line_transition_mode": projected_line_transition.get(
+        "proactive_line_transition_mode": projected.projected_line_transition.get(
             "transition_mode"
         ),
-        "proactive_line_transition_exit_mode": projected_line_transition.get(
+        "proactive_line_transition_exit_mode": projected.projected_line_transition.get(
             "line_exit_mode"
         ),
-        "proactive_line_machine_key": projected_line_machine.get("machine_key"),
-        "proactive_line_machine_mode": projected_line_machine.get("machine_mode"),
-        "proactive_line_machine_lifecycle": projected_line_machine.get(
-            "lifecycle_mode"
-        ),
-        "proactive_line_machine_actionability": projected_line_machine.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_state_key": projected_lifecycle_state.get("state_key"),
-        "proactive_lifecycle_state_mode": projected_lifecycle_state.get("state_mode"),
-        "proactive_lifecycle_state_lifecycle": projected_lifecycle_state.get(
-            "lifecycle_mode"
-        ),
-        "proactive_lifecycle_state_actionability": projected_lifecycle_state.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_transition_key": projected_lifecycle_transition.get(
-            "transition_key"
-        ),
-        "proactive_lifecycle_transition_mode": projected_lifecycle_transition.get(
-            "transition_mode"
-        ),
-        "proactive_lifecycle_transition_exit_mode": projected_lifecycle_transition.get(
-            "lifecycle_exit_mode"
-        ),
-        "proactive_lifecycle_machine_key": projected_lifecycle_machine.get(
+        "proactive_line_machine_key": projected.projected_line_machine.get(
             "machine_key"
         ),
-        "proactive_lifecycle_machine_mode": projected_lifecycle_machine.get(
+        "proactive_line_machine_mode": projected.projected_line_machine.get(
             "machine_mode"
         ),
-        "proactive_lifecycle_machine_lifecycle": projected_lifecycle_machine.get(
+        "proactive_line_machine_lifecycle": projected.projected_line_machine.get(
             "lifecycle_mode"
         ),
-        "proactive_lifecycle_machine_actionability": projected_lifecycle_machine.get(
+        "proactive_line_machine_actionability": projected.projected_line_machine.get(
             "actionability"
         ),
-        "proactive_lifecycle_controller_key": (
-            dict(state.get("proactive_lifecycle_controller_decision") or {}).get(
-                "controller_key"
-            )
+    }
+
+
+def _build_followup_lifecycle_core_fields(
+    bundle: _FollowupAssemblyBundle,
+) -> dict[str, Any]:
+    projected = bundle.projected
+    return {
+        **_build_followup_lifecycle_identity_fields(projected),
+        **_build_followup_lifecycle_controller_fields(projected),
+        **_build_followup_lifecycle_phase_fields(projected),
+        **_build_followup_lifecycle_result_fields(projected),
+    }
+
+
+def _build_followup_lifecycle_projection_fields(
+    *,
+    prefix: str,
+    projection: dict[str, Any],
+    scalar_fields: tuple[tuple[str, str], ...],
+    int_fields: tuple[tuple[str, str], ...] = (),
+) -> dict[str, Any]:
+    fields = {
+        f"{prefix}_{field_name}": projection.get(source_key)
+        for field_name, source_key in scalar_fields
+    }
+    fields.update(
+        {
+            f"{prefix}_{field_name}": int(projection.get(source_key) or 0)
+            for field_name, source_key in int_fields
+        }
+    )
+    return fields
+
+
+def _build_followup_lifecycle_identity_fields(
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    return {
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_state",
+            projection=projected.projected_lifecycle_state,
+            scalar_fields=(
+                ("key", "state_key"),
+                ("mode", "state_mode"),
+                ("lifecycle", "lifecycle_mode"),
+                ("actionability", "actionability"),
+            ),
         ),
-        "proactive_lifecycle_controller_state": (
-            dict(state.get("proactive_lifecycle_controller_decision") or {}).get(
-                "lifecycle_state"
-            )
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_transition",
+            projection=projected.projected_lifecycle_transition,
+            scalar_fields=(
+                ("key", "transition_key"),
+                ("mode", "transition_mode"),
+                ("exit_mode", "lifecycle_exit_mode"),
+            ),
         ),
-        "proactive_lifecycle_controller_decision": (
-            dict(state.get("proactive_lifecycle_controller_decision") or {}).get(
-                "decision"
-            )
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_machine",
+            projection=projected.projected_lifecycle_machine,
+            scalar_fields=(
+                ("key", "machine_key"),
+                ("mode", "machine_mode"),
+                ("lifecycle", "lifecycle_mode"),
+                ("actionability", "actionability"),
+            ),
         ),
-        "proactive_lifecycle_controller_delay_seconds": int(
-            dict(state.get("proactive_lifecycle_controller_decision") or {}).get(
-                "additional_delay_seconds"
-            )
-            or 0
+    }
+
+
+def _build_followup_lifecycle_controller_fields(
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    return _build_followup_lifecycle_projection_fields(
+        prefix="proactive_lifecycle_controller",
+        projection=projected.lifecycle_controller_projection,
+        scalar_fields=(
+            ("key", "controller_key"),
+            ("state", "lifecycle_state"),
+            ("decision", "decision"),
         ),
-        "proactive_lifecycle_envelope_key": projected_lifecycle_envelope.get(
-            "envelope_key"
+        int_fields=(("delay_seconds", "additional_delay_seconds"),),
+    )
+
+
+def _build_followup_lifecycle_phase_fields(
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    return {
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_envelope",
+            projection=projected.projected_lifecycle_envelope,
+            scalar_fields=(
+                ("key", "envelope_key"),
+                ("state", "lifecycle_state"),
+                ("mode", "envelope_mode"),
+                ("decision", "decision"),
+                ("actionability", "actionability"),
+            ),
+            int_fields=(("delay_seconds", "additional_delay_seconds"),),
         ),
-        "proactive_lifecycle_envelope_state": projected_lifecycle_envelope.get(
-            "lifecycle_state"
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_scheduler",
+            projection=projected.projected_lifecycle_scheduler,
+            scalar_fields=(
+                ("key", "scheduler_key"),
+                ("state", "lifecycle_state"),
+                ("mode", "scheduler_mode"),
+                ("decision", "decision"),
+                ("actionability", "actionability"),
+                ("queue_status", "queue_status_hint"),
+            ),
+            int_fields=(("delay_seconds", "additional_delay_seconds"),),
         ),
-        "proactive_lifecycle_envelope_mode": projected_lifecycle_envelope.get(
-            "envelope_mode"
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_window",
+            projection=projected.projected_lifecycle_window,
+            scalar_fields=(
+                ("key", "window_key"),
+                ("state", "lifecycle_state"),
+                ("mode", "window_mode"),
+                ("decision", "decision"),
+                ("queue_status", "queue_status"),
+            ),
+            int_fields=(("delay_seconds", "additional_delay_seconds"),),
         ),
-        "proactive_lifecycle_envelope_decision": projected_lifecycle_envelope.get(
-            "decision"
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_queue",
+            projection=projected.projected_lifecycle_queue,
+            scalar_fields=(
+                ("key", "queue_key"),
+                ("state", "lifecycle_state"),
+                ("mode", "queue_mode"),
+                ("decision", "decision"),
+                ("queue_status", "queue_status"),
+            ),
+            int_fields=(("delay_seconds", "additional_delay_seconds"),),
         ),
-        "proactive_lifecycle_envelope_actionability": projected_lifecycle_envelope.get(
-            "actionability"
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_dispatch",
+            projection=projected.projected_lifecycle_dispatch,
+            scalar_fields=(
+                ("key", "dispatch_key"),
+                ("state", "lifecycle_state"),
+                ("mode", "dispatch_mode"),
+                ("decision", "decision"),
+                ("actionability", "actionability"),
+            ),
+            int_fields=(("delay_seconds", "additional_delay_seconds"),),
         ),
-        "proactive_lifecycle_envelope_delay_seconds": int(
-            projected_lifecycle_envelope.get("additional_delay_seconds") or 0
+    }
+
+
+def _build_followup_lifecycle_result_fields(
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    return {
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_outcome",
+            projection=projected.projected_lifecycle_outcome,
+            scalar_fields=(
+                ("key", "outcome_key"),
+                ("status", "status"),
+                ("mode", "outcome_mode"),
+                ("decision", "decision"),
+                ("actionability", "actionability"),
+            ),
+            int_fields=(("message_event_count", "message_event_count"),),
         ),
-        "proactive_lifecycle_scheduler_key": projected_lifecycle_scheduler.get(
-            "scheduler_key"
+        **_build_followup_lifecycle_projection_fields(
+            prefix="proactive_lifecycle_resolution",
+            projection=projected.projected_lifecycle_resolution,
+            scalar_fields=(
+                ("key", "resolution_key"),
+                ("status", "status"),
+                ("mode", "resolution_mode"),
+                ("decision", "decision"),
+                ("actionability", "actionability"),
+                ("queue_override_status", "queue_override_status"),
+            ),
+            int_fields=(("remaining_stage_count", "remaining_stage_count"),),
         ),
-        "proactive_lifecycle_scheduler_state": projected_lifecycle_scheduler.get(
-            "lifecycle_state"
+    }
+
+
+def _build_followup_schedule_and_timing_fields(
+    bundle: _FollowupAssemblyBundle,
+) -> dict[str, Any]:
+    context = bundle.context
+    stage_resolution = bundle.stage_resolution
+    queue = bundle.queue
+    projected = bundle.projected
+    return {
+        **_build_followup_scheduling_fields(
+            context=context,
+            stage_resolution=stage_resolution,
         ),
-        "proactive_lifecycle_scheduler_mode": projected_lifecycle_scheduler.get(
-            "scheduler_mode"
+        **_build_followup_orchestration_fields(
+            context=context,
+            stage_resolution=stage_resolution,
         ),
-        "proactive_lifecycle_scheduler_decision": projected_lifecycle_scheduler.get(
-            "decision"
+        **_build_followup_progression_and_cadence_fields(
+            context=context,
+            stage_resolution=stage_resolution,
+            queue=queue,
         ),
-        "proactive_lifecycle_scheduler_actionability": projected_lifecycle_scheduler.get(
-            "actionability"
+        **_build_followup_directive_runtime_fields(
+            context=context,
+            projected=projected,
         ),
-        "proactive_lifecycle_scheduler_queue_status": projected_lifecycle_scheduler.get(
-            "queue_status_hint"
-        ),
-        "proactive_lifecycle_scheduler_delay_seconds": int(
-            projected_lifecycle_scheduler.get("additional_delay_seconds") or 0
-        ),
-        "proactive_lifecycle_window_key": projected_lifecycle_window.get(
-            "window_key"
-        ),
-        "proactive_lifecycle_window_state": projected_lifecycle_window.get(
-            "lifecycle_state"
-        ),
-        "proactive_lifecycle_window_mode": projected_lifecycle_window.get(
-            "window_mode"
-        ),
-        "proactive_lifecycle_window_decision": projected_lifecycle_window.get(
-            "decision"
-        ),
-        "proactive_lifecycle_window_queue_status": projected_lifecycle_window.get(
-            "queue_status"
-        ),
-        "proactive_lifecycle_window_delay_seconds": int(
-            projected_lifecycle_window.get("additional_delay_seconds") or 0
-        ),
-        "proactive_lifecycle_queue_key": projected_lifecycle_queue.get("queue_key"),
-        "proactive_lifecycle_queue_state": projected_lifecycle_queue.get(
-            "lifecycle_state"
-        ),
-        "proactive_lifecycle_queue_mode": projected_lifecycle_queue.get(
-            "queue_mode"
-        ),
-        "proactive_lifecycle_queue_decision": projected_lifecycle_queue.get(
-            "decision"
-        ),
-        "proactive_lifecycle_queue_status": projected_lifecycle_queue.get(
-            "queue_status"
-        ),
-        "proactive_lifecycle_queue_delay_seconds": int(
-            projected_lifecycle_queue.get("additional_delay_seconds") or 0
-        ),
-        "proactive_lifecycle_dispatch_key": projected_lifecycle_dispatch.get(
-            "dispatch_key"
-        ),
-        "proactive_lifecycle_dispatch_state": projected_lifecycle_dispatch.get(
-            "lifecycle_state"
-        ),
-        "proactive_lifecycle_dispatch_mode": projected_lifecycle_dispatch.get(
-            "dispatch_mode"
-        ),
-        "proactive_lifecycle_dispatch_decision": projected_lifecycle_dispatch.get(
-            "decision"
-        ),
-        "proactive_lifecycle_dispatch_actionability": projected_lifecycle_dispatch.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_dispatch_delay_seconds": int(
-            projected_lifecycle_dispatch.get("additional_delay_seconds") or 0
-        ),
-        "proactive_lifecycle_outcome_key": projected_lifecycle_outcome.get(
-            "outcome_key"
-        ),
-        "proactive_lifecycle_outcome_status": projected_lifecycle_outcome.get(
+        **_build_followup_timestamp_fields(context=context),
+    }
+
+
+def _build_followup_scheduling_fields(
+    *,
+    context: _FollowupContext,
+    stage_resolution: _StageResolution,
+) -> dict[str, Any]:
+    return {
+        "proactive_scheduling_status": context.proactive_scheduling_plan.get(
             "status"
         ),
-        "proactive_lifecycle_outcome_mode": projected_lifecycle_outcome.get(
-            "outcome_mode"
-        ),
-        "proactive_lifecycle_outcome_decision": projected_lifecycle_outcome.get(
-            "decision"
-        ),
-        "proactive_lifecycle_outcome_actionability": projected_lifecycle_outcome.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_outcome_message_event_count": int(
-            projected_lifecycle_outcome.get("message_event_count") or 0
-        ),
-        "proactive_lifecycle_resolution_key": projected_lifecycle_resolution.get(
-            "resolution_key"
-        ),
-        "proactive_lifecycle_resolution_status": projected_lifecycle_resolution.get(
-            "status"
-        ),
-        "proactive_lifecycle_resolution_mode": projected_lifecycle_resolution.get(
-            "resolution_mode"
-        ),
-        "proactive_lifecycle_resolution_decision": projected_lifecycle_resolution.get(
-            "decision"
-        ),
-        "proactive_lifecycle_resolution_actionability": projected_lifecycle_resolution.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_resolution_queue_override_status": (
-            projected_lifecycle_resolution.get("queue_override_status")
-        ),
-        "proactive_lifecycle_resolution_remaining_stage_count": int(
-            projected_lifecycle_resolution.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_activation_key": projected_lifecycle_activation.get(
-            "activation_key"
-        ),
-        "proactive_lifecycle_activation_status": projected_lifecycle_activation.get(
-            "status"
-        ),
-        "proactive_lifecycle_activation_mode": projected_lifecycle_activation.get(
-            "activation_mode"
-        ),
-        "proactive_lifecycle_activation_decision": projected_lifecycle_activation.get(
-            "decision"
-        ),
-        "proactive_lifecycle_activation_actionability": projected_lifecycle_activation.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_activation_active_stage_label": projected_lifecycle_activation.get(
-            "active_stage_label"
-        ),
-        "proactive_lifecycle_activation_queue_override_status": (
-            projected_lifecycle_activation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_activation_remaining_stage_count": int(
-            projected_lifecycle_activation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_settlement_key": projected_lifecycle_settlement.get(
-            "settlement_key"
-        ),
-        "proactive_lifecycle_settlement_status": projected_lifecycle_settlement.get(
-            "status"
-        ),
-        "proactive_lifecycle_settlement_mode": projected_lifecycle_settlement.get(
-            "settlement_mode"
-        ),
-        "proactive_lifecycle_settlement_decision": projected_lifecycle_settlement.get(
-            "decision"
-        ),
-        "proactive_lifecycle_settlement_actionability": projected_lifecycle_settlement.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_settlement_active_stage_label": projected_lifecycle_settlement.get(
-            "active_stage_label"
-        ),
-        "proactive_lifecycle_settlement_queue_override_status": (
-            projected_lifecycle_settlement.get("queue_override_status")
-        ),
-        "proactive_lifecycle_settlement_remaining_stage_count": int(
-            projected_lifecycle_settlement.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_closure_key": projected_lifecycle_closure.get(
-            "closure_key"
-        ),
-        "proactive_lifecycle_closure_status": projected_lifecycle_closure.get(
-            "status"
-        ),
-        "proactive_lifecycle_closure_mode": projected_lifecycle_closure.get(
-            "closure_mode"
-        ),
-        "proactive_lifecycle_closure_decision": projected_lifecycle_closure.get(
-            "decision"
-        ),
-        "proactive_lifecycle_closure_actionability": (
-            projected_lifecycle_closure.get("actionability")
-        ),
-        "proactive_lifecycle_closure_active_stage_label": (
-            projected_lifecycle_closure.get("active_stage_label")
-        ),
-        "proactive_lifecycle_closure_queue_override_status": (
-            projected_lifecycle_closure.get("queue_override_status")
-        ),
-        "proactive_lifecycle_closure_remaining_stage_count": int(
-            projected_lifecycle_closure.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_availability_key": projected_lifecycle_availability.get(
-            "availability_key"
-        ),
-        "proactive_lifecycle_availability_status": projected_lifecycle_availability.get(
-            "status"
-        ),
-        "proactive_lifecycle_availability_mode": projected_lifecycle_availability.get(
-            "availability_mode"
-        ),
-        "proactive_lifecycle_availability_decision": projected_lifecycle_availability.get(
-            "decision"
-        ),
-        "proactive_lifecycle_availability_actionability": (
-            projected_lifecycle_availability.get("actionability")
-        ),
-        "proactive_lifecycle_availability_active_stage_label": (
-            projected_lifecycle_availability.get("active_stage_label")
-        ),
-        "proactive_lifecycle_availability_queue_override_status": (
-            projected_lifecycle_availability.get("queue_override_status")
-        ),
-        "proactive_lifecycle_availability_remaining_stage_count": int(
-            projected_lifecycle_availability.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_retention_key": projected_lifecycle_retention.get(
-            "retention_key"
-        ),
-        "proactive_lifecycle_retention_status": projected_lifecycle_retention.get(
-            "status"
-        ),
-        "proactive_lifecycle_retention_mode": projected_lifecycle_retention.get(
-            "retention_mode"
-        ),
-        "proactive_lifecycle_retention_decision": projected_lifecycle_retention.get(
-            "decision"
-        ),
-        "proactive_lifecycle_retention_actionability": (
-            projected_lifecycle_retention.get("actionability")
-        ),
-        "proactive_lifecycle_retention_active_stage_label": (
-            projected_lifecycle_retention.get("active_stage_label")
-        ),
-        "proactive_lifecycle_retention_queue_override_status": (
-            projected_lifecycle_retention.get("queue_override_status")
-        ),
-        "proactive_lifecycle_retention_remaining_stage_count": int(
-            projected_lifecycle_retention.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_eligibility_key": projected_lifecycle_eligibility.get(
-            "eligibility_key"
-        ),
-        "proactive_lifecycle_eligibility_status": projected_lifecycle_eligibility.get(
-            "status"
-        ),
-        "proactive_lifecycle_eligibility_mode": projected_lifecycle_eligibility.get(
-            "eligibility_mode"
-        ),
-        "proactive_lifecycle_eligibility_decision": projected_lifecycle_eligibility.get(
-            "decision"
-        ),
-        "proactive_lifecycle_eligibility_actionability": (
-            projected_lifecycle_eligibility.get("actionability")
-        ),
-        "proactive_lifecycle_eligibility_active_stage_label": (
-            projected_lifecycle_eligibility.get("active_stage_label")
-        ),
-        "proactive_lifecycle_eligibility_queue_override_status": (
-            projected_lifecycle_eligibility.get("queue_override_status")
-        ),
-        "proactive_lifecycle_eligibility_remaining_stage_count": int(
-            projected_lifecycle_eligibility.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_candidate_key": projected_lifecycle_candidate.get(
-            "candidate_key"
-        ),
-        "proactive_lifecycle_candidate_status": projected_lifecycle_candidate.get(
-            "status"
-        ),
-        "proactive_lifecycle_candidate_mode": projected_lifecycle_candidate.get(
-            "candidate_mode"
-        ),
-        "proactive_lifecycle_candidate_decision": projected_lifecycle_candidate.get(
-            "decision"
-        ),
-        "proactive_lifecycle_candidate_actionability": (
-            projected_lifecycle_candidate.get("actionability")
-        ),
-        "proactive_lifecycle_candidate_active_stage_label": (
-            projected_lifecycle_candidate.get("active_stage_label")
-        ),
-        "proactive_lifecycle_candidate_queue_override_status": (
-            projected_lifecycle_candidate.get("queue_override_status")
-        ),
-        "proactive_lifecycle_candidate_remaining_stage_count": int(
-            projected_lifecycle_candidate.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_selectability_key": (
-            projected_lifecycle_selectability.get("selectability_key")
-        ),
-        "proactive_lifecycle_selectability_status": (
-            projected_lifecycle_selectability.get("status")
-        ),
-        "proactive_lifecycle_selectability_mode": (
-            projected_lifecycle_selectability.get("selectability_mode")
-        ),
-        "proactive_lifecycle_selectability_decision": (
-            projected_lifecycle_selectability.get("decision")
-        ),
-        "proactive_lifecycle_selectability_actionability": (
-            projected_lifecycle_selectability.get("actionability")
-        ),
-        "proactive_lifecycle_selectability_active_stage_label": (
-            projected_lifecycle_selectability.get("active_stage_label")
-        ),
-        "proactive_lifecycle_selectability_queue_override_status": (
-            projected_lifecycle_selectability.get("queue_override_status")
-        ),
-        "proactive_lifecycle_selectability_remaining_stage_count": int(
-            projected_lifecycle_selectability.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_reentry_key": (
-            projected_lifecycle_reentry.get("reentry_key")
-        ),
-        "proactive_lifecycle_reentry_status": (
-            projected_lifecycle_reentry.get("status")
-        ),
-        "proactive_lifecycle_reentry_mode": (
-            projected_lifecycle_reentry.get("reentry_mode")
-        ),
-        "proactive_lifecycle_reentry_decision": (
-            projected_lifecycle_reentry.get("decision")
-        ),
-        "proactive_lifecycle_reentry_actionability": (
-            projected_lifecycle_reentry.get("actionability")
-        ),
-        "proactive_lifecycle_reentry_active_stage_label": (
-            projected_lifecycle_reentry.get("active_stage_label")
-        ),
-        "proactive_lifecycle_reentry_queue_override_status": (
-            projected_lifecycle_reentry.get("queue_override_status")
-        ),
-        "proactive_lifecycle_reentry_remaining_stage_count": int(
-            projected_lifecycle_reentry.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_reactivation_key": (
-            projected_lifecycle_reactivation.get("reactivation_key")
-        ),
-        "proactive_lifecycle_reactivation_status": (
-            projected_lifecycle_reactivation.get("status")
-        ),
-        "proactive_lifecycle_reactivation_mode": (
-            projected_lifecycle_reactivation.get("reactivation_mode")
-        ),
-        "proactive_lifecycle_reactivation_decision": (
-            projected_lifecycle_reactivation.get("decision")
-        ),
-        "proactive_lifecycle_reactivation_actionability": (
-            projected_lifecycle_reactivation.get("actionability")
-        ),
-        "proactive_lifecycle_reactivation_active_stage_label": (
-            projected_lifecycle_reactivation.get("active_stage_label")
-        ),
-        "proactive_lifecycle_reactivation_queue_override_status": (
-            projected_lifecycle_reactivation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_reactivation_remaining_stage_count": int(
-            projected_lifecycle_reactivation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_resumption_key": (
-            projected_lifecycle_resumption.get("resumption_key")
-        ),
-        "proactive_lifecycle_resumption_status": (
-            projected_lifecycle_resumption.get("status")
-        ),
-        "proactive_lifecycle_resumption_mode": (
-            projected_lifecycle_resumption.get("resumption_mode")
-        ),
-        "proactive_lifecycle_resumption_decision": (
-            projected_lifecycle_resumption.get("decision")
-        ),
-        "proactive_lifecycle_resumption_actionability": (
-            projected_lifecycle_resumption.get("actionability")
-        ),
-        "proactive_lifecycle_resumption_active_stage_label": (
-            projected_lifecycle_resumption.get("active_stage_label")
-        ),
-        "proactive_lifecycle_resumption_queue_override_status": (
-            projected_lifecycle_resumption.get("queue_override_status")
-        ),
-        "proactive_lifecycle_resumption_remaining_stage_count": int(
-            projected_lifecycle_resumption.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_readiness_key": (
-            projected_lifecycle_readiness.get("readiness_key")
-        ),
-        "proactive_lifecycle_readiness_status": (
-            projected_lifecycle_readiness.get("status")
-        ),
-        "proactive_lifecycle_readiness_mode": (
-            projected_lifecycle_readiness.get("readiness_mode")
-        ),
-        "proactive_lifecycle_readiness_decision": (
-            projected_lifecycle_readiness.get("decision")
-        ),
-        "proactive_lifecycle_readiness_actionability": (
-            projected_lifecycle_readiness.get("actionability")
-        ),
-        "proactive_lifecycle_readiness_active_stage_label": (
-            projected_lifecycle_readiness.get("active_stage_label")
-        ),
-        "proactive_lifecycle_readiness_queue_override_status": (
-            projected_lifecycle_readiness.get("queue_override_status")
-        ),
-        "proactive_lifecycle_readiness_remaining_stage_count": int(
-            projected_lifecycle_readiness.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_arming_key": (
-            projected_lifecycle_arming.get("arming_key")
-        ),
-        "proactive_lifecycle_arming_status": (
-            projected_lifecycle_arming.get("status")
-        ),
-        "proactive_lifecycle_arming_mode": (
-            projected_lifecycle_arming.get("arming_mode")
-        ),
-        "proactive_lifecycle_arming_decision": (
-            projected_lifecycle_arming.get("decision")
-        ),
-        "proactive_lifecycle_arming_actionability": (
-            projected_lifecycle_arming.get("actionability")
-        ),
-        "proactive_lifecycle_arming_active_stage_label": (
-            projected_lifecycle_arming.get("active_stage_label")
-        ),
-        "proactive_lifecycle_arming_queue_override_status": (
-            projected_lifecycle_arming.get("queue_override_status")
-        ),
-        "proactive_lifecycle_arming_remaining_stage_count": int(
-            projected_lifecycle_arming.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_trigger_key": (
-            projected_lifecycle_trigger.get("trigger_key")
-        ),
-        "proactive_lifecycle_trigger_status": (
-            projected_lifecycle_trigger.get("status")
-        ),
-        "proactive_lifecycle_trigger_mode": (
-            projected_lifecycle_trigger.get("trigger_mode")
-        ),
-        "proactive_lifecycle_trigger_decision": (
-            projected_lifecycle_trigger.get("decision")
-        ),
-        "proactive_lifecycle_trigger_actionability": (
-            projected_lifecycle_trigger.get("actionability")
-        ),
-        "proactive_lifecycle_trigger_active_stage_label": (
-            projected_lifecycle_trigger.get("active_stage_label")
-        ),
-        "proactive_lifecycle_trigger_queue_override_status": (
-            projected_lifecycle_trigger.get("queue_override_status")
-        ),
-        "proactive_lifecycle_trigger_remaining_stage_count": int(
-            projected_lifecycle_trigger.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_launch_key": (
-            projected_lifecycle_launch.get("launch_key")
-        ),
-        "proactive_lifecycle_launch_status": (
-            projected_lifecycle_launch.get("status")
-        ),
-        "proactive_lifecycle_launch_mode": (
-            projected_lifecycle_launch.get("launch_mode")
-        ),
-        "proactive_lifecycle_launch_decision": (
-            projected_lifecycle_launch.get("decision")
-        ),
-        "proactive_lifecycle_launch_actionability": (
-            projected_lifecycle_launch.get("actionability")
-        ),
-        "proactive_lifecycle_launch_active_stage_label": (
-            projected_lifecycle_launch.get("active_stage_label")
-        ),
-        "proactive_lifecycle_launch_queue_override_status": (
-            projected_lifecycle_launch.get("queue_override_status")
-        ),
-        "proactive_lifecycle_launch_remaining_stage_count": int(
-            projected_lifecycle_launch.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_handoff_key": (
-            projected_lifecycle_handoff.get("handoff_key")
-        ),
-        "proactive_lifecycle_handoff_status": (
-            projected_lifecycle_handoff.get("status")
-        ),
-        "proactive_lifecycle_handoff_mode": (
-            projected_lifecycle_handoff.get("handoff_mode")
-        ),
-        "proactive_lifecycle_handoff_decision": (
-            projected_lifecycle_handoff.get("decision")
-        ),
-        "proactive_lifecycle_handoff_actionability": (
-            projected_lifecycle_handoff.get("actionability")
-        ),
-        "proactive_lifecycle_handoff_active_stage_label": (
-            projected_lifecycle_handoff.get("active_stage_label")
-        ),
-        "proactive_lifecycle_handoff_queue_override_status": (
-            projected_lifecycle_handoff.get("queue_override_status")
-        ),
-        "proactive_lifecycle_handoff_remaining_stage_count": int(
-            projected_lifecycle_handoff.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_continuation_key": (
-            projected_lifecycle_continuation.get("continuation_key")
-        ),
-        "proactive_lifecycle_continuation_status": (
-            projected_lifecycle_continuation.get("status")
-        ),
-        "proactive_lifecycle_continuation_mode": (
-            projected_lifecycle_continuation.get("continuation_mode")
-        ),
-        "proactive_lifecycle_continuation_decision": (
-            projected_lifecycle_continuation.get("decision")
-        ),
-        "proactive_lifecycle_continuation_actionability": (
-            projected_lifecycle_continuation.get("actionability")
-        ),
-        "proactive_lifecycle_continuation_active_stage_label": (
-            projected_lifecycle_continuation.get("active_stage_label")
-        ),
-        "proactive_lifecycle_continuation_queue_override_status": (
-            projected_lifecycle_continuation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_continuation_remaining_stage_count": int(
-            projected_lifecycle_continuation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_sustainment_key": (
-            projected_lifecycle_sustainment.get("sustainment_key")
-        ),
-        "proactive_lifecycle_sustainment_status": (
-            projected_lifecycle_sustainment.get("status")
-        ),
-        "proactive_lifecycle_sustainment_mode": (
-            projected_lifecycle_sustainment.get("sustainment_mode")
-        ),
-        "proactive_lifecycle_sustainment_decision": (
-            projected_lifecycle_sustainment.get("decision")
-        ),
-        "proactive_lifecycle_sustainment_actionability": (
-            projected_lifecycle_sustainment.get("actionability")
-        ),
-        "proactive_lifecycle_sustainment_active_stage_label": (
-            projected_lifecycle_sustainment.get("active_stage_label")
-        ),
-        "proactive_lifecycle_sustainment_queue_override_status": (
-            projected_lifecycle_sustainment.get("queue_override_status")
-        ),
-        "proactive_lifecycle_sustainment_remaining_stage_count": int(
-            projected_lifecycle_sustainment.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_stewardship_key": (
-            projected_lifecycle_stewardship.get("stewardship_key")
-        ),
-        "proactive_lifecycle_stewardship_status": (
-            projected_lifecycle_stewardship.get("status")
-        ),
-        "proactive_lifecycle_stewardship_mode": (
-            projected_lifecycle_stewardship.get("stewardship_mode")
-        ),
-        "proactive_lifecycle_stewardship_decision": (
-            projected_lifecycle_stewardship.get("decision")
-        ),
-        "proactive_lifecycle_stewardship_actionability": (
-            projected_lifecycle_stewardship.get("actionability")
-        ),
-        "proactive_lifecycle_stewardship_active_stage_label": (
-            projected_lifecycle_stewardship.get("active_stage_label")
-        ),
-        "proactive_lifecycle_stewardship_queue_override_status": (
-            projected_lifecycle_stewardship.get("queue_override_status")
-        ),
-        "proactive_lifecycle_stewardship_remaining_stage_count": int(
-            projected_lifecycle_stewardship.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_guardianship_key": (
-            projected_lifecycle_guardianship.get("guardianship_key")
-        ),
-        "proactive_lifecycle_guardianship_status": (
-            projected_lifecycle_guardianship.get("status")
-        ),
-        "proactive_lifecycle_guardianship_mode": (
-            projected_lifecycle_guardianship.get("guardianship_mode")
-        ),
-        "proactive_lifecycle_guardianship_decision": (
-            projected_lifecycle_guardianship.get("decision")
-        ),
-        "proactive_lifecycle_guardianship_actionability": (
-            projected_lifecycle_guardianship.get("actionability")
-        ),
-        "proactive_lifecycle_guardianship_active_stage_label": (
-            projected_lifecycle_guardianship.get("active_stage_label")
-        ),
-        "proactive_lifecycle_guardianship_queue_override_status": (
-            projected_lifecycle_guardianship.get("queue_override_status")
-        ),
-        "proactive_lifecycle_guardianship_remaining_stage_count": int(
-            projected_lifecycle_guardianship.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_oversight_key": (
-            projected_lifecycle_oversight.get("oversight_key")
-        ),
-        "proactive_lifecycle_oversight_status": (
-            projected_lifecycle_oversight.get("status")
-        ),
-        "proactive_lifecycle_oversight_mode": (
-            projected_lifecycle_oversight.get("oversight_mode")
-        ),
-        "proactive_lifecycle_oversight_decision": (
-            projected_lifecycle_oversight.get("decision")
-        ),
-        "proactive_lifecycle_oversight_actionability": (
-            projected_lifecycle_oversight.get("actionability")
-        ),
-        "proactive_lifecycle_oversight_active_stage_label": (
-            projected_lifecycle_oversight.get("active_stage_label")
-        ),
-        "proactive_lifecycle_oversight_queue_override_status": (
-            projected_lifecycle_oversight.get("queue_override_status")
-        ),
-        "proactive_lifecycle_oversight_remaining_stage_count": int(
-            projected_lifecycle_oversight.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_assurance_key": (
-            projected_lifecycle_assurance.get("assurance_key")
-        ),
-        "proactive_lifecycle_assurance_status": (
-            projected_lifecycle_assurance.get("status")
-        ),
-        "proactive_lifecycle_assurance_mode": (
-            projected_lifecycle_assurance.get("assurance_mode")
-        ),
-        "proactive_lifecycle_assurance_decision": (
-            projected_lifecycle_assurance.get("decision")
-        ),
-        "proactive_lifecycle_assurance_actionability": (
-            projected_lifecycle_assurance.get("actionability")
-        ),
-        "proactive_lifecycle_assurance_active_stage_label": (
-            projected_lifecycle_assurance.get("active_stage_label")
-        ),
-        "proactive_lifecycle_assurance_queue_override_status": (
-            projected_lifecycle_assurance.get("queue_override_status")
-        ),
-        "proactive_lifecycle_assurance_remaining_stage_count": int(
-            projected_lifecycle_assurance.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_attestation_key": (
-            projected_lifecycle_attestation.get("attestation_key")
-        ),
-        "proactive_lifecycle_attestation_status": (
-            projected_lifecycle_attestation.get("status")
-        ),
-        "proactive_lifecycle_attestation_mode": (
-            projected_lifecycle_attestation.get("attestation_mode")
-        ),
-        "proactive_lifecycle_attestation_decision": (
-            projected_lifecycle_attestation.get("decision")
-        ),
-        "proactive_lifecycle_attestation_actionability": (
-            projected_lifecycle_attestation.get("actionability")
-        ),
-        "proactive_lifecycle_attestation_active_stage_label": (
-            projected_lifecycle_attestation.get("active_stage_label")
-        ),
-        "proactive_lifecycle_attestation_queue_override_status": (
-            projected_lifecycle_attestation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_attestation_remaining_stage_count": int(
-            projected_lifecycle_attestation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_verification_key": (
-            projected_lifecycle_verification.get("verification_key")
-        ),
-        "proactive_lifecycle_verification_status": (
-            projected_lifecycle_verification.get("status")
-        ),
-        "proactive_lifecycle_verification_mode": (
-            projected_lifecycle_verification.get("verification_mode")
-        ),
-        "proactive_lifecycle_verification_decision": (
-            projected_lifecycle_verification.get("decision")
-        ),
-        "proactive_lifecycle_verification_actionability": (
-            projected_lifecycle_verification.get("actionability")
-        ),
-        "proactive_lifecycle_verification_active_stage_label": (
-            projected_lifecycle_verification.get("active_stage_label")
-        ),
-        "proactive_lifecycle_verification_queue_override_status": (
-            projected_lifecycle_verification.get("queue_override_status")
-        ),
-        "proactive_lifecycle_verification_remaining_stage_count": int(
-            projected_lifecycle_verification.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_certification_key": (
-            projected_lifecycle_certification.get("certification_key")
-        ),
-        "proactive_lifecycle_certification_status": (
-            projected_lifecycle_certification.get("status")
-        ),
-        "proactive_lifecycle_certification_mode": (
-            projected_lifecycle_certification.get("certification_mode")
-        ),
-        "proactive_lifecycle_certification_decision": (
-            projected_lifecycle_certification.get("decision")
-        ),
-        "proactive_lifecycle_certification_actionability": (
-            projected_lifecycle_certification.get("actionability")
-        ),
-        "proactive_lifecycle_certification_active_stage_label": (
-            projected_lifecycle_certification.get("active_stage_label")
-        ),
-        "proactive_lifecycle_certification_queue_override_status": (
-            projected_lifecycle_certification.get("queue_override_status")
-        ),
-        "proactive_lifecycle_certification_remaining_stage_count": int(
-            projected_lifecycle_certification.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_confirmation_key": (
-            projected_lifecycle_confirmation.get("confirmation_key")
-        ),
-        "proactive_lifecycle_confirmation_status": (
-            projected_lifecycle_confirmation.get("status")
-        ),
-        "proactive_lifecycle_confirmation_mode": (
-            projected_lifecycle_confirmation.get("confirmation_mode")
-        ),
-        "proactive_lifecycle_confirmation_decision": (
-            projected_lifecycle_confirmation.get("decision")
-        ),
-        "proactive_lifecycle_confirmation_actionability": (
-            projected_lifecycle_confirmation.get("actionability")
-        ),
-        "proactive_lifecycle_confirmation_active_stage_label": (
-            projected_lifecycle_confirmation.get("active_stage_label")
-        ),
-        "proactive_lifecycle_confirmation_queue_override_status": (
-            projected_lifecycle_confirmation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_confirmation_remaining_stage_count": int(
-            projected_lifecycle_confirmation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_ratification_key": (
-            projected_lifecycle_ratification.get("ratification_key")
-        ),
-        "proactive_lifecycle_ratification_status": (
-            projected_lifecycle_ratification.get("status")
-        ),
-        "proactive_lifecycle_ratification_mode": (
-            projected_lifecycle_ratification.get("ratification_mode")
-        ),
-        "proactive_lifecycle_ratification_decision": (
-            projected_lifecycle_ratification.get("decision")
-        ),
-        "proactive_lifecycle_ratification_actionability": (
-            projected_lifecycle_ratification.get("actionability")
-        ),
-        "proactive_lifecycle_ratification_active_stage_label": (
-            projected_lifecycle_ratification.get("active_stage_label")
-        ),
-        "proactive_lifecycle_ratification_queue_override_status": (
-            projected_lifecycle_ratification.get("queue_override_status")
-        ),
-        "proactive_lifecycle_ratification_remaining_stage_count": int(
-            projected_lifecycle_ratification.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_endorsement_key": (
-            projected_lifecycle_endorsement.get("endorsement_key")
-        ),
-        "proactive_lifecycle_endorsement_status": (
-            projected_lifecycle_endorsement.get("status")
-        ),
-        "proactive_lifecycle_endorsement_mode": (
-            projected_lifecycle_endorsement.get("endorsement_mode")
-        ),
-        "proactive_lifecycle_endorsement_decision": (
-            projected_lifecycle_endorsement.get("decision")
-        ),
-        "proactive_lifecycle_endorsement_actionability": (
-            projected_lifecycle_endorsement.get("actionability")
-        ),
-        "proactive_lifecycle_endorsement_active_stage_label": (
-            projected_lifecycle_endorsement.get("active_stage_label")
-        ),
-        "proactive_lifecycle_endorsement_queue_override_status": (
-            projected_lifecycle_endorsement.get("queue_override_status")
-        ),
-        "proactive_lifecycle_endorsement_remaining_stage_count": int(
-            projected_lifecycle_endorsement.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_authorization_key": (
-            projected_lifecycle_authorization.get("authorization_key")
-        ),
-        "proactive_lifecycle_authorization_status": (
-            projected_lifecycle_authorization.get("status")
-        ),
-        "proactive_lifecycle_authorization_mode": (
-            projected_lifecycle_authorization.get("authorization_mode")
-        ),
-        "proactive_lifecycle_authorization_decision": (
-            projected_lifecycle_authorization.get("decision")
-        ),
-        "proactive_lifecycle_authorization_actionability": (
-            projected_lifecycle_authorization.get("actionability")
-        ),
-        "proactive_lifecycle_authorization_active_stage_label": (
-            projected_lifecycle_authorization.get("active_stage_label")
-        ),
-        "proactive_lifecycle_authorization_queue_override_status": (
-            projected_lifecycle_authorization.get("queue_override_status")
-        ),
-        "proactive_lifecycle_authorization_remaining_stage_count": int(
-            projected_lifecycle_authorization.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_enactment_key": (
-            projected_lifecycle_enactment.get("enactment_key")
-        ),
-        "proactive_lifecycle_enactment_status": (
-            projected_lifecycle_enactment.get("status")
-        ),
-        "proactive_lifecycle_enactment_mode": (
-            projected_lifecycle_enactment.get("enactment_mode")
-        ),
-        "proactive_lifecycle_enactment_decision": (
-            projected_lifecycle_enactment.get("decision")
-        ),
-        "proactive_lifecycle_enactment_actionability": (
-            projected_lifecycle_enactment.get("actionability")
-        ),
-        "proactive_lifecycle_enactment_active_stage_label": (
-            projected_lifecycle_enactment.get("active_stage_label")
-        ),
-        "proactive_lifecycle_enactment_queue_override_status": (
-            projected_lifecycle_enactment.get("queue_override_status")
-        ),
-        "proactive_lifecycle_enactment_remaining_stage_count": int(
-            projected_lifecycle_enactment.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_finality_key": (
-            projected_lifecycle_finality.get("finality_key")
-        ),
-        "proactive_lifecycle_finality_status": (
-            projected_lifecycle_finality.get("status")
-        ),
-        "proactive_lifecycle_finality_mode": (
-            projected_lifecycle_finality.get("finality_mode")
-        ),
-        "proactive_lifecycle_finality_decision": (
-            projected_lifecycle_finality.get("decision")
-        ),
-        "proactive_lifecycle_finality_actionability": (
-            projected_lifecycle_finality.get("actionability")
-        ),
-        "proactive_lifecycle_finality_active_stage_label": (
-            projected_lifecycle_finality.get("active_stage_label")
-        ),
-        "proactive_lifecycle_finality_queue_override_status": (
-            projected_lifecycle_finality.get("queue_override_status")
-        ),
-        "proactive_lifecycle_finality_remaining_stage_count": int(
-            projected_lifecycle_finality.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_completion_key": (
-            projected_lifecycle_completion.get("completion_key")
-        ),
-        "proactive_lifecycle_completion_status": (
-            projected_lifecycle_completion.get("status")
-        ),
-        "proactive_lifecycle_completion_mode": (
-            projected_lifecycle_completion.get("completion_mode")
-        ),
-        "proactive_lifecycle_completion_decision": (
-            projected_lifecycle_completion.get("decision")
-        ),
-        "proactive_lifecycle_completion_actionability": (
-            projected_lifecycle_completion.get("actionability")
-        ),
-        "proactive_lifecycle_completion_active_stage_label": (
-            projected_lifecycle_completion.get("active_stage_label")
-        ),
-        "proactive_lifecycle_completion_queue_override_status": (
-            projected_lifecycle_completion.get("queue_override_status")
-        ),
-        "proactive_lifecycle_completion_remaining_stage_count": int(
-            projected_lifecycle_completion.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_conclusion_key": (
-            projected_lifecycle_conclusion.get("conclusion_key")
-        ),
-        "proactive_lifecycle_conclusion_status": (
-            projected_lifecycle_conclusion.get("status")
-        ),
-        "proactive_lifecycle_conclusion_mode": (
-            projected_lifecycle_conclusion.get("conclusion_mode")
-        ),
-        "proactive_lifecycle_conclusion_decision": (
-            projected_lifecycle_conclusion.get("decision")
-        ),
-        "proactive_lifecycle_conclusion_actionability": (
-            projected_lifecycle_conclusion.get("actionability")
-        ),
-        "proactive_lifecycle_conclusion_active_stage_label": (
-            projected_lifecycle_conclusion.get("active_stage_label")
-        ),
-        "proactive_lifecycle_conclusion_queue_override_status": (
-            projected_lifecycle_conclusion.get("queue_override_status")
-        ),
-        "proactive_lifecycle_conclusion_remaining_stage_count": int(
-            projected_lifecycle_conclusion.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_disposition_key": (
-            projected_lifecycle_disposition.get("disposition_key")
-        ),
-        "proactive_lifecycle_disposition_status": (
-            projected_lifecycle_disposition.get("status")
-        ),
-        "proactive_lifecycle_disposition_mode": (
-            projected_lifecycle_disposition.get("disposition_mode")
-        ),
-        "proactive_lifecycle_disposition_decision": (
-            projected_lifecycle_disposition.get("decision")
-        ),
-        "proactive_lifecycle_disposition_actionability": (
-            projected_lifecycle_disposition.get("actionability")
-        ),
-        "proactive_lifecycle_disposition_active_stage_label": (
-            projected_lifecycle_disposition.get("active_stage_label")
-        ),
-        "proactive_lifecycle_disposition_queue_override_status": (
-            projected_lifecycle_disposition.get("queue_override_status")
-        ),
-        "proactive_lifecycle_disposition_remaining_stage_count": int(
-            projected_lifecycle_disposition.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_standing_key": (
-            projected_lifecycle_standing.get("standing_key")
-        ),
-        "proactive_lifecycle_standing_status": (
-            projected_lifecycle_standing.get("status")
-        ),
-        "proactive_lifecycle_standing_mode": (
-            projected_lifecycle_standing.get("standing_mode")
-        ),
-        "proactive_lifecycle_standing_decision": (
-            projected_lifecycle_standing.get("decision")
-        ),
-        "proactive_lifecycle_standing_actionability": (
-            projected_lifecycle_standing.get("actionability")
-        ),
-        "proactive_lifecycle_standing_active_stage_label": (
-            projected_lifecycle_standing.get("active_stage_label")
-        ),
-        "proactive_lifecycle_standing_queue_override_status": (
-            projected_lifecycle_standing.get("queue_override_status")
-        ),
-        "proactive_lifecycle_standing_remaining_stage_count": int(
-            projected_lifecycle_standing.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_residency_key": (
-            projected_lifecycle_residency.get("residency_key")
-        ),
-        "proactive_lifecycle_residency_status": (
-            projected_lifecycle_residency.get("status")
-        ),
-        "proactive_lifecycle_residency_mode": (
-            projected_lifecycle_residency.get("residency_mode")
-        ),
-        "proactive_lifecycle_residency_decision": (
-            projected_lifecycle_residency.get("decision")
-        ),
-        "proactive_lifecycle_residency_actionability": (
-            projected_lifecycle_residency.get("actionability")
-        ),
-        "proactive_lifecycle_residency_active_stage_label": (
-            projected_lifecycle_residency.get("active_stage_label")
-        ),
-        "proactive_lifecycle_residency_queue_override_status": (
-            projected_lifecycle_residency.get("queue_override_status")
-        ),
-        "proactive_lifecycle_residency_remaining_stage_count": int(
-            projected_lifecycle_residency.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_tenure_key": (
-            projected_lifecycle_tenure.get("tenure_key")
-        ),
-        "proactive_lifecycle_tenure_status": (
-            projected_lifecycle_tenure.get("status")
-        ),
-        "proactive_lifecycle_tenure_mode": (
-            projected_lifecycle_tenure.get("tenure_mode")
-        ),
-        "proactive_lifecycle_tenure_decision": (
-            projected_lifecycle_tenure.get("decision")
-        ),
-        "proactive_lifecycle_tenure_actionability": (
-            projected_lifecycle_tenure.get("actionability")
-        ),
-        "proactive_lifecycle_tenure_active_stage_label": (
-            projected_lifecycle_tenure.get("active_stage_label")
-        ),
-        "proactive_lifecycle_tenure_queue_override_status": (
-            projected_lifecycle_tenure.get("queue_override_status")
-        ),
-        "proactive_lifecycle_tenure_remaining_stage_count": int(
-            projected_lifecycle_tenure.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_persistence_key": (
-            projected_lifecycle_persistence.get("persistence_key")
-        ),
-        "proactive_lifecycle_persistence_status": (
-            projected_lifecycle_persistence.get("status")
-        ),
-        "proactive_lifecycle_persistence_mode": (
-            projected_lifecycle_persistence.get("persistence_mode")
-        ),
-        "proactive_lifecycle_persistence_decision": (
-            projected_lifecycle_persistence.get("decision")
-        ),
-        "proactive_lifecycle_persistence_actionability": (
-            projected_lifecycle_persistence.get("actionability")
-        ),
-        "proactive_lifecycle_persistence_active_stage_label": (
-            projected_lifecycle_persistence.get("active_stage_label")
-        ),
-        "proactive_lifecycle_persistence_queue_override_status": (
-            projected_lifecycle_persistence.get("queue_override_status")
-        ),
-        "proactive_lifecycle_persistence_remaining_stage_count": int(
-            projected_lifecycle_persistence.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_durability_key": (
-            projected_lifecycle_durability.get("durability_key")
-        ),
-        "proactive_lifecycle_durability_status": (
-            projected_lifecycle_durability.get("status")
-        ),
-        "proactive_lifecycle_durability_mode": (
-            projected_lifecycle_durability.get("durability_mode")
-        ),
-        "proactive_lifecycle_durability_decision": (
-            projected_lifecycle_durability.get("decision")
-        ),
-        "proactive_lifecycle_durability_actionability": (
-            projected_lifecycle_durability.get("actionability")
-        ),
-        "proactive_lifecycle_durability_active_stage_label": (
-            projected_lifecycle_durability.get("active_stage_label")
-        ),
-        "proactive_lifecycle_durability_queue_override_status": (
-            projected_lifecycle_durability.get("queue_override_status")
-        ),
-        "proactive_lifecycle_durability_remaining_stage_count": int(
-            projected_lifecycle_durability.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_longevity_key": (
-            projected_lifecycle_longevity.get("longevity_key")
-        ),
-        "proactive_lifecycle_longevity_status": (
-            projected_lifecycle_longevity.get("status")
-        ),
-        "proactive_lifecycle_longevity_mode": (
-            projected_lifecycle_longevity.get("longevity_mode")
-        ),
-        "proactive_lifecycle_longevity_decision": (
-            projected_lifecycle_longevity.get("decision")
-        ),
-        "proactive_lifecycle_longevity_actionability": (
-            projected_lifecycle_longevity.get("actionability")
-        ),
-        "proactive_lifecycle_longevity_active_stage_label": (
-            projected_lifecycle_longevity.get("active_stage_label")
-        ),
-        "proactive_lifecycle_longevity_queue_override_status": (
-            projected_lifecycle_longevity.get("queue_override_status")
-        ),
-        "proactive_lifecycle_longevity_remaining_stage_count": int(
-            projected_lifecycle_longevity.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_legacy_key": (
-            projected_lifecycle_legacy.get("legacy_key")
-        ),
-        "proactive_lifecycle_legacy_status": (
-            projected_lifecycle_legacy.get("status")
-        ),
-        "proactive_lifecycle_legacy_mode": (
-            projected_lifecycle_legacy.get("legacy_mode")
-        ),
-        "proactive_lifecycle_legacy_decision": (
-            projected_lifecycle_legacy.get("decision")
-        ),
-        "proactive_lifecycle_legacy_actionability": (
-            projected_lifecycle_legacy.get("actionability")
-        ),
-        "proactive_lifecycle_legacy_active_stage_label": (
-            projected_lifecycle_legacy.get("active_stage_label")
-        ),
-        "proactive_lifecycle_legacy_queue_override_status": (
-            projected_lifecycle_legacy.get("queue_override_status")
-        ),
-        "proactive_lifecycle_legacy_remaining_stage_count": int(
-            projected_lifecycle_legacy.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_heritage_key": (
-            projected_lifecycle_heritage.get("heritage_key")
-        ),
-        "proactive_lifecycle_heritage_status": (
-            projected_lifecycle_heritage.get("status")
-        ),
-        "proactive_lifecycle_heritage_mode": (
-            projected_lifecycle_heritage.get("heritage_mode")
-        ),
-        "proactive_lifecycle_heritage_decision": (
-            projected_lifecycle_heritage.get("decision")
-        ),
-        "proactive_lifecycle_heritage_actionability": (
-            projected_lifecycle_heritage.get("actionability")
-        ),
-        "proactive_lifecycle_heritage_active_stage_label": (
-            projected_lifecycle_heritage.get("active_stage_label")
-        ),
-        "proactive_lifecycle_heritage_queue_override_status": (
-            projected_lifecycle_heritage.get("queue_override_status")
-        ),
-        "proactive_lifecycle_heritage_remaining_stage_count": int(
-            projected_lifecycle_heritage.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_lineage_key": (
-            projected_lifecycle_lineage.get("lineage_key")
-        ),
-        "proactive_lifecycle_lineage_status": (
-            projected_lifecycle_lineage.get("status")
-        ),
-        "proactive_lifecycle_lineage_mode": (
-            projected_lifecycle_lineage.get("lineage_mode")
-        ),
-        "proactive_lifecycle_lineage_decision": (
-            projected_lifecycle_lineage.get("decision")
-        ),
-        "proactive_lifecycle_lineage_actionability": (
-            projected_lifecycle_lineage.get("actionability")
-        ),
-        "proactive_lifecycle_lineage_active_stage_label": (
-            projected_lifecycle_lineage.get("active_stage_label")
-        ),
-        "proactive_lifecycle_lineage_queue_override_status": (
-            projected_lifecycle_lineage.get("queue_override_status")
-        ),
-        "proactive_lifecycle_lineage_remaining_stage_count": int(
-            projected_lifecycle_lineage.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_ancestry_key": (
-            projected_lifecycle_ancestry.get("ancestry_key")
-        ),
-        "proactive_lifecycle_ancestry_status": (
-            projected_lifecycle_ancestry.get("status")
-        ),
-        "proactive_lifecycle_ancestry_mode": (
-            projected_lifecycle_ancestry.get("ancestry_mode")
-        ),
-        "proactive_lifecycle_ancestry_decision": (
-            projected_lifecycle_ancestry.get("decision")
-        ),
-        "proactive_lifecycle_ancestry_actionability": (
-            projected_lifecycle_ancestry.get("actionability")
-        ),
-        "proactive_lifecycle_ancestry_active_stage_label": (
-            projected_lifecycle_ancestry.get("active_stage_label")
-        ),
-        "proactive_lifecycle_ancestry_queue_override_status": (
-            projected_lifecycle_ancestry.get("queue_override_status")
-        ),
-        "proactive_lifecycle_ancestry_remaining_stage_count": int(
-            projected_lifecycle_ancestry.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_provenance_key": (
-            projected_lifecycle_provenance.get("provenance_key")
-        ),
-        "proactive_lifecycle_provenance_status": (
-            projected_lifecycle_provenance.get("status")
-        ),
-        "proactive_lifecycle_provenance_mode": (
-            projected_lifecycle_provenance.get("provenance_mode")
-        ),
-        "proactive_lifecycle_provenance_decision": (
-            projected_lifecycle_provenance.get("decision")
-        ),
-        "proactive_lifecycle_provenance_actionability": (
-            projected_lifecycle_provenance.get("actionability")
-        ),
-        "proactive_lifecycle_provenance_active_stage_label": (
-            projected_lifecycle_provenance.get("active_stage_label")
-        ),
-        "proactive_lifecycle_provenance_queue_override_status": (
-            projected_lifecycle_provenance.get("queue_override_status")
-        ),
-        "proactive_lifecycle_provenance_remaining_stage_count": int(
-            projected_lifecycle_provenance.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_origin_key": projected_lifecycle_origin.get(
-            "origin_key"
-        ),
-        "proactive_lifecycle_origin_status": projected_lifecycle_origin.get(
-            "status"
-        ),
-        "proactive_lifecycle_origin_mode": projected_lifecycle_origin.get(
-            "origin_mode"
-        ),
-        "proactive_lifecycle_origin_decision": projected_lifecycle_origin.get(
-            "decision"
-        ),
-        "proactive_lifecycle_origin_actionability": projected_lifecycle_origin.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_origin_active_stage_label": (
-            projected_lifecycle_origin.get("active_stage_label")
-        ),
-        "proactive_lifecycle_origin_queue_override_status": (
-            projected_lifecycle_origin.get("queue_override_status")
-        ),
-        "proactive_lifecycle_origin_remaining_stage_count": int(
-            projected_lifecycle_origin.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_root_key": projected_lifecycle_root.get("root_key"),
-        "proactive_lifecycle_root_status": projected_lifecycle_root.get("status"),
-        "proactive_lifecycle_root_mode": projected_lifecycle_root.get("root_mode"),
-        "proactive_lifecycle_root_decision": projected_lifecycle_root.get(
-            "decision"
-        ),
-        "proactive_lifecycle_root_actionability": projected_lifecycle_root.get(
-            "actionability"
-        ),
-        "proactive_lifecycle_root_active_stage_label": (
-            projected_lifecycle_root.get("active_stage_label")
-        ),
-        "proactive_lifecycle_root_queue_override_status": (
-            projected_lifecycle_root.get("queue_override_status")
-        ),
-        "proactive_lifecycle_root_remaining_stage_count": int(
-            projected_lifecycle_root.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_foundation_key": projected_lifecycle_foundation.get(
-            "foundation_key"
-        ),
-        "proactive_lifecycle_foundation_status": projected_lifecycle_foundation.get(
-            "status"
-        ),
-        "proactive_lifecycle_foundation_mode": projected_lifecycle_foundation.get(
-            "foundation_mode"
-        ),
-        "proactive_lifecycle_foundation_decision": (
-            projected_lifecycle_foundation.get("decision")
-        ),
-        "proactive_lifecycle_foundation_actionability": (
-            projected_lifecycle_foundation.get("actionability")
-        ),
-        "proactive_lifecycle_foundation_active_stage_label": (
-            projected_lifecycle_foundation.get("active_stage_label")
-        ),
-        "proactive_lifecycle_foundation_queue_override_status": (
-            projected_lifecycle_foundation.get("queue_override_status")
-        ),
-        "proactive_lifecycle_foundation_remaining_stage_count": int(
-            projected_lifecycle_foundation.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_bedrock_key": projected_lifecycle_bedrock.get(
-            "bedrock_key"
-        ),
-        "proactive_lifecycle_bedrock_status": projected_lifecycle_bedrock.get(
-            "status"
-        ),
-        "proactive_lifecycle_bedrock_mode": projected_lifecycle_bedrock.get(
-            "bedrock_mode"
-        ),
-        "proactive_lifecycle_bedrock_decision": (
-            projected_lifecycle_bedrock.get("decision")
-        ),
-        "proactive_lifecycle_bedrock_actionability": (
-            projected_lifecycle_bedrock.get("actionability")
-        ),
-        "proactive_lifecycle_bedrock_active_stage_label": (
-            projected_lifecycle_bedrock.get("active_stage_label")
-        ),
-        "proactive_lifecycle_bedrock_queue_override_status": (
-            projected_lifecycle_bedrock.get("queue_override_status")
-        ),
-        "proactive_lifecycle_bedrock_remaining_stage_count": int(
-            projected_lifecycle_bedrock.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_substrate_key": projected_lifecycle_substrate.get(
-            "substrate_key"
-        ),
-        "proactive_lifecycle_substrate_status": projected_lifecycle_substrate.get(
-            "status"
-        ),
-        "proactive_lifecycle_substrate_mode": projected_lifecycle_substrate.get(
-            "substrate_mode"
-        ),
-        "proactive_lifecycle_substrate_decision": (
-            projected_lifecycle_substrate.get("decision")
-        ),
-        "proactive_lifecycle_substrate_actionability": (
-            projected_lifecycle_substrate.get("actionability")
-        ),
-        "proactive_lifecycle_substrate_active_stage_label": (
-            projected_lifecycle_substrate.get("active_stage_label")
-        ),
-        "proactive_lifecycle_substrate_queue_override_status": (
-            projected_lifecycle_substrate.get("queue_override_status")
-        ),
-        "proactive_lifecycle_substrate_remaining_stage_count": int(
-            projected_lifecycle_substrate.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_stratum_key": projected_lifecycle_stratum.get(
-            "stratum_key"
-        ),
-        "proactive_lifecycle_stratum_status": projected_lifecycle_stratum.get(
-            "status"
-        ),
-        "proactive_lifecycle_stratum_mode": projected_lifecycle_stratum.get(
-            "stratum_mode"
-        ),
-        "proactive_lifecycle_stratum_decision": (
-            projected_lifecycle_stratum.get("decision")
-        ),
-        "proactive_lifecycle_stratum_actionability": (
-            projected_lifecycle_stratum.get("actionability")
-        ),
-        "proactive_lifecycle_stratum_active_stage_label": (
-            projected_lifecycle_stratum.get("active_stage_label")
-        ),
-        "proactive_lifecycle_stratum_queue_override_status": (
-            projected_lifecycle_stratum.get("queue_override_status")
-        ),
-        "proactive_lifecycle_stratum_remaining_stage_count": int(
-            projected_lifecycle_stratum.get("remaining_stage_count") or 0
-        ),
-        "proactive_lifecycle_layer_key": projected_lifecycle_layer.get("layer_key"),
-        "proactive_lifecycle_layer_status": projected_lifecycle_layer.get(
-            "status"
-        ),
-        "proactive_lifecycle_layer_mode": projected_lifecycle_layer.get(
-            "layer_mode"
-        ),
-        "proactive_lifecycle_layer_decision": (
-            projected_lifecycle_layer.get("decision")
-        ),
-        "proactive_lifecycle_layer_actionability": (
-            projected_lifecycle_layer.get("actionability")
-        ),
-        "proactive_lifecycle_layer_active_stage_label": (
-            projected_lifecycle_layer.get("active_stage_label")
-        ),
-        "proactive_lifecycle_layer_queue_override_status": (
-            projected_lifecycle_layer.get("queue_override_status")
-        ),
-        "proactive_lifecycle_layer_remaining_stage_count": int(
-            projected_lifecycle_layer.get("remaining_stage_count") or 0
-        ),
-        "proactive_scheduling_status": proactive_scheduling_plan.get("status"),
-        "proactive_scheduling_mode": proactive_scheduling_plan.get(
+        "proactive_scheduling_mode": context.proactive_scheduling_plan.get(
             "scheduler_mode"
         ),
         "proactive_scheduling_min_seconds_since_last_outbound": int(
-            proactive_scheduling_plan.get("min_seconds_since_last_outbound") or 0
+            context.proactive_scheduling_plan.get(
+                "min_seconds_since_last_outbound"
+            )
+            or 0
         ),
         "proactive_scheduling_first_touch_extra_delay_seconds": int(
-            proactive_scheduling_plan.get("first_touch_extra_delay_seconds") or 0
+            context.proactive_scheduling_plan.get(
+                "first_touch_extra_delay_seconds"
+            )
+            or 0
         ),
-        "proactive_scheduling_stage_spacing_mode": proactive_scheduling_plan.get(
+        "proactive_scheduling_stage_spacing_mode": context.proactive_scheduling_plan.get(
             "stage_spacing_mode"
         ),
-        "proactive_scheduling_low_pressure_guard": proactive_scheduling_plan.get(
+        "proactive_scheduling_low_pressure_guard": context.proactive_scheduling_plan.get(
             "low_pressure_guard"
         ),
-        "proactive_guardrail_key": proactive_guardrail_plan.get("guardrail_key"),
-        "proactive_guardrail_max_dispatch_count": max_dispatch_count,
+        "proactive_guardrail_key": context.proactive_guardrail_plan.get(
+            "guardrail_key"
+        ),
+        "proactive_guardrail_max_dispatch_count": context.max_dispatch_count,
         "proactive_guardrail_stage_min_seconds_since_last_user": int(
-            (current_stage_guardrail or {}).get("min_seconds_since_last_user") or 0
+            (stage_resolution.current_stage_guardrail or {}).get(
+                "min_seconds_since_last_user"
+            )
+            or 0
         ),
         "proactive_guardrail_stage_min_seconds_since_last_dispatch": int(
-            (current_stage_guardrail or {}).get(
+            (stage_resolution.current_stage_guardrail or {}).get(
                 "min_seconds_since_last_dispatch"
             )
             or 0
         ),
         "proactive_guardrail_stage_on_guardrail_hit": (
-            (current_stage_guardrail or {}).get("on_guardrail_hit")
+            (stage_resolution.current_stage_guardrail or {}).get(
+                "on_guardrail_hit"
+            )
         ),
         "proactive_guardrail_hard_stop_conditions": list(
-            proactive_guardrail_plan.get("hard_stop_conditions") or []
+            context.proactive_guardrail_plan.get("hard_stop_conditions") or []
         ),
-        "proactive_orchestration_key": proactive_orchestration_plan.get(
+    }
+
+
+def _build_followup_orchestration_fields(
+    *,
+    context: _FollowupContext,
+    stage_resolution: _StageResolution,
+) -> dict[str, Any]:
+    return {
+        "proactive_orchestration_key": context.proactive_orchestration_plan.get(
             "orchestration_key"
         ),
         "proactive_orchestration_stage_objective": (
-            (current_stage_directive or {}).get("objective")
+            (stage_resolution.current_stage_directive or {}).get("objective")
         ),
         "proactive_orchestration_stage_delivery_mode": (
-            (current_stage_directive or {}).get("delivery_mode")
+            (stage_resolution.current_stage_directive or {}).get("delivery_mode")
         ),
         "proactive_orchestration_stage_question_mode": (
-            (current_stage_directive or {}).get("question_mode")
+            (stage_resolution.current_stage_directive or {}).get("question_mode")
         ),
         "proactive_orchestration_stage_autonomy_mode": (
-            (current_stage_directive or {}).get("autonomy_mode")
+            (stage_resolution.current_stage_directive or {}).get("autonomy_mode")
         ),
         "proactive_orchestration_stage_closing_style": (
-            (current_stage_directive or {}).get("closing_style")
+            (stage_resolution.current_stage_directive or {}).get("closing_style")
         ),
-        "proactive_actuation_key": proactive_actuation_plan.get("actuation_key"),
+        "proactive_actuation_key": context.proactive_actuation_plan.get(
+            "actuation_key"
+        ),
         "proactive_actuation_opening_move": (
-            (current_stage_actuation or {}).get("opening_move")
+            (stage_resolution.current_stage_actuation or {}).get("opening_move")
         ),
         "proactive_actuation_bridge_move": (
-            (current_stage_actuation or {}).get("bridge_move")
+            (stage_resolution.current_stage_actuation or {}).get("bridge_move")
         ),
         "proactive_actuation_closing_move": (
-            (current_stage_actuation or {}).get("closing_move")
+            (stage_resolution.current_stage_actuation or {}).get("closing_move")
         ),
         "proactive_actuation_continuity_anchor": (
-            (current_stage_actuation or {}).get("continuity_anchor")
+            (stage_resolution.current_stage_actuation or {}).get(
+                "continuity_anchor"
+            )
         ),
         "proactive_actuation_somatic_mode": (
-            (current_stage_actuation or {}).get("somatic_mode")
+            (stage_resolution.current_stage_actuation or {}).get("somatic_mode")
         ),
         "proactive_actuation_somatic_body_anchor": (
-            (current_stage_actuation or {}).get("somatic_body_anchor")
+            (stage_resolution.current_stage_actuation or {}).get(
+                "somatic_body_anchor"
+            )
         ),
         "proactive_actuation_followup_style": (
-            (current_stage_actuation or {}).get("followup_style")
+            (stage_resolution.current_stage_actuation or {}).get("followup_style")
         ),
         "proactive_actuation_user_space_signal": (
-            (current_stage_actuation or {}).get("user_space_signal")
+            (stage_resolution.current_stage_actuation or {}).get(
+                "user_space_signal"
+            )
         ),
-        "proactive_progression_key": proactive_progression_plan.get(
+    }
+
+
+def _build_followup_progression_and_cadence_fields(
+    *,
+    context: _FollowupContext,
+    stage_resolution: _StageResolution,
+    queue: _ResolvedFollowupQueueBundle,
+) -> dict[str, Any]:
+    return {
+        "proactive_progression_key": context.proactive_progression_plan.get(
             "progression_key"
         ),
-        "proactive_progression_close_loop_stage": close_loop_stage,
+        "proactive_progression_close_loop_stage": context.close_loop_stage,
         "proactive_progression_stage_action": (
-            (current_stage_progression or {}).get("on_expired")
+            (stage_resolution.current_stage_progression or {}).get("on_expired")
         ),
         "proactive_progression_max_overdue_seconds": int(
-            (current_stage_progression or {}).get("max_overdue_seconds") or 0
+            (stage_resolution.current_stage_progression or {}).get(
+                "max_overdue_seconds"
+            )
+            or 0
         ),
-        "proactive_progression_advanced": progression_advanced,
-        "proactive_progression_reason": progression_reason,
-        "trigger_after_seconds": int(directive.get("trigger_after_seconds") or 0),
-        "window_seconds": int(directive.get("window_seconds") or 0),
-        "proactive_cadence_key": proactive_cadence_plan.get("cadence_key"),
-        "proactive_cadence_status": proactive_cadence_plan.get("status"),
-        "proactive_cadence_stage_index": current_stage_index,
-        "proactive_cadence_stage_label": current_stage_label,
-        "proactive_cadence_stage_count": max_dispatch_count,
+        "proactive_progression_advanced": stage_resolution.progression_advanced,
+        "proactive_progression_reason": stage_resolution.progression_reason,
+        "trigger_after_seconds": int(
+            context.directive.get("trigger_after_seconds") or 0
+        ),
+        "window_seconds": int(context.directive.get("window_seconds") or 0),
+        "proactive_cadence_key": context.proactive_cadence_plan.get("cadence_key"),
+        "proactive_cadence_status": context.proactive_cadence_plan.get("status"),
+        "proactive_cadence_stage_index": stage_resolution.current_stage_index,
+        "proactive_cadence_stage_label": stage_resolution.current_stage_label,
+        "proactive_cadence_stage_count": context.max_dispatch_count,
         "proactive_cadence_remaining_dispatches": max(
             0,
-            max_dispatch_count - (current_stage_index - 1),
+            context.max_dispatch_count - (stage_resolution.current_stage_index - 1),
         ),
         "proactive_cadence_next_interval_seconds": (
-            stage_intervals_seconds[
-                min(current_stage_index - 1, len(stage_intervals_seconds) - 1)
+            context.stage_intervals_seconds[
+                min(
+                    stage_resolution.current_stage_index - 1,
+                    len(context.stage_intervals_seconds) - 1,
+                )
             ]
-            if stage_intervals_seconds
+            if context.stage_intervals_seconds
             else 0
         ),
-        "proactive_cadence_dispatched_stage_count": dispatched_stage_count,
-        "due_at": due_at.isoformat() if due_at is not None else None,
-        "base_due_at": base_due_at.isoformat() if base_due_at is not None else None,
-        "expires_at": expires_at.isoformat() if expires_at is not None else None,
-        "seconds_until_due": seconds_until_due,
-        "seconds_overdue": seconds_overdue,
-        "window_remaining_seconds": window_remaining_seconds,
-        "schedule_reason": schedule_reason,
+        "proactive_cadence_dispatched_stage_count": context.dispatched_stage_count,
+        "due_at": queue.due_at.isoformat() if queue.due_at is not None else None,
+        "base_due_at": (
+            queue.base_due_at.isoformat() if queue.base_due_at is not None else None
+        ),
+        "expires_at": (
+            queue.expires_at.isoformat() if queue.expires_at is not None else None
+        ),
+        "seconds_until_due": queue.seconds_until_due,
+        "seconds_overdue": queue.seconds_overdue,
+        "window_remaining_seconds": queue.window_remaining_seconds,
+        "schedule_reason": queue.schedule_reason,
         "scheduling_deferred_until": (
-            scheduling_deferred_until.isoformat()
-            if scheduling_deferred_until is not None
+            queue.scheduling_deferred_until.isoformat()
+            if queue.scheduling_deferred_until is not None
             else None
         ),
-        "opening_hint": directive.get("opening_hint"),
-        "rationale": directive.get("rationale"),
-        "trigger_conditions": list(directive.get("trigger_conditions") or []),
-        "hold_reasons": list(directive.get("hold_reasons") or []),
+    }
+
+
+def _build_followup_directive_runtime_fields(
+    *,
+    context: _FollowupContext,
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    return {
+        "opening_hint": context.directive.get("opening_hint"),
+        "rationale": context.directive.get("rationale"),
+        "trigger_conditions": list(
+            context.directive.get("trigger_conditions") or []
+        ),
+        "hold_reasons": list(context.directive.get("hold_reasons") or []),
         "scheduling_notes": list(
-            proactive_scheduling_plan.get("scheduling_notes") or []
+            context.proactive_scheduling_plan.get("scheduling_notes") or []
         ),
-        "time_awareness_mode": (
-            dict(state.get("runtime_coordination_snapshot") or {}).get(
-                "time_awareness_mode"
-            )
+        "time_awareness_mode": projected.runtime_coordination_snapshot.get(
+            "time_awareness_mode"
         ),
-        "cognitive_load_band": (
-            dict(state.get("runtime_coordination_snapshot") or {}).get(
-                "cognitive_load_band"
-            )
+        "cognitive_load_band": projected.runtime_coordination_snapshot.get(
+            "cognitive_load_band"
         ),
-        "proactive_style": (
-            dict(state.get("runtime_coordination_snapshot") or {}).get(
-                "proactive_style"
-            )
+        "proactive_style": projected.runtime_coordination_snapshot.get(
+            "proactive_style"
         ),
-        "somatic_cue": (
-            dict(state.get("runtime_coordination_snapshot") or {}).get(
-                "somatic_cue"
-            )
-        ),
-        "turn_count": int(state.get("turn_count") or 0),
+        "somatic_cue": projected.runtime_coordination_snapshot.get("somatic_cue"),
+        "turn_count": int(context.state.get("turn_count") or 0),
+    }
+
+
+def _build_followup_timestamp_fields(
+    *,
+    context: _FollowupContext,
+) -> dict[str, Any]:
+    return {
         "started_at": (
-            latest_session_event.occurred_at.isoformat()
-            if latest_session_event is not None
-            else session.get("created_at")
+            context.latest_session_event.occurred_at.isoformat()
+            if context.latest_session_event is not None
+            else context.session.get("created_at")
         ),
         "last_user_message_at": (
-            latest_user_event.occurred_at.isoformat()
-            if latest_user_event is not None
+            context.latest_user_event.occurred_at.isoformat()
+            if context.latest_user_event is not None
             else None
         ),
         "last_assistant_message_at": (
-            latest_assistant_event.occurred_at.isoformat()
-            if latest_assistant_event is not None
+            context.latest_assistant_event.occurred_at.isoformat()
+            if context.latest_assistant_event is not None
             else None
         ),
-        "directive_updated_at": directive_time.isoformat(),
+        "directive_updated_at": context.directive_time.isoformat(),
         "scheduling_updated_at": (
-            latest_proactive_scheduling_event.occurred_at.isoformat()
-            if latest_proactive_scheduling_event is not None
+            context.latest_proactive_scheduling_event.occurred_at.isoformat()
+            if context.latest_proactive_scheduling_event is not None
             else None
         ),
         "orchestration_updated_at": (
-            latest_proactive_orchestration_event.occurred_at.isoformat()
-            if latest_proactive_orchestration_event is not None
+            context.latest_proactive_orchestration_event.occurred_at.isoformat()
+            if context.latest_proactive_orchestration_event is not None
             else None
         ),
         "actuation_updated_at": (
-            latest_proactive_actuation_event.occurred_at.isoformat()
-            if latest_proactive_actuation_event is not None
+            context.latest_proactive_actuation_event.occurred_at.isoformat()
+            if context.latest_proactive_actuation_event is not None
             else None
         ),
         "progression_updated_at": (
-            latest_proactive_progression_event.occurred_at.isoformat()
-            if latest_proactive_progression_event is not None
+            context.latest_proactive_progression_event.occurred_at.isoformat()
+            if context.latest_proactive_progression_event is not None
             else None
         ),
         "dispatch_gate_updated_at": (
-            latest_proactive_dispatch_gate_event.occurred_at.isoformat()
-            if latest_proactive_dispatch_gate_event is not None
+            context.latest_proactive_dispatch_gate_event.occurred_at.isoformat()
+            if context.latest_proactive_dispatch_gate_event is not None
             else None
         ),
         "dispatch_feedback_updated_at": (
-            latest_proactive_dispatch_feedback_event.occurred_at.isoformat()
-            if latest_proactive_dispatch_feedback_event is not None
+            context.latest_proactive_dispatch_feedback_event.occurred_at.isoformat()
+            if context.latest_proactive_dispatch_feedback_event is not None
             else None
         ),
         "stage_controller_updated_at": (
-            latest_proactive_stage_controller_event.occurred_at.isoformat()
-            if latest_proactive_stage_controller_event is not None
+            context.latest_proactive_stage_controller_event.occurred_at.isoformat()
+            if context.latest_proactive_stage_controller_event is not None
             else None
         ),
         "line_controller_updated_at": (
-            latest_proactive_line_controller_event.occurred_at.isoformat()
-            if latest_proactive_line_controller_event is not None
+            context.latest_proactive_line_controller_event.occurred_at.isoformat()
+            if context.latest_proactive_line_controller_event is not None
             else None
         ),
-        "last_event_at": events[-1].occurred_at.isoformat() if events else None,
+        "last_event_at": (
+            context.events[-1].occurred_at.isoformat() if context.events else None
+        ),
     }
+
+
+def _build_followup_generic_lifecycle_fields(
+    projected: _ProjectedFollowupStateBundle,
+) -> dict[str, Any]:
+    fields: dict[str, Any] = {}
+    for phase in _GENERIC_LIFECYCLE_PHASES:
+        phase_projection = projected.projections[
+            f"proactive_lifecycle_{phase}_decision"
+        ]
+        fields[f"proactive_lifecycle_{phase}_key"] = phase_projection.get(
+            f"{phase}_key"
+        )
+        fields[f"proactive_lifecycle_{phase}_status"] = phase_projection.get(
+            "status"
+        )
+        fields[f"proactive_lifecycle_{phase}_mode"] = phase_projection.get(
+            f"{phase}_mode"
+        )
+        fields[f"proactive_lifecycle_{phase}_decision"] = phase_projection.get(
+            "decision"
+        )
+        fields[f"proactive_lifecycle_{phase}_actionability"] = phase_projection.get(
+            "actionability"
+        )
+        fields[f"proactive_lifecycle_{phase}_active_stage_label"] = (
+            phase_projection.get("active_stage_label")
+        )
+        fields[f"proactive_lifecycle_{phase}_queue_override_status"] = (
+            phase_projection.get("queue_override_status")
+        )
+        fields[f"proactive_lifecycle_{phase}_remaining_stage_count"] = int(
+            phase_projection.get("remaining_stage_count") or 0
+        )
+    return fields
+
 
 def _latest_event(
     events: list[StoredEvent],

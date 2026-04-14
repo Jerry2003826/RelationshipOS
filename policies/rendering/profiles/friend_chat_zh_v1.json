@@ -1,0 +1,133 @@
+{
+  "response_rendering": {
+    "defaults": {
+      "rendering_mode": "supportive_progress",
+      "max_sentences": 3,
+      "question_count_limit": 0,
+      "include_validation_on_negative_appraisal": false,
+      "include_next_step_on_negative_appraisal": false
+    },
+    "clarify": {
+      "max_sentences": 2,
+      "question_count_limit": 1,
+      "style_guardrails": [
+        "sound like casual chat in Chinese instead of an intake form"
+      ]
+    },
+    "support_with_boundary": {
+      "max_sentences": 3,
+      "style_guardrails": [
+        "keep the boundary soft and human instead of clinical"
+      ]
+    },
+    "time_awareness_modes": {
+      "reengagement": {
+        "style_guardrails": [
+          "resume like someone continuing yesterday's chat, not restarting a ticket"
+        ]
+      },
+      "resume": {
+        "style_guardrails": [
+          "resume like someone continuing yesterday's chat, not restarting a ticket"
+        ]
+      }
+    },
+    "proactive_followup_style_guardrail": "leave a natural conversational opening instead of sounding like a coach or therapist"
+  },
+  "runtime_behavior": {
+    "include_narrative_card": true,
+    "recent_turn_count": 12,
+    "earlier_summary_char_limit": 520,
+    "friend_chat_lightweight_self_memory_limit": 6,
+    "friend_chat_social_query_limit": 1,
+    "friend_chat_social_memory_limit": 4,
+    "friend_chat_social_enable_vector_search": false,
+    "friend_chat_social_prefer_fast": true,
+    "reply_contract_lines": [
+      "stay in-world",
+      "中文优先时像微信聊天一样说话",
+      "少解释、少指导、少治疗感",
+      "接住最近状态、语气和没聊完的话头",
+      "no <think>",
+      "final reply only"
+    ],
+    "edge_routing": {
+      "factual_memory_item_budget_min": 4,
+      "factual_max_completion_tokens": 120,
+      "social_memory_item_budget_min": 1,
+      "social_memory_item_budget_max": 2,
+      "social_max_completion_tokens": 120,
+      "relational_max_completion_tokens": 180,
+      "recall_budget_pressure_factor": 2,
+      "complex_cross_user_hit_count": 1,
+      "large_user_message_threshold": 800
+    },
+    "social_disclosure_tokens": [
+      "who else",
+      "someone else",
+      "secret",
+      "gossip",
+      "tea",
+      "别人",
+      "谁还",
+      "秘密",
+      "八卦",
+      "还有谁",
+      "别人也",
+      "知道一点",
+      "少说一点"
+    ],
+    "social_query_noise_tokens": [
+      "你是不是",
+      "知道一点",
+      "要说就",
+      "少说一点",
+      "的事",
+      "别人",
+      "谁还",
+      "还有谁",
+      "秘密",
+      "八卦",
+      "说一点",
+      "说说",
+      "讲讲"
+    ],
+    "persona_state_probe_phrases": [
+      "你会怎么形容你现在的状态",
+      "你现在是什么状态",
+      "你现在怎么样",
+      "你现在说话大概是什么感觉",
+      "你现在说话是什么感觉",
+      "你现在跟我讲话是什么感觉",
+      "你会怎么形容你现在说话的感觉",
+      "你现在说话的感觉"
+    ],
+    "state_reflection_probe_phrases": [
+      "你觉得我今天大概是什么状态",
+      "你觉得我现在大概是什么状态",
+      "你觉得我今天是什么状态",
+      "你觉得我现在是什么状态",
+      "你觉得我这阵子大概是什么状态",
+      "你觉得我这阵子是什么状态"
+    ],
+    "relationship_reflection_probe_phrases": [
+      "和刚开始比有什么不一样",
+      "跟刚开始比有什么不一样",
+      "现在跟我说话，和刚开始比有什么不一样",
+      "现在和刚开始比有什么不一样",
+      "和刚开始比，你现在跟我说话有什么不一样"
+    ],
+    "state_reflection_markers": [
+      "不太想动",
+      "刷手机",
+      "嫌麻烦",
+      "提不起劲",
+      "提不起兴趣",
+      "没力气",
+      "没意思",
+      "发呆",
+      "通勤还是很烦",
+      "很烦"
+    ]
+  }
+}

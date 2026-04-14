@@ -1,0 +1,34 @@
+{
+  "thresholds": {
+    "direct_ready_confidence": 0.88,
+    "direct_ready_disclosure_risk": 0.58,
+    "gossip_direct_reveal_sum": 1.72,
+    "gossip_direct_reveal_conscience": 0.76,
+    "dramatic_value": 0.92,
+    "theatricality": 0.7,
+    "confrontation_appetite": 0.5,
+    "factual_partial_conscience": 0.66
+  },
+  "mode_configs": {
+    "hint": {
+      "dramatic_ceiling": 0.26
+    },
+    "partial_reveal": {
+      "allowed_fact_count_cap": 1,
+      "quote_style": "attributed_summary",
+      "dramatic_ceiling": 0.42,
+      "must_anchor_to_observed_memory": true
+    },
+    "direct_reveal": {
+      "allowed_fact_count_cap": 1,
+      "dramatic_ceiling": 0.58,
+      "must_anchor_to_observed_memory": true
+    },
+    "dramatic_confrontation": {
+      "allowed_fact_count_cap": 1,
+      "quote_style": "explicit_attributed_fact",
+      "dramatic_ceiling": 0.72,
+      "must_anchor_to_observed_memory": true
+    }
+  }
+}

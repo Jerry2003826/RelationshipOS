@@ -59,113 +59,45 @@ def build_proactive_stage_state_decision(
     selected_pressure_mode = selected_pressure_mode or "none"
     selected_autonomy_signal = selected_autonomy_signal or current_stage_autonomy_mode or "none"
 
-    primary_source = "cadence"
-    controller_decision = None
-    if dispatch_gate_decision in {"hold", "defer"}:
-        primary_source = "gate"
-        controller_decision = dispatch_gate_decision
-    elif orchestration_controller_decision not in {None, "follow_local_controllers"}:
-        primary_source = "orchestration_controller"
-        controller_decision = orchestration_controller_decision
-    elif aggregate_controller_decision not in {None, "follow_local_controllers"}:
-        primary_source = "aggregate_controller"
-        controller_decision = aggregate_controller_decision
-    elif stage_controller_decision not in {None, "follow_local_controllers"}:
-        primary_source = "stage_controller"
-        controller_decision = stage_controller_decision
-    elif line_controller_decision not in {None, "follow_local_controllers"}:
-        primary_source = "line_controller"
-        controller_decision = line_controller_decision
-    elif dispatch_envelope_decision in {"dispatch_shaped", "defer_dispatch", "hold_dispatch"}:
-        primary_source = "dispatch_envelope"
-        controller_decision = dispatch_envelope_decision
-    elif progression_advanced:
-        primary_source = "progression"
-        controller_decision = progression_action
+    state_source = _resolve_stage_state_source(
+        dispatch_gate_decision=dispatch_gate_decision,
+        orchestration_controller_decision=orchestration_controller_decision,
+        aggregate_controller_decision=aggregate_controller_decision,
+        stage_controller_decision=stage_controller_decision,
+        line_controller_decision=line_controller_decision,
+        dispatch_envelope_decision=dispatch_envelope_decision,
+        progression_advanced=progression_advanced,
+        progression_action=progression_action,
+    )
+    primary_source = str(state_source["primary_source"])
+    controller_decision = state_source["controller_decision"]
 
-    if queue_status == "hold" or dispatch_gate_decision == "hold":
-        status = "hold"
-        state_mode = "held"
-    elif dispatch_gate_decision == "defer" or dispatch_envelope_decision == "defer_dispatch":
-        status = "scheduled"
-        state_mode = "deferred_dispatch"
-    elif queue_status == "scheduled":
-        status = "scheduled"
-        if line_state == "close_ready" or progression_action == "close_line":
-            state_mode = "scheduled_close_loop"
-        elif line_state == "softened":
-            state_mode = "scheduled_softened"
-        else:
-            state_mode = "scheduled_wait"
-    elif queue_status == "waiting":
-        status = "active"
-        state_mode = "waiting_softened" if line_state == "softened" else "waiting_turn"
-    elif queue_status == "overdue":
-        status = "active"
-        if progression_advanced:
-            state_mode = "overdue_progressed"
-        elif dispatch_envelope_decision == "dispatch_shaped":
-            state_mode = "overdue_shaped"
-        else:
-            state_mode = "overdue_ready"
-    else:
-        status = "active"
-        if dispatch_envelope_decision == "dispatch_shaped":
-            state_mode = "dispatch_shaped"
-        elif line_state == "close_ready" or progression_action == "close_line":
-            state_mode = "dispatch_close_ready"
-        elif line_state == "softened":
-            state_mode = "dispatch_softened"
-        else:
-            state_mode = "dispatch_ready"
+    state_resolution = _build_stage_state_resolution(
+        queue_status=queue_status,
+        dispatch_gate_decision=dispatch_gate_decision,
+        dispatch_envelope_decision=dispatch_envelope_decision,
+        line_state=line_state,
+        progression_action=progression_action,
+        progression_advanced=progression_advanced,
+    )
+    status = str(state_resolution["status"])
+    state_mode = str(state_resolution["state_mode"])
 
-    changed = bool(
-        primary_source != "cadence"
-        or progression_advanced
-        or dispatch_envelope_decision in {"dispatch_shaped", "defer_dispatch", "hold_dispatch"}
-        or line_state != "steady"
+    changed = _is_stage_state_changed(
+        primary_source=primary_source,
+        progression_advanced=progression_advanced,
+        dispatch_envelope_decision=dispatch_envelope_decision,
+        line_state=line_state,
     )
     state_key = f"{stage_label}_{state_mode}_{selected_strategy_key}"
-
-    state_notes: list[str] = [f"queue:{queue_status}"]
-    if schedule_reason:
-        state_notes.append(f"schedule:{schedule_reason}")
-    if line_state and line_state != "steady":
-        state_notes.append(f"line:{line_state}")
-    if progression_action and progression_action != "none":
-        state_notes.append(f"progression:{progression_action}")
-    if primary_source:
-        state_notes.append(f"source:{primary_source}")
-
-    rationale = (
-        "The current proactive stage is following its expected cadence state without "
-        "additional controller or gate shaping."
+    state_notes = _build_stage_state_notes(
+        queue_status=queue_status,
+        schedule_reason=schedule_reason,
+        line_state=line_state,
+        progression_action=progression_action,
+        primary_source=primary_source,
     )
-    if state_mode == "deferred_dispatch":
-        rationale = (
-            "The current proactive stage has a shaped envelope, but the dispatch gate "
-            "is still leaving more space before it can be sent."
-        )
-    elif state_mode in {"scheduled_softened", "dispatch_softened", "waiting_softened"}:
-        rationale = (
-            "The current proactive stage is softened by the controller stack, so it "
-            "keeps a lower-pressure posture even before dispatch."
-        )
-    elif state_mode in {"dispatch_shaped", "overdue_shaped"}:
-        rationale = (
-            "The current proactive stage is ready to move with a shaped low-pressure "
-            "envelope instead of its original local defaults."
-        )
-    elif state_mode in {"scheduled_close_loop", "dispatch_close_ready"}:
-        rationale = (
-            "The current proactive stage is already in a close-loop posture, so the "
-            "remaining line is being wound down carefully."
-        )
-    elif state_mode == "held":
-        rationale = (
-            "The current proactive stage should stay on hold because the line is not "
-            "ready to move at all."
-        )
+    rationale = _build_stage_state_rationale(state_mode=state_mode)
 
     return ProactiveStageStateDecision(
         status=status,
@@ -191,6 +123,169 @@ def build_proactive_stage_state_decision(
         state_notes=_compact(state_notes, limit=6),
         rationale=rationale,
     )
+
+
+def _resolve_stage_state_source(
+    *,
+    dispatch_gate_decision: str | None,
+    orchestration_controller_decision: str | None,
+    aggregate_controller_decision: str | None,
+    stage_controller_decision: str | None,
+    line_controller_decision: str | None,
+    dispatch_envelope_decision: str | None,
+    progression_advanced: bool,
+    progression_action: str,
+) -> dict[str, str | None]:
+    for primary_source, controller_decision in (
+        (
+            "gate",
+            dispatch_gate_decision if dispatch_gate_decision in {"hold", "defer"} else None,
+        ),
+        (
+            "orchestration_controller",
+            orchestration_controller_decision
+            if orchestration_controller_decision not in {None, "follow_local_controllers"}
+            else None,
+        ),
+        (
+            "aggregate_controller",
+            aggregate_controller_decision
+            if aggregate_controller_decision not in {None, "follow_local_controllers"}
+            else None,
+        ),
+        (
+            "stage_controller",
+            stage_controller_decision
+            if stage_controller_decision not in {None, "follow_local_controllers"}
+            else None,
+        ),
+        (
+            "line_controller",
+            line_controller_decision
+            if line_controller_decision not in {None, "follow_local_controllers"}
+            else None,
+        ),
+        (
+            "dispatch_envelope",
+            dispatch_envelope_decision
+            if dispatch_envelope_decision in {"dispatch_shaped", "defer_dispatch", "hold_dispatch"}
+            else None,
+        ),
+        ("progression", progression_action if progression_advanced else None),
+    ):
+        if controller_decision is not None:
+            return {
+                "primary_source": primary_source,
+                "controller_decision": controller_decision,
+            }
+    return {"primary_source": "cadence", "controller_decision": None}
+
+
+def _build_stage_state_resolution(
+    *,
+    queue_status: str,
+    dispatch_gate_decision: str | None,
+    dispatch_envelope_decision: str | None,
+    line_state: str,
+    progression_action: str,
+    progression_advanced: bool,
+) -> dict[str, str]:
+    if queue_status == "hold" or dispatch_gate_decision == "hold":
+        return {"status": "hold", "state_mode": "held"}
+    if dispatch_gate_decision == "defer" or dispatch_envelope_decision == "defer_dispatch":
+        return {"status": "scheduled", "state_mode": "deferred_dispatch"}
+    if queue_status == "scheduled":
+        if line_state == "close_ready" or progression_action == "close_line":
+            return {"status": "scheduled", "state_mode": "scheduled_close_loop"}
+        if line_state == "softened":
+            return {"status": "scheduled", "state_mode": "scheduled_softened"}
+        return {"status": "scheduled", "state_mode": "scheduled_wait"}
+    if queue_status == "waiting":
+        return {
+            "status": "active",
+            "state_mode": "waiting_softened" if line_state == "softened" else "waiting_turn",
+        }
+    if queue_status == "overdue":
+        if progression_advanced:
+            return {"status": "active", "state_mode": "overdue_progressed"}
+        if dispatch_envelope_decision == "dispatch_shaped":
+            return {"status": "active", "state_mode": "overdue_shaped"}
+        return {"status": "active", "state_mode": "overdue_ready"}
+    if dispatch_envelope_decision == "dispatch_shaped":
+        return {"status": "active", "state_mode": "dispatch_shaped"}
+    if line_state == "close_ready" or progression_action == "close_line":
+        return {"status": "active", "state_mode": "dispatch_close_ready"}
+    if line_state == "softened":
+        return {"status": "active", "state_mode": "dispatch_softened"}
+    return {"status": "active", "state_mode": "dispatch_ready"}
+
+
+def _is_stage_state_changed(
+    *,
+    primary_source: str,
+    progression_advanced: bool,
+    dispatch_envelope_decision: str | None,
+    line_state: str,
+) -> bool:
+    return bool(
+        primary_source != "cadence"
+        or progression_advanced
+        or dispatch_envelope_decision in {"dispatch_shaped", "defer_dispatch", "hold_dispatch"}
+        or line_state != "steady"
+    )
+
+
+def _build_stage_state_notes(
+    *,
+    queue_status: str,
+    schedule_reason: str | None,
+    line_state: str | None,
+    progression_action: str | None,
+    primary_source: str,
+) -> list[str]:
+    state_notes: list[str] = [f"queue:{queue_status}"]
+    if schedule_reason:
+        state_notes.append(f"schedule:{schedule_reason}")
+    if line_state and line_state != "steady":
+        state_notes.append(f"line:{line_state}")
+    if progression_action and progression_action != "none":
+        state_notes.append(f"progression:{progression_action}")
+    if primary_source:
+        state_notes.append(f"source:{primary_source}")
+    return state_notes
+
+
+def _build_stage_state_rationale(*, state_mode: str) -> str:
+    rationale = (
+        "The current proactive stage is following its expected cadence state without "
+        "additional controller or gate shaping."
+    )
+    if state_mode == "deferred_dispatch":
+        return (
+            "The current proactive stage has a shaped envelope, but the dispatch gate "
+            "is still leaving more space before it can be sent."
+        )
+    if state_mode in {"scheduled_softened", "dispatch_softened", "waiting_softened"}:
+        return (
+            "The current proactive stage is softened by the controller stack, so it "
+            "keeps a lower-pressure posture even before dispatch."
+        )
+    if state_mode in {"dispatch_shaped", "overdue_shaped"}:
+        return (
+            "The current proactive stage is ready to move with a shaped low-pressure "
+            "envelope instead of its original local defaults."
+        )
+    if state_mode in {"scheduled_close_loop", "dispatch_close_ready"}:
+        return (
+            "The current proactive stage is already in a close-loop posture, so the "
+            "remaining line is being wound down carefully."
+        )
+    if state_mode == "held":
+        return (
+            "The current proactive stage should stay on hold because the line is not "
+            "ready to move at all."
+        )
+    return rationale
 
 
 def build_proactive_stage_transition_decision(
@@ -227,77 +322,32 @@ def build_proactive_stage_transition_decision(
         else stage_state_decision.dispatch_envelope_decision
     )
     primary_source = stage_state_decision.primary_source or "cadence"
-    controller_decision = stage_state_decision.controller_decision
-    if controller_decision in {None, ""}:
-        for decision in (
-            orchestration_controller_decision.decision
-            if orchestration_controller_decision is not None
-            else None,
-            aggregate_controller_decision.decision
-            if aggregate_controller_decision is not None
-            else None,
-            stage_controller_decision.decision if stage_controller_decision is not None else None,
-            line_controller_decision.decision if line_controller_decision is not None else None,
-            envelope_decision,
-            gate_decision,
-        ):
-            if decision and decision not in {"follow_local_controllers", "dispatch"}:
-                controller_decision = decision
-                break
-
-    transition_mode = "hold_stage"
-    status = "hold"
-    next_queue_status_hint = "hold"
-    stage_exit_mode = "stay"
-    next_stage_index: int | None = None
-
-    is_close_loop_stage = bool(
-        line_state == "close_ready"
-        or progression_action == "close_line"
-        or stage_label == "final_soft_close"
+    controller_decision = _resolve_stage_transition_controller_decision(
+        stage_state_decision=stage_state_decision,
+        gate_decision=gate_decision,
+        envelope_decision=envelope_decision,
+        aggregate_controller_decision=aggregate_controller_decision,
+        orchestration_controller_decision=orchestration_controller_decision,
+        stage_controller_decision=stage_controller_decision,
+        line_controller_decision=line_controller_decision,
     )
-    if queue_status == "hold" or gate_decision == "hold":
-        transition_mode = "hold_stage"
-        status = "hold"
-        next_queue_status_hint = "hold"
-    elif queue_status == "scheduled" or gate_decision == "defer":
-        status = "scheduled"
-        next_queue_status_hint = "scheduled"
-        if is_close_loop_stage:
-            transition_mode = "reschedule_close_loop"
-            stage_exit_mode = "close_loop"
-        else:
-            transition_mode = "reschedule_stage"
-    elif queue_status == "waiting":
-        status = "waiting"
-        next_queue_status_hint = "waiting"
-        if line_state == "softened":
-            transition_mode = "wait_softened_stage"
-        else:
-            transition_mode = "wait_stage"
-    else:
-        status = "active"
-        next_queue_status_hint = "dispatched"
-        if is_close_loop_stage:
-            transition_mode = "dispatch_close_loop"
-            if stage_label == "final_soft_close" or progression_action == "close_line":
-                stage_exit_mode = "retire_line"
-                next_queue_status_hint = "terminal"
-                next_stage_label = None
-            else:
-                stage_exit_mode = "close_loop"
-        elif envelope_decision == "dispatch_shaped" or line_state == "softened":
-            transition_mode = "dispatch_softened_stage"
-            stage_exit_mode = "advance_line"
-        else:
-            transition_mode = "dispatch_stage"
-            stage_exit_mode = "advance_line"
-
-        if stage_exit_mode == "advance_line":
-            if next_stage_label:
-                next_stage_index = min(stage_count, stage_index + 1)
-            elif stage_index < stage_count:
-                next_stage_index = stage_index + 1
+    transition_state = _build_stage_transition_state(
+        stage_label=stage_label,
+        stage_index=stage_index,
+        stage_count=stage_count,
+        queue_status=queue_status,
+        line_state=line_state,
+        progression_action=progression_action,
+        gate_decision=gate_decision,
+        envelope_decision=envelope_decision,
+        next_stage_label=next_stage_label,
+    )
+    transition_mode = transition_state["transition_mode"]
+    status = transition_state["status"]
+    next_queue_status_hint = transition_state["next_queue_status_hint"]
+    stage_exit_mode = transition_state["stage_exit_mode"]
+    next_stage_label = transition_state["next_stage_label"]
+    next_stage_index = transition_state["next_stage_index"]
 
     changed = bool(
         stage_state_decision.changed
@@ -306,52 +356,17 @@ def build_proactive_stage_transition_decision(
     )
     selected_strategy_key = stage_state_decision.selected_strategy_key or "none"
     transition_key = f"{stage_label}_{transition_mode}_{selected_strategy_key}"
-
-    transition_notes: list[str] = [
-        f"state:{current_state_mode}",
-        f"queue:{queue_status}",
-        f"source:{primary_source}",
-    ]
-    if line_state != "steady":
-        transition_notes.append(f"line:{line_state}")
-    if progression_action != "none":
-        transition_notes.append(f"progression:{progression_action}")
-    if controller_decision:
-        transition_notes.append(f"controller:{controller_decision}")
-    if next_stage_label:
-        transition_notes.append(f"next:{next_stage_label}")
-    elif next_stage_index is not None:
-        transition_notes.append(f"next_index:{next_stage_index}")
-
-    rationale = (
-        "The current proactive stage is staying on its default lifecycle path "
-        "without needing a controller-led transition."
+    transition_notes = _build_stage_transition_notes(
+        current_state_mode=current_state_mode,
+        queue_status=queue_status,
+        primary_source=primary_source,
+        line_state=line_state,
+        progression_action=progression_action,
+        controller_decision=controller_decision,
+        next_stage_label=next_stage_label,
+        next_stage_index=next_stage_index,
     )
-    if transition_mode == "hold_stage":
-        rationale = (
-            "The current proactive stage should remain on hold because the proactive "
-            "line is not ready to move at all."
-        )
-    elif transition_mode in {"reschedule_stage", "reschedule_close_loop"}:
-        rationale = (
-            "The current proactive stage should be rescheduled so the line keeps its "
-            "low-pressure timing instead of firing on the first due moment."
-        )
-    elif transition_mode == "wait_softened_stage":
-        rationale = (
-            "The current proactive stage is still waiting, but the controller stack "
-            "has already softened its posture before dispatch."
-        )
-    elif transition_mode == "dispatch_softened_stage":
-        rationale = (
-            "The current proactive stage can dispatch now, but it should do so with "
-            "a softened low-pressure envelope."
-        )
-    elif transition_mode == "dispatch_close_loop":
-        rationale = (
-            "The current proactive stage can dispatch now, and the line is already in "
-            "a close-loop posture so the remaining proactive path should wind down."
-        )
+    rationale = _build_stage_transition_rationale(transition_mode=transition_mode)
 
     return ProactiveStageTransitionDecision(
         status=status,
@@ -380,6 +395,186 @@ def build_proactive_stage_transition_decision(
         transition_notes=_compact(transition_notes, limit=6),
         rationale=rationale,
     )
+
+
+def _resolve_stage_transition_controller_decision(
+    *,
+    stage_state_decision: ProactiveStageStateDecision,
+    gate_decision: str | None,
+    envelope_decision: str | None,
+    aggregate_controller_decision: ProactiveAggregateControllerDecision | None,
+    orchestration_controller_decision: ProactiveOrchestrationControllerDecision | None,
+    stage_controller_decision: ProactiveStageControllerDecision | None,
+    line_controller_decision: ProactiveLineControllerDecision | None,
+) -> str | None:
+    controller_decision = stage_state_decision.controller_decision
+    if controller_decision not in {None, ""}:
+        return controller_decision
+    for decision in (
+        orchestration_controller_decision.decision
+        if orchestration_controller_decision is not None
+        else None,
+        aggregate_controller_decision.decision
+        if aggregate_controller_decision is not None
+        else None,
+        stage_controller_decision.decision if stage_controller_decision is not None else None,
+        line_controller_decision.decision if line_controller_decision is not None else None,
+        envelope_decision,
+        gate_decision,
+    ):
+        if decision and decision not in {"follow_local_controllers", "dispatch"}:
+            return decision
+    return controller_decision
+
+
+def _build_stage_transition_state(
+    *,
+    stage_label: str,
+    stage_index: int,
+    stage_count: int,
+    queue_status: str,
+    line_state: str,
+    progression_action: str,
+    gate_decision: str | None,
+    envelope_decision: str | None,
+    next_stage_label: str | None,
+) -> dict[str, object]:
+    transition_mode = "hold_stage"
+    status = "hold"
+    next_queue_status_hint = "hold"
+    stage_exit_mode = "stay"
+    next_stage_index: int | None = None
+
+    is_close_loop_stage = bool(
+        line_state == "close_ready"
+        or progression_action == "close_line"
+        or stage_label == "final_soft_close"
+    )
+    if queue_status == "hold" or gate_decision == "hold":
+        return {
+            "transition_mode": transition_mode,
+            "status": status,
+            "next_queue_status_hint": next_queue_status_hint,
+            "stage_exit_mode": stage_exit_mode,
+            "next_stage_label": next_stage_label,
+            "next_stage_index": next_stage_index,
+        }
+    if queue_status == "scheduled" or gate_decision == "defer":
+        return {
+            "transition_mode": (
+                "reschedule_close_loop" if is_close_loop_stage else "reschedule_stage"
+            ),
+            "status": "scheduled",
+            "next_queue_status_hint": "scheduled",
+            "stage_exit_mode": "close_loop" if is_close_loop_stage else "stay",
+            "next_stage_label": next_stage_label,
+            "next_stage_index": next_stage_index,
+        }
+    if queue_status == "waiting":
+        return {
+            "transition_mode": (
+                "wait_softened_stage" if line_state == "softened" else "wait_stage"
+            ),
+            "status": "waiting",
+            "next_queue_status_hint": "waiting",
+            "stage_exit_mode": stage_exit_mode,
+            "next_stage_label": next_stage_label,
+            "next_stage_index": next_stage_index,
+        }
+
+    status = "active"
+    next_queue_status_hint = "dispatched"
+    if is_close_loop_stage:
+        transition_mode = "dispatch_close_loop"
+        if stage_label == "final_soft_close" or progression_action == "close_line":
+            stage_exit_mode = "retire_line"
+            next_queue_status_hint = "terminal"
+            next_stage_label = None
+        else:
+            stage_exit_mode = "close_loop"
+    elif envelope_decision == "dispatch_shaped" or line_state == "softened":
+        transition_mode = "dispatch_softened_stage"
+        stage_exit_mode = "advance_line"
+    else:
+        transition_mode = "dispatch_stage"
+        stage_exit_mode = "advance_line"
+
+    if stage_exit_mode == "advance_line":
+        if next_stage_label:
+            next_stage_index = min(stage_count, stage_index + 1)
+        elif stage_index < stage_count:
+            next_stage_index = stage_index + 1
+
+    return {
+        "transition_mode": transition_mode,
+        "status": status,
+        "next_queue_status_hint": next_queue_status_hint,
+        "stage_exit_mode": stage_exit_mode,
+        "next_stage_label": next_stage_label,
+        "next_stage_index": next_stage_index,
+    }
+
+
+def _build_stage_transition_notes(
+    *,
+    current_state_mode: str,
+    queue_status: str,
+    primary_source: str,
+    line_state: str,
+    progression_action: str,
+    controller_decision: str | None,
+    next_stage_label: str | None,
+    next_stage_index: int | None,
+) -> list[str]:
+    transition_notes: list[str] = [
+        f"state:{current_state_mode}",
+        f"queue:{queue_status}",
+        f"source:{primary_source}",
+    ]
+    if line_state != "steady":
+        transition_notes.append(f"line:{line_state}")
+    if progression_action != "none":
+        transition_notes.append(f"progression:{progression_action}")
+    if controller_decision:
+        transition_notes.append(f"controller:{controller_decision}")
+    if next_stage_label:
+        transition_notes.append(f"next:{next_stage_label}")
+    elif next_stage_index is not None:
+        transition_notes.append(f"next_index:{next_stage_index}")
+    return transition_notes
+
+
+def _build_stage_transition_rationale(*, transition_mode: str) -> str:
+    rationale = (
+        "The current proactive stage is staying on its default lifecycle path "
+        "without needing a controller-led transition."
+    )
+    if transition_mode == "hold_stage":
+        return (
+            "The current proactive stage should remain on hold because the proactive "
+            "line is not ready to move at all."
+        )
+    if transition_mode in {"reschedule_stage", "reschedule_close_loop"}:
+        return (
+            "The current proactive stage should be rescheduled so the line keeps its "
+            "low-pressure timing instead of firing on the first due moment."
+        )
+    if transition_mode == "wait_softened_stage":
+        return (
+            "The current proactive stage is still waiting, but the controller stack "
+            "has already softened its posture before dispatch."
+        )
+    if transition_mode == "dispatch_softened_stage":
+        return (
+            "The current proactive stage can dispatch now, but it should do so with "
+            "a softened low-pressure envelope."
+        )
+    if transition_mode == "dispatch_close_loop":
+        return (
+            "The current proactive stage can dispatch now, and the line is already in "
+            "a close-loop posture so the remaining proactive path should wind down."
+        )
+    return rationale
 
 
 def build_proactive_stage_machine_decision(
@@ -438,78 +633,31 @@ def build_proactive_stage_machine_decision(
     primary_source = (
         stage_transition_decision.primary_source or stage_state_decision.primary_source or "cadence"
     )
-    controller_decision = (
-        stage_transition_decision.controller_decision or stage_state_decision.controller_decision
+    controller_decision = _resolve_stage_machine_controller_decision(
+        stage_state_decision=stage_state_decision,
+        stage_transition_decision=stage_transition_decision,
+        aggregate_controller_decision=aggregate_controller_decision,
+        orchestration_controller_decision=orchestration_controller_decision,
+        stage_controller_decision=stage_controller_decision,
+        line_controller_decision=line_controller_decision,
     )
-    if controller_decision in {None, ""}:
-        for decision in (
-            orchestration_controller_decision.decision
-            if orchestration_controller_decision is not None
-            else None,
-            aggregate_controller_decision.decision
-            if aggregate_controller_decision is not None
-            else None,
-            stage_controller_decision.decision if stage_controller_decision is not None else None,
-            line_controller_decision.decision if line_controller_decision is not None else None,
-        ):
-            if decision and decision not in {"follow_local_controllers", "dispatch"}:
-                controller_decision = decision
-                break
-
-    machine_mode = "held"
-    lifecycle_mode = "dormant"
-    actionability = "hold"
-    status = "hold"
-    machine_notes: list[str] = []
-
-    if stage_exit_mode == "retire_line" or next_queue_status_hint == "terminal":
-        machine_mode = "retiring_line"
-        lifecycle_mode = "terminal"
-        actionability = "retire"
-        status = "terminal"
-        machine_notes.append("terminal_stage_exit")
-    elif transition_mode.startswith("reschedule_") or queue_status == "scheduled":
-        status = "scheduled"
-        actionability = "reschedule"
-        if stage_exit_mode == "close_loop" or "close_loop" in transition_mode:
-            machine_mode = "scheduled_close_loop"
-            lifecycle_mode = "buffered_close_loop"
-            machine_notes.append("close_loop_buffer")
-        else:
-            machine_mode = "scheduled_stage"
-            lifecycle_mode = "buffered"
-    elif transition_mode.startswith("wait_") or queue_status == "waiting":
-        status = "waiting"
-        machine_mode = "waiting_stage"
-        lifecycle_mode = "waiting"
-        actionability = "wait"
-    elif transition_mode == "dispatch_close_loop":
-        status = "active"
-        machine_mode = "dispatching_close_loop"
-        lifecycle_mode = "winding_down"
-        actionability = "dispatch"
-        machine_notes.append("close_loop_dispatch")
-    elif transition_mode in {"dispatch_stage", "dispatch_softened_stage"}:
-        status = "active"
-        actionability = "dispatch"
-        machine_mode = (
-            "dispatching_softened_stage"
-            if transition_mode == "dispatch_softened_stage"
-            else "dispatching_stage"
-        )
-        lifecycle_mode = "dispatching"
-
-    if line_state == "softened":
-        machine_notes.append("line_softened")
-    if current_state_mode.endswith("close_loop"):
-        machine_notes.append("state_close_loop")
-    if controller_decision and controller_decision not in {
-        "dispatch",
-        "follow_local_controllers",
-    }:
-        machine_notes.append(f"controller:{controller_decision}")
-    if primary_source not in {"cadence", "dispatch_envelope"}:
-        machine_notes.append(f"source:{primary_source}")
+    machine_state = _build_stage_machine_state(
+        stage_exit_mode=stage_exit_mode,
+        next_queue_status_hint=next_queue_status_hint,
+        transition_mode=transition_mode,
+        queue_status=queue_status,
+    )
+    machine_mode = str(machine_state["machine_mode"])
+    lifecycle_mode = str(machine_state["lifecycle_mode"])
+    actionability = str(machine_state["actionability"])
+    status = str(machine_state["status"])
+    machine_notes = _build_stage_machine_notes(
+        machine_notes=list(machine_state["machine_notes"]),
+        line_state=line_state,
+        current_state_mode=current_state_mode,
+        controller_decision=controller_decision,
+        primary_source=primary_source,
+    )
 
     machine_key = f"{stage_label}_{machine_mode}"
     changed = bool(
@@ -518,26 +666,7 @@ def build_proactive_stage_machine_decision(
         or machine_mode not in {"held", "dispatching_stage"}
         or actionability != "hold"
     )
-    rationale = (
-        "The proactive stage machine now has a unified lifecycle view for this stage, "
-        "combining the current state, the latest transition, and the controller stack "
-        "into one dispatch posture."
-    )
-    if lifecycle_mode == "terminal":
-        rationale = (
-            "The proactive stage machine has moved into a terminal posture, so this "
-            "line should retire instead of continuing to push contact."
-        )
-    elif lifecycle_mode in {"buffered", "buffered_close_loop", "waiting"}:
-        rationale = (
-            "The proactive stage machine is intentionally buffered, so this stage keeps "
-            "space open before any further proactive movement."
-        )
-    elif lifecycle_mode == "winding_down":
-        rationale = (
-            "The proactive stage machine is dispatching a close-loop stage, so the "
-            "line is being wound down carefully."
-        )
+    rationale = _build_stage_machine_rationale(lifecycle_mode=lifecycle_mode)
 
     return ProactiveStageMachineDecision(
         status=status,
@@ -568,6 +697,154 @@ def build_proactive_stage_machine_decision(
         machine_notes=_compact(machine_notes, limit=6),
         rationale=rationale,
     )
+
+
+def _resolve_stage_machine_controller_decision(
+    *,
+    stage_state_decision: ProactiveStageStateDecision,
+    stage_transition_decision: ProactiveStageTransitionDecision,
+    aggregate_controller_decision: ProactiveAggregateControllerDecision | None,
+    orchestration_controller_decision: ProactiveOrchestrationControllerDecision | None,
+    stage_controller_decision: ProactiveStageControllerDecision | None,
+    line_controller_decision: ProactiveLineControllerDecision | None,
+) -> str | None:
+    controller_decision = (
+        stage_transition_decision.controller_decision or stage_state_decision.controller_decision
+    )
+    if controller_decision not in {None, ""}:
+        return controller_decision
+    for decision in (
+        orchestration_controller_decision.decision
+        if orchestration_controller_decision is not None
+        else None,
+        aggregate_controller_decision.decision
+        if aggregate_controller_decision is not None
+        else None,
+        stage_controller_decision.decision if stage_controller_decision is not None else None,
+        line_controller_decision.decision if line_controller_decision is not None else None,
+    ):
+        if decision and decision not in {"follow_local_controllers", "dispatch"}:
+            return decision
+    return controller_decision
+
+
+def _build_stage_machine_state(
+    *,
+    stage_exit_mode: str,
+    next_queue_status_hint: str,
+    transition_mode: str,
+    queue_status: str,
+) -> dict[str, object]:
+    machine_notes: list[str] = []
+    if stage_exit_mode == "retire_line" or next_queue_status_hint == "terminal":
+        machine_notes.append("terminal_stage_exit")
+        return {
+            "machine_mode": "retiring_line",
+            "lifecycle_mode": "terminal",
+            "actionability": "retire",
+            "status": "terminal",
+            "machine_notes": machine_notes,
+        }
+    if transition_mode.startswith("reschedule_") or queue_status == "scheduled":
+        if stage_exit_mode == "close_loop" or "close_loop" in transition_mode:
+            machine_notes.append("close_loop_buffer")
+            return {
+                "machine_mode": "scheduled_close_loop",
+                "lifecycle_mode": "buffered_close_loop",
+                "actionability": "reschedule",
+                "status": "scheduled",
+                "machine_notes": machine_notes,
+            }
+        return {
+            "machine_mode": "scheduled_stage",
+            "lifecycle_mode": "buffered",
+            "actionability": "reschedule",
+            "status": "scheduled",
+            "machine_notes": machine_notes,
+        }
+    if transition_mode.startswith("wait_") or queue_status == "waiting":
+        return {
+            "machine_mode": "waiting_stage",
+            "lifecycle_mode": "waiting",
+            "actionability": "wait",
+            "status": "waiting",
+            "machine_notes": machine_notes,
+        }
+    if transition_mode == "dispatch_close_loop":
+        machine_notes.append("close_loop_dispatch")
+        return {
+            "machine_mode": "dispatching_close_loop",
+            "lifecycle_mode": "winding_down",
+            "actionability": "dispatch",
+            "status": "active",
+            "machine_notes": machine_notes,
+        }
+    if transition_mode in {"dispatch_stage", "dispatch_softened_stage"}:
+        return {
+            "machine_mode": (
+                "dispatching_softened_stage"
+                if transition_mode == "dispatch_softened_stage"
+                else "dispatching_stage"
+            ),
+            "lifecycle_mode": "dispatching",
+            "actionability": "dispatch",
+            "status": "active",
+            "machine_notes": machine_notes,
+        }
+    return {
+        "machine_mode": "held",
+        "lifecycle_mode": "dormant",
+        "actionability": "hold",
+        "status": "hold",
+        "machine_notes": machine_notes,
+    }
+
+
+def _build_stage_machine_notes(
+    *,
+    machine_notes: list[str],
+    line_state: str | None,
+    current_state_mode: str,
+    controller_decision: str | None,
+    primary_source: str,
+) -> list[str]:
+    notes = list(machine_notes)
+    if line_state == "softened":
+        notes.append("line_softened")
+    if current_state_mode.endswith("close_loop"):
+        notes.append("state_close_loop")
+    if controller_decision and controller_decision not in {
+        "dispatch",
+        "follow_local_controllers",
+    }:
+        notes.append(f"controller:{controller_decision}")
+    if primary_source not in {"cadence", "dispatch_envelope"}:
+        notes.append(f"source:{primary_source}")
+    return notes
+
+
+def _build_stage_machine_rationale(*, lifecycle_mode: str) -> str:
+    rationale = (
+        "The proactive stage machine now has a unified lifecycle view for this stage, "
+        "combining the current state, the latest transition, and the controller stack "
+        "into one dispatch posture."
+    )
+    if lifecycle_mode == "terminal":
+        return (
+            "The proactive stage machine has moved into a terminal posture, so this "
+            "line should retire instead of continuing to push contact."
+        )
+    if lifecycle_mode in {"buffered", "buffered_close_loop", "waiting"}:
+        return (
+            "The proactive stage machine is intentionally buffered, so this stage keeps "
+            "space open before any further proactive movement."
+        )
+    if lifecycle_mode == "winding_down":
+        return (
+            "The proactive stage machine is dispatching a close-loop stage, so the "
+            "line is being wound down carefully."
+        )
+    return rationale
 
 
 def build_proactive_line_state_decision(

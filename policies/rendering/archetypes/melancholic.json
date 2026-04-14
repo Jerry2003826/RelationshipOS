@@ -1,0 +1,10 @@
+{
+  "fallback_templates": {
+    "sanitized_relational_fallback": {
+      "default": {
+        "zh": "嗯……现在还是有点累。要不先只说最压着你的那一小块，我慢慢陪你理。",
+        "en": "I'm a little low on energy, but we can stay with the heaviest part first and take it slowly."
+      }
+    }
+  }
+}

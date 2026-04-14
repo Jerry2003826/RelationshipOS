@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>RelationshipOS 控制台</title>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="/static/console.css">
+  </head>
+  <body>
+    <div
+      class="shell"
+      x-data="{
+        tab: 'sessions',
+        selectedSession: {{ selected_session_id_js | safe }},
+        selectedProjectorName: {{ default_projector_name_js | safe }},
+        selectedProjectorVersion: {{ default_projector_version_js | safe }}
+      }"
+      data-selected-session="{{ selected_session_id }}"
+      data-selected-projector-name="{{ default_projector_name }}"
+      data-selected-projector-version="{{ default_projector_version }}"
+      data-ws-url="{{ ws_url }}"
+      data-detail-base-url="{{ detail_base_url }}"
+      data-overview-url="{{ overview_url }}"
+      data-sessions-url="{{ sessions_url }}"
+      data-jobs-url="{{ jobs_url }}"
+      data-archives-url="{{ archives_url }}"
+      data-evaluations-url="{{ evaluations_url }}"
+      data-scenarios-url="{{ scenarios_url }}"
+      data-entity-url="{{ entity_url }}"
+    >
+      <header class="hero">
+        <div class="eyebrow">RelationshipOS 控制台</div>
+        <h1>在浏览器中查看运行时状态</h1>
+        <p>
+          本控制台为只读模式，提供统一的视角来查看会话、策略决策、记忆状态、
+          任务、归档和评测信号，同时事件溯源运行时持续运行。
+        </p>
+      </header>
+      <div class="layout">
+        <div class="stack">
+          <section class="panel">
+            <div
+              id="console-overview"
+              hx-get="{{ overview_url }}"
+              hx-trigger="load, every {{ panel_refresh_seconds }}s"
+              hx-swap="innerHTML"
+            ></div>
+          </section>
+          <section class="panel">
+            <div
+              id="console-session-detail"
+              hx-get="{{ detail_url }}"
+              hx-trigger="load"
+              hx-swap="innerHTML"
+            ></div>
+          </section>
+        </div>
+        <aside class="stack">
+          <section class="panel panel-shell">
+            <div class="tabbar">
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'sessions' }"
+                @click="tab = 'sessions'"
+              >会话</button>
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'jobs' }"
+                @click="tab = 'jobs'"
+              >任务</button>
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'archives' }"
+                @click="tab = 'archives'"
+              >归档</button>
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'evaluations' }"
+                @click="tab = 'evaluations'"
+              >评测</button>
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'scenarios' }"
+                @click="tab = 'scenarios'"
+              >场景</button>
+              <button
+                class="tab"
+                :class="{ 'active': tab === 'entity' }"
+                @click="tab = 'entity'"
+              >人格</button>
+            </div>
+            <div x-show="tab === 'sessions'" x-cloak>
+              <div
+                id="console-sessions"
+                hx-get="{{ sessions_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+            <div x-show="tab === 'jobs'" x-cloak>
+              <div
+                id="console-jobs"
+                hx-get="{{ jobs_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+            <div x-show="tab === 'archives'" x-cloak>
+              <div
+                id="console-archives"
+                hx-get="{{ archives_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+            <div x-show="tab === 'evaluations'" x-cloak>
+              <div
+                id="console-evaluations"
+                hx-get="{{ evaluations_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+            <div x-show="tab === 'scenarios'" x-cloak>
+              <div
+                id="console-scenarios"
+                hx-get="{{ scenarios_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+            <div x-show="tab === 'entity'" x-cloak>
+              <div
+                id="console-entity"
+                hx-get="{{ entity_url }}"
+                hx-trigger="load, every {{ panel_refresh_seconds }}s"
+                hx-swap="innerHTML"
+              ></div>
+            </div>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <script src="/static/console.js"></script>
+  </body>
+</html>

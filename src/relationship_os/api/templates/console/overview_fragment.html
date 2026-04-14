@@ -1,0 +1,85 @@
+<div class="fragment-stack">
+  <section class="fragment-section">
+    <div class="section-header">
+      <h2>运行时概览</h2>
+      <span class="pulse-dot">每 {{ panel_refresh_seconds }} 秒刷新</span>
+    </div>
+    <div class="metric-grid">
+      {% for card in metric_cards %}
+      <article class="metric-card">
+        <div class="metric-label">{{ card.label }}</div>
+        <div class="metric-value">{{ card.value }}</div>
+        <div class="metric-detail">{{ card.detail }}</div>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="fragment-section">
+    <div class="section-header"><h2>运行时形态</h2></div>
+    <div class="kv-grid">
+      {% for item in runtime_grid %}
+      <div class="kv-item">
+        <span class="kv-label">{{ item.label }}</span>
+        <span class="kv-value">{{ item.value }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="fragment-section">
+    <div class="section-header"><h2>评测热点信号</h2></div>
+    <div class="signal-list">
+      {% if evaluation_rows %}
+        {% for row in evaluation_rows %}
+        <article class="signal-row">
+          <div class="signal-title">{{ row.title }}</div>
+          <div class="signal-meta">
+            {% for badge in row.badges %}
+            <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+            {% endfor %}
+          </div>
+          <p>{{ row.detail }}</p>
+        </article>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <h3>{{ evaluation_empty_title }}</h3>
+        <p>{{ evaluation_empty_detail }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  <section class="fragment-section">
+    <div class="section-header"><h2>主动跟进队列</h2></div>
+    <div class="kv-grid">
+      {% for item in proactive_grid %}
+      <div class="kv-item">
+        <span class="kv-label">{{ item.label }}</span>
+        <span class="kv-value">{{ item.value }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="signal-list">
+      {% if proactive_rows %}
+        {% for row in proactive_rows %}
+        <article class="signal-row">
+          <div class="signal-title">{{ row.title }}</div>
+          <div class="signal-meta">
+            {% for badge in row.badges %}
+            <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+            {% endfor %}
+          </div>
+          <p>{{ row.summary }}</p>
+          {% for line in row.detail_lines %}
+          <p class="muted">{{ line }}</p>
+          {% endfor %}
+        </article>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <h3>{{ proactive_empty_title }}</h3>
+        <p>{{ proactive_empty_detail }}</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+</div>

@@ -122,6 +122,7 @@ class ProactiveStageActuation:
     followup_style: str
     user_space_signal: str
     rationale: str = ""
+    actuation_from_preset: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -530,3 +531,15 @@ class ProactiveLineMachineDecision:
     controller_decision: str | None = None
     machine_notes: list[str] = field(default_factory=list)
     rationale: str = ""
+
+
+@dataclass(slots=True, frozen=True)
+class StageParameterProfile:
+    """Learned parameters for a specific proactive stage."""
+
+    stage_label: str
+    learned_extra_delay_seconds: int = 0
+    learned_delivery_mode: str = "none"
+    learned_pressure_mode: str = "none"
+    confidence: float = 0.0
+    sample_count: int = 0

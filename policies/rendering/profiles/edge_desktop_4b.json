@@ -1,0 +1,15 @@
+{
+  "runtime_behavior": {
+    "edge_routing": {
+      "factual_memory_item_budget_min": 5,
+      "factual_max_completion_tokens": 120,
+      "social_memory_item_budget_min": 2,
+      "social_memory_item_budget_max": 4,
+      "social_max_completion_tokens": 140,
+      "relational_max_completion_tokens": 160,
+      "recall_budget_pressure_factor": 2,
+      "complex_cross_user_hit_count": 2,
+      "large_user_message_threshold": 600
+    }
+  }
+}

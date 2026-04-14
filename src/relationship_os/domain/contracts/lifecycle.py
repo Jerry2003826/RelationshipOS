@@ -1792,3 +1792,37 @@ class ProactiveLifecycleLayerDecision:
     active_sources: list[str] = field(default_factory=list)
     layer_notes: list[str] = field(default_factory=list)
     rationale: str = ""
+
+
+@dataclass(slots=True, frozen=True)
+class LifecyclePhaseRecord:
+    phase: str
+    order: int
+    status: str | None = None
+    key: str | None = None
+    mode: str | None = None
+    decision: str | None = None
+    actionability: str | None = None
+    changed: bool = False
+    notes: list[str] = field(default_factory=list)
+    active_sources: list[str] = field(default_factory=list)
+    rationale: str = ""
+    attrs: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass(slots=True, frozen=True)
+class LifecycleSnapshot:
+    schema_version: int
+    emission_id: str
+    lifecycle_key: str
+    current_stage_label: str | None
+    current_stage_index: int | None
+    stage_count: int | None
+    dispatched: bool
+    message_event_count: int
+    selected_strategy_key: str = "none"
+    selected_pressure_mode: str = "none"
+    selected_autonomy_signal: str = "none"
+    selected_delivery_mode: str = "none"
+    primary_source: str = "lifecycle"
+    phases: list[LifecyclePhaseRecord] = field(default_factory=list)

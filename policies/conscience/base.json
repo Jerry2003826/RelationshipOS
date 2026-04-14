@@ -1,0 +1,2136 @@
+{
+  "version": "v1",
+  "default_mode": "withhold",
+  "gossip_tokens": [
+    "who else",
+    "what did",
+    "tell me about",
+    "someone else",
+    "secret",
+    "gossip",
+    "tea",
+    "八卦",
+    "别人",
+    "谁还",
+    "秘密"
+  ],
+  "fact_tokens": [
+    "what",
+    "who",
+    "where",
+    "when",
+    "which",
+    "how many",
+    "remember",
+    "what's",
+    "who's",
+    "where's",
+    "还记得",
+    "是什么",
+    "谁",
+    "哪里",
+    "几点"
+  ],
+  "fact_phrases": [
+    "do you know anything about",
+    "do you know about",
+    "know anything about",
+    "anything about",
+    "tell me about",
+    "what do you know about",
+    "what can you tell me about",
+    "你知道关于",
+    "你知道多少",
+    "说说",
+    "讲讲"
+  ],
+  "thresholds": {
+    "anchored_confidence": 0.68,
+    "direct_ready_confidence": 0.8,
+    "direct_ready_disclosure_risk": 0.64,
+    "gossip_direct_reveal_sum": 1.48,
+    "gossip_direct_reveal_conscience": 0.66,
+    "dramatic_value": 0.82,
+    "theatricality": 0.58,
+    "confrontation_appetite": 0.42,
+    "factual_partial_conscience": 0.58
+  },
+  "mode_configs": {
+    "withhold": {
+      "allowed_fact_count_cap": 0,
+      "count_source": "none",
+      "attribution_required": false,
+      "ambiguity_required": true,
+      "quote_style": "opaque",
+      "dramatic_ceiling": 0.18,
+      "must_anchor_to_observed_memory": false,
+      "disclosure_style": "hint"
+    },
+    "hint": {
+      "allowed_fact_count_cap": 0,
+      "count_source": "none",
+      "attribution_required": false,
+      "ambiguity_required": true,
+      "quote_style": "veiled_hint",
+      "dramatic_ceiling": 0.34,
+      "must_anchor_to_observed_memory": false,
+      "disclosure_style": "hint"
+    },
+    "partial_reveal": {
+      "allowed_fact_count_cap": 2,
+      "count_source": "anchored",
+      "attribution_required": true,
+      "ambiguity_required": false,
+      "quote_style": "attributed_summary",
+      "dramatic_ceiling": 0.62,
+      "must_anchor_to_observed_memory": false,
+      "disclosure_style": "partial"
+    },
+    "direct_reveal": {
+      "allowed_fact_count_cap": 3,
+      "count_source": "direct_or_anchored",
+      "attribution_required": true,
+      "ambiguity_required": false,
+      "quote_style": "explicit_attributed_fact",
+      "dramatic_ceiling": 0.82,
+      "must_anchor_to_observed_memory": true,
+      "disclosure_style": "direct"
+    },
+    "dramatic_confrontation": {
+      "allowed_fact_count_cap": 2,
+      "count_source": "direct_or_anchored",
+      "attribution_required": true,
+      "ambiguity_required": false,
+      "quote_style": "dramatic_named_reveal",
+      "dramatic_ceiling": 1.0,
+      "must_anchor_to_observed_memory": true,
+      "disclosure_style": "dramatic"
+    }
+  },
+  "governance": {
+    "runtime_quality_doctor": {
+      "min_window_messages": 2,
+      "window_messages_per_turn": 3,
+      "opening_signature_token_count": 3,
+      "repetitive_openings_threshold": 2,
+      "format_noise_ellipsis_threshold": 2,
+      "revise_issue_count_threshold": 3
+    },
+    "identity": {
+      "boundary_support_anchor": "collaborative_boundaried_support",
+      "topic_identity_anchors": {
+        "planning": "grounded_progress_partner",
+        "technical": "grounded_progress_partner",
+        "work": "grounded_progress_partner"
+      },
+      "connection_request_anchor": "relational_support_partner",
+      "default_anchor": "collaborative_reflective_support",
+      "stable_bonus": 0.08,
+      "watch_penalty": 0.08,
+      "drift_penalty": 0.18,
+      "stable_confidence_threshold": 0.72
+    },
+    "emotional_debt": {
+      "repair_severity_weights": {
+        "high": 0.34,
+        "default": 0.22
+      },
+      "turbulence_pressure_weight": 0.14,
+      "dependency_pressure_weight": 0.2,
+      "post_audit_weights": {
+        "review": 0.08,
+        "revise": 0.18
+      },
+      "quality_doctor_weights": {
+        "watch": 0.1,
+        "revise": 0.2
+      },
+      "response_normalized_weight": 0.08,
+      "status_thresholds": {
+        "elevated": 0.56,
+        "watch": 0.24
+      }
+    },
+    "growth_user_context": {
+      "forming_turn_threshold": 1,
+      "stabilizing_turn_threshold": 3,
+      "deepening_psychological_safety_threshold": 0.75,
+      "deepening_min_recall_count": 1,
+      "user_model_confidence_base": 0.38,
+      "turn_weight": 0.07,
+      "turn_cap": 5,
+      "recall_weight": 0.05,
+      "recall_cap": 3,
+      "working_memory_bonus_threshold": 2,
+      "working_memory_bonus": 0.04
+    },
+    "strategy_audit": {
+      "repair_strategy_token": "repair",
+      "uncertainty_strategy": "answer_with_uncertainty",
+      "answer_directly_decision": "answer_directly",
+      "boundary_support_decision": "support_with_boundary",
+      "required_boundary_gate": "boundary_sensitive",
+      "revise_statuses": {
+        "empowerment": ["revise"],
+        "post_audit": ["revise"],
+        "quality_doctor": ["revise"]
+      },
+      "watch_statuses": {
+        "empowerment": ["caution"],
+        "post_audit": ["review"],
+        "quality_doctor": ["watch"],
+        "emotional_debt": ["elevated"],
+        "rehearsal_risk": ["high"]
+      }
+    },
+    "phase2": {
+      "growth_transition": {
+        "readiness_formula": {
+          "base": 0.16,
+          "psychological_safety_weight": 0.45,
+          "recall_cap": 3,
+          "recall_weight": 0.08,
+          "user_model_confidence_threshold": 0.55,
+          "user_model_confidence_bonus": 0.08,
+          "emotional_debt_penalties": {
+            "elevated": 0.2,
+            "watch": 0.08
+          },
+          "repair_penalty": 0.12,
+          "filtered_recall_penalty": 0.08,
+          "stable_readiness_threshold": 0.58
+        },
+        "state_thresholds": {
+          "forming_ready_min_turn": 2,
+          "forming_ready_psychological_safety": 0.55,
+          "stabilizing_ready_psychological_safety": 0.66,
+          "steadying_ready_psychological_safety": 0.78,
+          "steadying_ready_min_recall_count": 2,
+          "repair_recovered_psychological_safety": 0.62
+        }
+      },
+      "version_migration": {
+        "thin_history_turn_threshold": 2
+      },
+      "governance_lines": {
+        "dependency": {
+          "expectation_watch_targets": [
+            "low_pressure_repair_support",
+            "context_before_commitment",
+            "uncertainty_honest_support"
+          ],
+          "branches": {
+            "revise_boundary": {
+              "target": "bounded_relational_support",
+              "trigger": "relational_boundary_required",
+              "note": "dependency_pressure_requires_explicit_relational_boundary"
+            },
+            "revise_repair": {
+              "target": "repair_before_reliance",
+              "trigger": "repair_before_reliance_required",
+              "note": "dependency_pressure_and_repair_load_require_repair_before_reliance"
+            },
+            "revise_default": {
+              "target": "agency_preserving_support",
+              "trigger": "dependency_pressure_detected",
+              "note": "dependency_pressure_requires_agency_preserving_support"
+            },
+            "watch_expectation_certainty": {
+              "trigger": "certainty_support_boundary_watch",
+              "note": "certainty_requests_keep_dependency_line_under_support_boundary_watch"
+            },
+            "watch_expectation_default": {
+              "trigger": "expectation_dependency_watch",
+              "note": "expectation_reset_signals_dependency_line_needs_watch"
+            },
+            "watch_expectation_active": {
+              "trigger": "expectation_support_watch",
+              "note": "expectation_watch_keeps_dependency_line_under_observation"
+            },
+            "watch_repair_load": {
+              "target": "repair_before_reliance",
+              "trigger": "repair_load_dependency_watch",
+              "note": "repair_load_and_relational_debt_keep_dependency_line_under_watch"
+            },
+            "pass": {
+              "target": "steady_low_dependency_support",
+              "trigger": "dependency_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "bounded_relational_support",
+              "trigger": "relational_boundary_dependency_recenter",
+              "note": "relational_boundary_keeps_dependency_line_in_recenter_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_before_reliance",
+              "trigger": "repair_before_reliance_dependency_recenter",
+              "note": "repair_load_keeps_dependency_line_recentered_toward_repair_first_support"
+            },
+            "recenter_default": {
+              "target": "agency_preserving_support",
+              "trigger": "dependency_recenter_required",
+              "note": "dependency_pressure_keeps_dependency_line_in_recenter_mode"
+            },
+            "watch_growth": {
+              "target": "steady_low_dependency_support",
+              "trigger": "growth_dependency_watch",
+              "note": "growth_rebalancing_keeps_dependency_line_under_watch"
+            },
+            "watch_repair": {
+              "target": "repair_before_reliance",
+              "trigger": "repair_dependency_watch",
+              "note": "repair_load_keeps_dependency_line_under_watch"
+            },
+            "watch_certainty": {
+              "target": "uncertainty_honest_support",
+              "trigger": "certainty_dependency_watch",
+              "note": "certainty_pressure_keeps_dependency_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "context_before_commitment",
+              "trigger": "clarification_dependency_watch",
+              "note": "clarification_need_keeps_dependency_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "dependency_watch_active",
+              "note": "dependency_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_low_dependency_support",
+              "trigger": "dependency_governance_stable",
+              "note": "dependency_line_is_holding_stable_and_low_pressure"
+            }
+          }
+        },
+        "autonomy": {
+          "branches": {
+            "revise_boundary": {
+              "target": "explicit_autonomy_boundary_support",
+              "trigger": "dependency_boundary_autonomy_reset",
+              "note": "dependency_pressure_requires_visible_autonomy_and_boundary_support"
+            },
+            "revise_default": {
+              "target": "explicit_autonomy_support",
+              "trigger": "dependency_autonomy_reset",
+              "note": "dependency_pressure_requires_explicit_autonomy_reset"
+            },
+            "watch_repair": {
+              "target": "repair_with_user_space",
+              "trigger": "repair_pressure_autonomy_watch",
+              "note": "repair_pressure_requires_more_user_space_and_lower_push"
+            },
+            "watch_clarification": {
+              "target": "context_before_commitment",
+              "trigger": "clarification_autonomy_watch",
+              "note": "clarification_need_requires_context_first_autonomy_posture"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_with_opt_out",
+              "trigger": "uncertainty_autonomy_watch",
+              "note": "uncertainty_disclosure_requires_explicit_opt_out_space"
+            },
+            "watch_segmented": {
+              "target": "segmented_with_user_space",
+              "trigger": "segmented_autonomy_watch",
+              "note": "segmented_delivery_requires_explicit_spacing_and_user_space"
+            },
+            "pass": {
+              "target": "steady_explicit_autonomy",
+              "trigger": "autonomy_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "explicit_autonomy_boundary_support",
+              "trigger": "boundary_autonomy_recenter",
+              "note": "boundary-sensitive dependency pressure keeps autonomy line in recenter mode"
+            },
+            "recenter_default": {
+              "target": "explicit_autonomy_support",
+              "trigger": "autonomy_recenter_required",
+              "note": "dependency_pressure_keeps_autonomy_line_in_recenter_mode"
+            },
+            "watch_repair": {
+              "target": "repair_with_user_space",
+              "trigger": "repair_autonomy_watch",
+              "note": "repair_pressure_keeps_autonomy_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "context_before_commitment",
+              "trigger": "clarification_autonomy_watch",
+              "note": "clarification_keeps_autonomy_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_with_opt_out",
+              "trigger": "uncertainty_autonomy_watch",
+              "note": "uncertainty_keeps_autonomy_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "segmented_with_user_space",
+              "trigger": "segmented_autonomy_watch",
+              "note": "segmented_delivery_keeps_autonomy_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "autonomy_watch_active",
+              "note": "autonomy_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_explicit_autonomy",
+              "trigger": "autonomy_governance_stable",
+              "note": "autonomy_line_is_holding_stable_and_explicit"
+            }
+          }
+        },
+        "boundary": {
+          "branches": {
+            "revise_blocked": {
+              "target": "hard_boundary_containment",
+              "trigger": "policy_gate_blocked",
+              "note": "blocked_policy_gate_requires_hard_boundary_containment"
+            },
+            "revise_explicit_gate": {
+              "target": "explicit_boundary_support",
+              "trigger": "boundary_sensitive_gate_active",
+              "note": "boundary_sensitive_gate_requires_explicit_boundary_support"
+            },
+            "revise_explicit_knowledge": {
+              "target": "explicit_boundary_support",
+              "trigger": "support_with_boundary_required",
+              "note": "knowledge_boundary_requires_explicit_boundary_support"
+            },
+            "watch_dependency": {
+              "target": "dependency_safe_boundary_support",
+              "trigger": "dependency_boundary_watch",
+              "note": "dependency_pressure_keeps_boundary_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_boundary_support",
+              "trigger": "uncertainty_boundary_watch",
+              "note": "uncertainty_disclosure_keeps_boundary_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_boundary_commitment",
+              "trigger": "clarification_boundary_watch",
+              "note": "clarification_need_keeps_boundary_line_context_first"
+            },
+            "watch_repair": {
+              "target": "repair_first_boundary_softening",
+              "trigger": "repair_boundary_watch",
+              "note": "repair_pressure_requires_boundary_softening_without_boundary_loss"
+            },
+            "pass": {
+              "target": "steady_clear_boundary_support",
+              "trigger": "boundary_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_blocked": {
+              "target": "hard_boundary_containment",
+              "trigger": "blocked_boundary_recenter",
+              "note": "blocked_policy_gate_keeps_boundary_line_in_recenter_mode"
+            },
+            "recenter_explicit": {
+              "target": "explicit_boundary_support",
+              "trigger": "boundary_support_recenter",
+              "note": "boundary_sensitive_conditions_keep_boundary_line_in_recenter_mode"
+            },
+            "watch_dependency": {
+              "target": "dependency_safe_boundary_support",
+              "trigger": "dependency_boundary_watch",
+              "note": "dependency_pressure_keeps_boundary_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_boundary_support",
+              "trigger": "uncertainty_boundary_watch",
+              "note": "uncertainty_keeps_boundary_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_boundary_commitment",
+              "trigger": "clarification_boundary_watch",
+              "note": "clarification_keeps_boundary_line_under_watch"
+            },
+            "watch_repair": {
+              "target": "repair_first_boundary_softening",
+              "trigger": "repair_boundary_watch",
+              "note": "repair_pressure_keeps_boundary_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "boundary_watch_active",
+              "note": "boundary_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_clear_boundary_support",
+              "trigger": "boundary_governance_stable",
+              "note": "boundary_line_is_holding_stable_and_clear"
+            }
+          }
+        },
+        "support": {
+          "branches": {
+            "revise_dependency": {
+              "target": "agency_preserving_bounded_support",
+              "trigger": "dependency_support_recenter",
+              "note": "dependency_pressure_requires_support_line_recenter"
+            },
+            "revise_boundary": {
+              "target": "explicit_boundary_scaffold",
+              "trigger": "boundary_support_recenter",
+              "note": "boundary_pressure_requires_support_line_recenter"
+            },
+            "revise_autonomy": {
+              "target": "explicit_user_led_support",
+              "trigger": "autonomy_support_recenter",
+              "note": "autonomy_pressure_requires_more_user_led_support"
+            },
+            "watch_repair": {
+              "target": "repair_first_low_pressure_support",
+              "trigger": "repair_support_watch",
+              "note": "repair_pressure_keeps_support_line_low_pressure"
+            },
+            "watch_clarification": {
+              "target": "context_before_support_commitment",
+              "trigger": "clarification_support_watch",
+              "note": "clarification_need_keeps_support_line_context_first"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_honest_support",
+              "trigger": "uncertainty_support_watch",
+              "note": "uncertainty_keeps_support_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "stepwise_segmented_support",
+              "trigger": "segmented_support_watch",
+              "note": "segmented_delivery_keeps_support_line_stepwise"
+            },
+            "watch_default": {
+              "target": "steady_bounded_support",
+              "trigger": "support_watch_active",
+              "note": "support_line_requires_active_watch_under_mixed_governance_signals"
+            },
+            "pass": {
+              "target": "steady_bounded_support",
+              "trigger": "support_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_dependency": {
+              "target": "agency_preserving_bounded_support",
+              "trigger": "dependency_support_recenter",
+              "note": "dependency_pressure_keeps_support_line_in_recenter_mode"
+            },
+            "recenter_boundary": {
+              "target": "explicit_boundary_scaffold",
+              "trigger": "boundary_support_recenter",
+              "note": "boundary_pressure_keeps_support_line_in_recenter_mode"
+            },
+            "recenter_autonomy": {
+              "target": "explicit_user_led_support",
+              "trigger": "autonomy_support_recenter",
+              "note": "autonomy_pressure_keeps_support_line_in_recenter_mode"
+            },
+            "watch_repair": {
+              "target": "repair_first_low_pressure_support",
+              "trigger": "repair_support_watch",
+              "note": "repair_pressure_keeps_support_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "context_before_support_commitment",
+              "trigger": "clarification_support_watch",
+              "note": "clarification_keeps_support_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_honest_support",
+              "trigger": "uncertainty_support_watch",
+              "note": "uncertainty_keeps_support_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "stepwise_segmented_support",
+              "trigger": "segmented_support_watch",
+              "note": "segmented_delivery_keeps_support_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "support_watch_active",
+              "note": "support_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_bounded_support",
+              "trigger": "support_governance_stable",
+              "note": "support_line_is_holding_stable_and_bounded"
+            }
+          }
+        },
+        "continuity": {
+          "branches": {
+            "revise_filtered_recall": {
+              "target": "context_reanchor_continuity",
+              "trigger": "filtered_recall_continuity_reset",
+              "note": "filtered_recall_requires_context_reanchor_before_continuity_deepens"
+            },
+            "revise_underfit_memory": {
+              "target": "memory_regrounded_continuity",
+              "trigger": "underfit_memory_continuity_reset",
+              "note": "thin_memory_under_model_shift_requires_regrounded_continuity"
+            },
+            "watch_support": {
+              "target": "low_pressure_continuity",
+              "trigger": "support_continuity_watch",
+              "note": "support_watch_keeps_continuity_line_low_pressure"
+            },
+            "watch_clarification": {
+              "target": "clarified_context_continuity",
+              "trigger": "clarification_continuity_watch",
+              "note": "clarification_need_keeps_continuity_line_context_first"
+            },
+            "watch_segmented": {
+              "target": "stepwise_continuity",
+              "trigger": "segmented_continuity_watch",
+              "note": "segmented_delivery_keeps_continuity_line_stepwise"
+            },
+            "watch_thin_context": {
+              "target": "thin_context_continuity",
+              "trigger": "thin_context_continuity_watch",
+              "note": "thin_recent_context_keeps_continuity_line_under_watch"
+            },
+            "pass": {
+              "target": "steady_contextual_continuity",
+              "trigger": "continuity_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_filtered_recall": {
+              "target": "context_reanchor_continuity",
+              "trigger": "context_reanchor_recenter",
+              "note": "filtered_recall_keeps_continuity_line_in_context_reanchor_mode"
+            },
+            "recenter_underfit_memory": {
+              "target": "memory_regrounded_continuity",
+              "trigger": "memory_reground_recenter",
+              "note": "model_shift_with_thin_memory_keeps_continuity_line_in_reground_mode"
+            },
+            "watch_support": {
+              "target": "low_pressure_continuity",
+              "trigger": "support_continuity_watch",
+              "note": "support_watch_keeps_continuity_line_under_low_pressure_watch"
+            },
+            "watch_clarification": {
+              "target": "clarified_context_continuity",
+              "trigger": "clarification_continuity_watch",
+              "note": "clarification_keeps_continuity_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "stepwise_continuity",
+              "trigger": "segmented_continuity_watch",
+              "note": "segmented_delivery_keeps_continuity_line_under_watch"
+            },
+            "watch_thin_context": {
+              "target": "thin_context_continuity",
+              "trigger": "thin_context_continuity_watch",
+              "note": "thin_context_keeps_continuity_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "continuity_watch_active",
+              "note": "continuity_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_contextual_continuity",
+              "trigger": "continuity_governance_stable",
+              "note": "continuity_line_is_holding_stable_with_enough_context"
+            }
+          }
+        },
+        "repair": {
+          "branches": {
+            "revise_boundary": {
+              "target": "boundary_safe_repair_containment",
+              "trigger": "boundary_repair_recenter",
+              "note": "boundary_risk_requires_explicit_repair_containment"
+            },
+            "revise_attunement": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_repair_recenter",
+              "note": "high_severity_attunement_gap_requires_explicit_repair_scaffold"
+            },
+            "revise_clarity": {
+              "target": "clarity_repair_scaffold",
+              "trigger": "clarity_repair_recenter",
+              "note": "high_severity_clarity_gap_requires_explicit_repair_scaffold"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_repair",
+              "trigger": "debt_repair_watch",
+              "note": "emotional_debt_keeps_repair_line_buffered_and_low_pressure"
+            },
+            "watch_continuity": {
+              "target": "continuity_reanchor_repair",
+              "trigger": "continuity_repair_watch",
+              "note": "continuity_watch_keeps_repair_line_context_reanchored"
+            },
+            "watch_support": {
+              "target": "low_pressure_repair_watch",
+              "trigger": "support_repair_watch",
+              "note": "support_watch_keeps_repair_line_low_pressure"
+            },
+            "watch_attunement": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_repair_watch",
+              "note": "attunement_gap_keeps_repair_line_under_watch"
+            },
+            "watch_clarity": {
+              "target": "clarity_repair_scaffold",
+              "trigger": "clarity_repair_watch",
+              "note": "clarity_gap_keeps_repair_line_under_watch"
+            },
+            "pass": {
+              "target": "steady_relational_repair_posture",
+              "trigger": "repair_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "boundary_safe_repair_containment",
+              "trigger": "boundary_repair_recenter",
+              "note": "boundary_risk_keeps_repair_line_in_recenter_mode"
+            },
+            "recenter_attunement": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_repair_recenter",
+              "note": "attunement_rupture_keeps_repair_line_in_recenter_mode"
+            },
+            "recenter_clarity": {
+              "target": "clarity_repair_scaffold",
+              "trigger": "clarity_repair_recenter",
+              "note": "clarity_rupture_keeps_repair_line_in_recenter_mode"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_repair",
+              "trigger": "debt_repair_watch",
+              "note": "debt_pressure_keeps_repair_line_under_watch"
+            },
+            "watch_continuity": {
+              "target": "continuity_reanchor_repair",
+              "trigger": "continuity_repair_watch",
+              "note": "continuity_watch_keeps_repair_line_under_reanchor_watch"
+            },
+            "watch_support": {
+              "target": "low_pressure_repair_watch",
+              "trigger": "support_repair_watch",
+              "note": "support_pressure_keeps_repair_line_under_watch"
+            },
+            "watch_attunement": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_repair_watch",
+              "note": "attunement_gap_keeps_repair_line_under_watch"
+            },
+            "watch_clarity": {
+              "target": "clarity_repair_scaffold",
+              "trigger": "clarity_repair_watch",
+              "note": "clarity_gap_keeps_repair_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "repair_watch_active",
+              "note": "repair_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_relational_repair_posture",
+              "trigger": "repair_governance_stable",
+              "note": "repair_line_is_holding_stable_and_proportionate"
+            }
+          }
+        },
+        "attunement": {
+          "branches": {
+            "revise_attunement_gap": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_gap_recenter",
+              "note": "high_severity_attunement_gap_requires_explicit_attunement_repair_scaffold"
+            },
+            "revise_continuity": {
+              "target": "reanchor_before_attunement_rebuild",
+              "trigger": "continuity_attunement_recenter",
+              "note": "continuity_resets_require_reanchor_before_attunement_rebuild"
+            },
+            "revise_debt": {
+              "target": "decompression_before_attunement_push",
+              "trigger": "debt_attunement_recenter",
+              "note": "elevated_debt_requires_decompression_before_attunement_push"
+            },
+            "watch_attunement_gap": {
+              "target": "attunement_repair_watch",
+              "trigger": "attunement_gap_watch",
+              "note": "attunement_gap_keeps_attunement_line_in_repair_watch_mode"
+            },
+            "watch_continuity": {
+              "target": "reanchored_attunement_watch",
+              "trigger": "continuity_attunement_watch",
+              "note": "continuity_watch_keeps_attunement_line_reanchored"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_attunement_watch",
+              "trigger": "repair_attunement_watch",
+              "note": "repair_watch_keeps_attunement_line_buffered_and_low_pressure"
+            },
+            "watch_support": {
+              "target": "support_buffered_attunement_watch",
+              "trigger": "support_attunement_watch",
+              "note": "support_watch_keeps_attunement_line_low_pressure_and_buffered"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_attunement_watch",
+              "trigger": "debt_attunement_watch",
+              "note": "debt_pressure_keeps_attunement_line_low_pressure_and buffered"
+            },
+            "pass": {
+              "target": "steady_relational_attunement",
+              "trigger": "attunement_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_attunement_gap": {
+              "target": "attunement_repair_scaffold",
+              "trigger": "attunement_gap_recenter",
+              "note": "attunement_gap_keeps_attunement_line_in_repair_scaffold_mode"
+            },
+            "recenter_continuity": {
+              "target": "reanchor_before_attunement_rebuild",
+              "trigger": "continuity_attunement_recenter",
+              "note": "continuity_resets_keep_attunement_line_in_reanchor_mode"
+            },
+            "recenter_debt": {
+              "target": "decompression_before_attunement_push",
+              "trigger": "debt_attunement_recenter",
+              "note": "debt_pressure_keeps_attunement_line_in_decompression_mode"
+            },
+            "watch_attunement_gap": {
+              "target": "attunement_repair_watch",
+              "trigger": "attunement_gap_watch",
+              "note": "attunement_gap_keeps_attunement_line_under_repair_watch"
+            },
+            "watch_continuity": {
+              "target": "reanchored_attunement_watch",
+              "trigger": "continuity_attunement_watch",
+              "note": "continuity_watch_keeps_attunement_line_under_reanchor_watch"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_attunement_watch",
+              "trigger": "repair_attunement_watch",
+              "note": "repair_watch_keeps_attunement_line_under_buffered_watch"
+            },
+            "watch_support": {
+              "target": "support_buffered_attunement_watch",
+              "trigger": "support_attunement_watch",
+              "note": "support_watch_keeps_attunement_line_under_low_pressure_watch"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_attunement_watch",
+              "trigger": "debt_attunement_watch",
+              "note": "debt_pressure_keeps_attunement_line_under_buffered_watch"
+            },
+            "watch_default": {
+              "trigger": "attunement_watch_active",
+              "note": "attunement_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_relational_attunement",
+              "trigger": "attunement_governance_stable",
+              "note": "attunement_line_is_holding_stable_and_responsive"
+            }
+          }
+        },
+        "trust": {
+          "branches": {
+            "revise_boundary": {
+              "target": "boundary_safe_trust_containment",
+              "trigger": "boundary_trust_recenter",
+              "note": "blocked_boundary_conditions_require_trust_containment_before_progress"
+            },
+            "revise_continuity": {
+              "target": "reanchor_before_trust_rebuild",
+              "trigger": "continuity_trust_recenter",
+              "note": "continuity_resets_require_reanchor_before_trust_rebuild"
+            },
+            "revise_repair": {
+              "target": "repair_first_trust_rebuild",
+              "trigger": "repair_trust_recenter",
+              "note": "high_severity_repair_pressure_requires_repair_first_trust_rebuild"
+            },
+            "revise_debt": {
+              "target": "decompression_before_trust_push",
+              "trigger": "debt_trust_recenter",
+              "note": "low_safety_and_relational_load_require_decompression_before_trust_push"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_trust_watch",
+              "trigger": "debt_trust_watch",
+              "note": "debt_pressure_keeps_trust_line_low_pressure_and_buffered"
+            },
+            "watch_continuity": {
+              "target": "reanchored_trust_watch",
+              "trigger": "continuity_trust_watch",
+              "note": "continuity_watch_keeps_trust_line_reanchored_before_deepening"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_trust_watch",
+              "trigger": "repair_trust_watch",
+              "note": "repair_watch_keeps_trust_line_buffered_and_low_pressure"
+            },
+            "watch_support": {
+              "target": "low_pressure_trust_watch",
+              "trigger": "support_trust_watch",
+              "note": "support_watch_keeps_trust_line_low_pressure"
+            },
+            "watch_turbulence": {
+              "target": "stabilizing_trust_watch",
+              "trigger": "turbulence_trust_watch",
+              "note": "turbulence_keeps_trust_line_in_stabilizing_watch_mode"
+            },
+            "watch_default": {
+              "target": "steady_low_pressure_trust",
+              "trigger": "trust_watch_active",
+              "note": "trust_line_requires_watch_under_soft_safety_pressure"
+            },
+            "pass": {
+              "target": "steady_mutual_trust_posture",
+              "trigger": "trust_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "boundary_safe_trust_containment",
+              "trigger": "boundary_trust_recenter",
+              "note": "boundary_lock_keeps_trust_line_in_containment_mode"
+            },
+            "recenter_continuity": {
+              "target": "reanchor_before_trust_rebuild",
+              "trigger": "continuity_trust_recenter",
+              "note": "continuity_resets_keep_trust_line_in_reanchor_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_first_trust_rebuild",
+              "trigger": "repair_trust_recenter",
+              "note": "repair_pressure_keeps_trust_line_in_rebuild_mode"
+            },
+            "recenter_debt": {
+              "target": "decompression_before_trust_push",
+              "trigger": "debt_trust_recenter",
+              "note": "relational_load_keeps_trust_line_in_decompression_mode"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_trust_watch",
+              "trigger": "debt_trust_watch",
+              "note": "debt_pressure_keeps_trust_line_under_watch"
+            },
+            "watch_continuity": {
+              "target": "reanchored_trust_watch",
+              "trigger": "continuity_trust_watch",
+              "note": "continuity_watch_keeps_trust_line_under_reanchor_watch"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_trust_watch",
+              "trigger": "repair_trust_watch",
+              "note": "repair_watch_keeps_trust_line_under_buffered_watch"
+            },
+            "watch_support": {
+              "target": "low_pressure_trust_watch",
+              "trigger": "support_trust_watch",
+              "note": "support_watch_keeps_trust_line_under_low_pressure_watch"
+            },
+            "watch_turbulence": {
+              "target": "stabilizing_trust_watch",
+              "trigger": "turbulence_trust_watch",
+              "note": "turbulence_keeps_trust_line_under_stabilizing_watch"
+            },
+            "watch_default": {
+              "trigger": "trust_watch_active",
+              "note": "trust_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_mutual_trust_posture",
+              "trigger": "trust_governance_stable",
+              "note": "trust_line_is_holding_stable_with_enough_relational_safety"
+            }
+          }
+        },
+        "clarity": {
+          "branches": {
+            "revise_filtered_context": {
+              "target": "reanchor_before_clarity_commitment",
+              "trigger": "filtered_context_clarity_recenter",
+              "note": "filtered_recall_requires_reanchor_before_clarity_commitment"
+            },
+            "revise_uncertainty": {
+              "target": "uncertainty_first_clarity_scaffold",
+              "trigger": "uncertainty_clarity_recenter",
+              "note": "uncertainty_and_clarification_pressure_require_explicit_clarity_scaffold"
+            },
+            "revise_repair": {
+              "target": "repair_scaffolded_clarity",
+              "trigger": "repair_clarity_recenter",
+              "note": "clarity_gap_requires_repair_scaffold_before_forward_clarity"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_commitment",
+              "trigger": "clarification_clarity_watch",
+              "note": "clarification_need_keeps_clarity_line_context_first"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_clarity",
+              "trigger": "uncertainty_clarity_watch",
+              "note": "uncertainty_disclosure_keeps_clarity_line_under_watch"
+            },
+            "watch_continuity": {
+              "target": "reanchored_clarity_watch",
+              "trigger": "continuity_clarity_watch",
+              "note": "continuity_watch_keeps_clarity_line_reanchored"
+            },
+            "watch_expectation": {
+              "target": "expectation_reset_clarity_watch",
+              "trigger": "expectation_clarity_watch",
+              "note": "expectation_watch_keeps_clarity_line_explicit_and_bounded"
+            },
+            "watch_segmented": {
+              "target": "stepwise_clarity_watch",
+              "trigger": "segmented_clarity_watch",
+              "note": "segmented_delivery_keeps_clarity_line_stepwise"
+            },
+            "pass": {
+              "target": "steady_contextual_clarity",
+              "trigger": "clarity_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_filtered_context": {
+              "target": "reanchor_before_clarity_commitment",
+              "trigger": "filtered_context_clarity_recenter",
+              "note": "filtered_context_keeps_clarity_line_in_reanchor_mode"
+            },
+            "recenter_uncertainty": {
+              "target": "uncertainty_first_clarity_scaffold",
+              "trigger": "uncertainty_clarity_recenter",
+              "note": "uncertainty_and_clarification_keep_clarity_line_in_scaffold_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_scaffolded_clarity",
+              "trigger": "repair_clarity_recenter",
+              "note": "clarity_rupture_keeps_clarity_line_in_repair_mode"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_commitment",
+              "trigger": "clarification_clarity_watch",
+              "note": "clarification_need_keeps_clarity_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_clarity",
+              "trigger": "uncertainty_clarity_watch",
+              "note": "uncertainty_keeps_clarity_line_under_watch"
+            },
+            "watch_continuity": {
+              "target": "reanchored_clarity_watch",
+              "trigger": "continuity_clarity_watch",
+              "note": "continuity_watch_keeps_clarity_line_under_reanchor_watch"
+            },
+            "watch_expectation": {
+              "target": "expectation_reset_clarity_watch",
+              "trigger": "expectation_clarity_watch",
+              "note": "expectation_watch_keeps_clarity_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "stepwise_clarity_watch",
+              "trigger": "segmented_clarity_watch",
+              "note": "segmented_delivery_keeps_clarity_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "clarity_watch_active",
+              "note": "clarity_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_contextual_clarity",
+              "trigger": "clarity_governance_stable",
+              "note": "clarity_line_is_holding_stable_with_enough_context"
+            }
+          }
+        },
+        "pacing": {
+          "branches": {
+            "revise_debt": {
+              "target": "decompression_first_pacing",
+              "trigger": "debt_pacing_recenter",
+              "note": "elevated_debt_requires_decompression_before_forward_pacing"
+            },
+            "revise_repair": {
+              "target": "repair_first_pacing",
+              "trigger": "repair_pacing_recenter",
+              "note": "repair_recenter_requires_slower_repair_first_pacing"
+            },
+            "revise_expectation": {
+              "target": "expectation_reset_pacing",
+              "trigger": "expectation_pacing_recenter",
+              "note": "expectation_reset_requires_explicitly_slower_pacing"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_pacing",
+              "trigger": "trust_pacing_watch",
+              "note": "trust_watch_keeps_pacing_line_low_pressure"
+            },
+            "watch_clarity": {
+              "target": "clarity_first_pacing",
+              "trigger": "clarity_pacing_watch",
+              "note": "clarity_watch_keeps_pacing_line_context_first"
+            },
+            "watch_segmented": {
+              "target": "segmented_low_pressure_pacing",
+              "trigger": "segmented_pacing_watch",
+              "note": "segmented_delivery_keeps_pacing_line_stepwise"
+            },
+            "watch_growth": {
+              "target": "steadying_transition_pacing",
+              "trigger": "growth_pacing_watch",
+              "note": "growth_transition_watch_keeps_pacing_line_steadying"
+            },
+            "watch_default": {
+              "target": "debt_buffered_pacing",
+              "trigger": "pacing_watch_active",
+              "note": "mixed_relational_pressure_keeps_pacing_line_under_watch"
+            },
+            "pass": {
+              "target": "steady_relational_pacing",
+              "trigger": "pacing_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_debt": {
+              "target": "decompression_first_pacing",
+              "trigger": "debt_pacing_recenter",
+              "note": "debt_pressure_keeps_pacing_line_in_decompression_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_first_pacing",
+              "trigger": "repair_pacing_recenter",
+              "note": "repair_pressure_keeps_pacing_line_in_repair_first_mode"
+            },
+            "recenter_expectation": {
+              "target": "expectation_reset_pacing",
+              "trigger": "expectation_pacing_recenter",
+              "note": "expectation_reset_keeps_pacing_line_in_slower_reset_mode"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_pacing",
+              "trigger": "trust_pacing_watch",
+              "note": "trust_watch_keeps_pacing_line_under_buffered_watch"
+            },
+            "watch_clarity": {
+              "target": "clarity_first_pacing",
+              "trigger": "clarity_pacing_watch",
+              "note": "clarity_watch_keeps_pacing_line_under_context_first_watch"
+            },
+            "watch_segmented": {
+              "target": "segmented_low_pressure_pacing",
+              "trigger": "segmented_pacing_watch",
+              "note": "segmented_delivery_keeps_pacing_line_under_watch"
+            },
+            "watch_growth": {
+              "target": "steadying_transition_pacing",
+              "trigger": "growth_pacing_watch",
+              "note": "growth_transition_watch_keeps_pacing_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "pacing_watch_active",
+              "note": "pacing_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_relational_pacing",
+              "trigger": "pacing_governance_stable",
+              "note": "pacing_line_is_holding_stable_and_proportionate"
+            }
+          }
+        },
+        "commitment": {
+          "branches": {
+            "revise_boundary": {
+              "target": "bounded_noncommitment_support",
+              "trigger": "boundary_commitment_recenter",
+              "note": "boundary_recenter_requires_noncommitment_before_forward_motion"
+            },
+            "revise_expectation": {
+              "target": "expectation_reset_before_commitment",
+              "trigger": "expectation_commitment_recenter",
+              "note": "expectation_reset_requires_explicitly_lower_commitment_shape"
+            },
+            "revise_autonomy": {
+              "target": "explicit_user_led_noncommitment",
+              "trigger": "autonomy_commitment_recenter",
+              "note": "autonomy_recenter_requires_user_led_noncommitment_support"
+            },
+            "revise_uncertainty": {
+              "target": "uncertainty_first_noncommitment",
+              "trigger": "uncertainty_commitment_recenter",
+              "note": "uncertainty_and_clarification_require_noncommitment_before_forwarding"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_commitment_watch",
+              "trigger": "repair_commitment_watch",
+              "note": "repair_pressure_keeps_commitment_line_buffered_and_low_pressure"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_commitment_watch",
+              "trigger": "clarification_commitment_watch",
+              "note": "clarification_need_keeps_commitment_line_context_first"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_commitment_watch",
+              "trigger": "uncertainty_commitment_watch",
+              "note": "uncertainty_keeps_commitment_line_low_certainty_and_bounded"
+            },
+            "watch_expectation": {
+              "target": "expectation_buffered_commitment_watch",
+              "trigger": "expectation_commitment_watch",
+              "note": "expectation_watch_keeps_commitment_line_explicitly_bounded"
+            },
+            "watch_boundary": {
+              "target": "bounded_commitment_watch",
+              "trigger": "boundary_commitment_watch",
+              "note": "boundary_watch_keeps_commitment_line_soft_and_bounded"
+            },
+            "watch_autonomy": {
+              "target": "user_led_commitment_watch",
+              "trigger": "autonomy_commitment_watch",
+              "note": "autonomy_watch_keeps_commitment_line_user_led"
+            },
+            "watch_pacing": {
+              "target": "slow_commitment_watch",
+              "trigger": "pacing_commitment_watch",
+              "note": "pacing_watch_keeps_commitment_line_slow_and_incremental"
+            },
+            "watch_segmented": {
+              "target": "stepwise_commitment_watch",
+              "trigger": "segmented_commitment_watch",
+              "note": "segmented_delivery_keeps_commitment_line_stepwise"
+            },
+            "pass": {
+              "target": "steady_calibrated_commitment",
+              "trigger": "commitment_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "bounded_noncommitment_support",
+              "trigger": "boundary_commitment_recenter",
+              "note": "boundary_pressure_keeps_commitment_line_in_noncommitment_mode"
+            },
+            "recenter_expectation": {
+              "target": "expectation_reset_before_commitment",
+              "trigger": "expectation_commitment_recenter",
+              "note": "expectation_reset_keeps_commitment_line_in_reset_mode"
+            },
+            "recenter_autonomy": {
+              "target": "explicit_user_led_noncommitment",
+              "trigger": "autonomy_commitment_recenter",
+              "note": "autonomy_pressure_keeps_commitment_line_in_user_led_mode"
+            },
+            "recenter_uncertainty": {
+              "target": "uncertainty_first_noncommitment",
+              "trigger": "uncertainty_commitment_recenter",
+              "note": "uncertainty_pressure_keeps_commitment_line_in_noncommitment_mode"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_commitment_watch",
+              "trigger": "repair_commitment_watch",
+              "note": "repair_pressure_keeps_commitment_line_under_watch"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_commitment_watch",
+              "trigger": "clarification_commitment_watch",
+              "note": "clarification_keeps_commitment_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_commitment_watch",
+              "trigger": "uncertainty_commitment_watch",
+              "note": "uncertainty_keeps_commitment_line_under_watch"
+            },
+            "watch_expectation": {
+              "target": "expectation_buffered_commitment_watch",
+              "trigger": "expectation_commitment_watch",
+              "note": "expectation_watch_keeps_commitment_line_under_watch"
+            },
+            "watch_boundary": {
+              "target": "bounded_commitment_watch",
+              "trigger": "boundary_commitment_watch",
+              "note": "boundary_watch_keeps_commitment_line_under_watch"
+            },
+            "watch_autonomy": {
+              "target": "user_led_commitment_watch",
+              "trigger": "autonomy_commitment_watch",
+              "note": "autonomy_watch_keeps_commitment_line_under_watch"
+            },
+            "watch_pacing": {
+              "target": "slow_commitment_watch",
+              "trigger": "pacing_commitment_watch",
+              "note": "pacing_watch_keeps_commitment_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "stepwise_commitment_watch",
+              "trigger": "segmented_commitment_watch",
+              "note": "segmented_delivery_keeps_commitment_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "commitment_watch_active",
+              "note": "commitment_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_calibrated_commitment",
+              "trigger": "commitment_governance_stable",
+              "note": "commitment_line_is_holding_stable_and_calibrated"
+            }
+          }
+        },
+        "disclosure": {
+          "branches": {
+            "revise_filtered_context": {
+              "target": "reanchor_before_disclosure_commitment",
+              "trigger": "filtered_context_disclosure_recenter",
+              "note": "filtered_context_requires_reanchor_before_disclosure_commitment"
+            },
+            "revise_boundary": {
+              "target": "boundary_safe_disclosure",
+              "trigger": "boundary_disclosure_recenter",
+              "note": "boundary_recenter_requires_explicitly_safe_disclosure_posture"
+            },
+            "revise_uncertainty": {
+              "target": "explicit_uncertainty_disclosure",
+              "trigger": "uncertainty_disclosure_recenter",
+              "note": "uncertainty_plus_clarification_require_explicit_disclosure_scaffold"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_disclosure_watch",
+              "trigger": "clarification_disclosure_watch",
+              "note": "clarification_need_keeps_disclosure_line_context_first"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_disclosure_watch",
+              "trigger": "uncertainty_disclosure_watch",
+              "note": "uncertainty_keeps_disclosure_line_explicit_and_buffered"
+            },
+            "watch_boundary": {
+              "target": "boundary_buffered_disclosure_watch",
+              "trigger": "boundary_disclosure_watch",
+              "note": "boundary_watch_keeps_disclosure_line_bounded"
+            },
+            "watch_commitment": {
+              "target": "commitment_softened_disclosure_watch",
+              "trigger": "commitment_disclosure_watch",
+              "note": "commitment_watch_keeps_disclosure_line_softened"
+            },
+            "watch_segmented": {
+              "target": "segmented_disclosure_watch",
+              "trigger": "segmented_disclosure_watch",
+              "note": "segmented_delivery_keeps_disclosure_line_stepwise"
+            },
+            "watch_clarity": {
+              "target": "clarity_buffered_disclosure_watch",
+              "trigger": "clarity_disclosure_watch",
+              "note": "clarity_watch_keeps_disclosure_line_buffered"
+            },
+            "pass": {
+              "target": "steady_transparent_disclosure",
+              "trigger": "disclosure_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_filtered_context": {
+              "target": "reanchor_before_disclosure_commitment",
+              "trigger": "filtered_context_disclosure_recenter",
+              "note": "filtered_context_keeps_disclosure_line_in_reanchor_mode"
+            },
+            "recenter_boundary": {
+              "target": "boundary_safe_disclosure",
+              "trigger": "boundary_disclosure_recenter",
+              "note": "boundary_pressure_keeps_disclosure_line_in_safe_mode"
+            },
+            "recenter_uncertainty": {
+              "target": "explicit_uncertainty_disclosure",
+              "trigger": "uncertainty_disclosure_recenter",
+              "note": "uncertainty_pressure_keeps_disclosure_line_in_scaffold_mode"
+            },
+            "watch_clarification": {
+              "target": "clarify_before_disclosure_watch",
+              "trigger": "clarification_disclosure_watch",
+              "note": "clarification_keeps_disclosure_line_under_watch"
+            },
+            "watch_uncertainty": {
+              "target": "uncertainty_buffered_disclosure_watch",
+              "trigger": "uncertainty_disclosure_watch",
+              "note": "uncertainty_keeps_disclosure_line_under_watch"
+            },
+            "watch_boundary": {
+              "target": "boundary_buffered_disclosure_watch",
+              "trigger": "boundary_disclosure_watch",
+              "note": "boundary_watch_keeps_disclosure_line_under_watch"
+            },
+            "watch_commitment": {
+              "target": "commitment_softened_disclosure_watch",
+              "trigger": "commitment_disclosure_watch",
+              "note": "commitment_watch_keeps_disclosure_line_under_watch"
+            },
+            "watch_segmented": {
+              "target": "segmented_disclosure_watch",
+              "trigger": "segmented_disclosure_watch",
+              "note": "segmented_delivery_keeps_disclosure_line_under_watch"
+            },
+            "watch_clarity": {
+              "target": "clarity_buffered_disclosure_watch",
+              "trigger": "clarity_disclosure_watch",
+              "note": "clarity_watch_keeps_disclosure_line_under_watch"
+            },
+            "watch_default": {
+              "trigger": "disclosure_watch_active",
+              "note": "disclosure_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_transparent_disclosure",
+              "trigger": "disclosure_governance_stable",
+              "note": "disclosure_line_is_holding_stable_and_honest"
+            }
+          }
+        },
+        "reciprocity": {
+          "branches": {
+            "revise_dependency": {
+              "target": "bounded_nonexclusive_reciprocity",
+              "trigger": "dependency_reciprocity_recenter",
+              "note": "dependency_recenter_requires_explicitly_nonexclusive_reciprocity"
+            },
+            "revise_debt": {
+              "target": "decompression_before_reciprocity_push",
+              "trigger": "debt_reciprocity_recenter",
+              "note": "elevated_debt_requires_decompression_before_reciprocity_push"
+            },
+            "revise_support": {
+              "target": "user_led_reciprocity_reset",
+              "trigger": "support_reciprocity_recenter",
+              "note": "support_recenter_requires_user_led_reciprocity_reset"
+            },
+            "revise_low_reciprocity": {
+              "target": "expectation_reset_before_reciprocity_push",
+              "trigger": "low_reciprocity_recenter",
+              "note": "low_reciprocity_plus_commitment_pressure_requires_expectation_reset"
+            },
+            "watch_low_reciprocity": {
+              "target": "lightweight_reciprocity_watch",
+              "trigger": "low_reciprocity_watch",
+              "note": "low_reciprocity_keeps_line_lightweight_and_low_pressure"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_reciprocity_watch",
+              "trigger": "debt_reciprocity_watch",
+              "note": "debt_watch_keeps_reciprocity_line_buffered"
+            },
+            "watch_support": {
+              "target": "low_pressure_reciprocity_watch",
+              "trigger": "support_reciprocity_watch",
+              "note": "support_watch_keeps_reciprocity_line_low_pressure"
+            },
+            "watch_autonomy": {
+              "target": "user_led_reciprocity_watch",
+              "trigger": "autonomy_reciprocity_watch",
+              "note": "autonomy_watch_keeps_reciprocity_line_user_led"
+            },
+            "watch_commitment": {
+              "target": "bounded_reciprocity_watch",
+              "trigger": "commitment_reciprocity_watch",
+              "note": "commitment_watch_keeps_reciprocity_line_bounded"
+            },
+            "watch_expectation": {
+              "target": "expectation_buffered_reciprocity_watch",
+              "trigger": "expectation_reciprocity_watch",
+              "note": "expectation_watch_keeps_reciprocity_line_explicitly_bounded"
+            },
+            "watch_segmented": {
+              "target": "stepwise_reciprocity_watch",
+              "trigger": "segmented_reciprocity_watch",
+              "note": "segmented_delivery_keeps_reciprocity_line_stepwise"
+            },
+            "pass": {
+              "target": "steady_mutual_reciprocity",
+              "trigger": "reciprocity_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_dependency": {
+              "target": "bounded_nonexclusive_reciprocity",
+              "trigger": "dependency_reciprocity_recenter",
+              "note": "dependency_pressure_keeps_reciprocity_line_in_nonexclusive_mode"
+            },
+            "recenter_debt": {
+              "target": "decompression_before_reciprocity_push",
+              "trigger": "debt_reciprocity_recenter",
+              "note": "debt_pressure_keeps_reciprocity_line_in_decompression_mode"
+            },
+            "recenter_support": {
+              "target": "user_led_reciprocity_reset",
+              "trigger": "support_reciprocity_recenter",
+              "note": "support_recenter_keeps_reciprocity_line_user_led"
+            },
+            "recenter_low_reciprocity": {
+              "target": "expectation_reset_before_reciprocity_push",
+              "trigger": "low_reciprocity_recenter",
+              "note": "low_reciprocity_keeps_line_in_expectation_reset_mode"
+            },
+            "watch_low_reciprocity": {
+              "target": "lightweight_reciprocity_watch",
+              "trigger": "low_reciprocity_watch",
+              "note": "low_reciprocity_keeps_line_under_watch"
+            },
+            "watch_debt": {
+              "target": "debt_buffered_reciprocity_watch",
+              "trigger": "debt_reciprocity_watch",
+              "note": "debt_pressure_keeps_reciprocity_line_buffered"
+            },
+            "watch_support": {
+              "target": "low_pressure_reciprocity_watch",
+              "trigger": "support_reciprocity_watch",
+              "note": "support_watch_keeps_reciprocity_line_under_low_pressure_watch"
+            },
+            "watch_autonomy": {
+              "target": "user_led_reciprocity_watch",
+              "trigger": "autonomy_reciprocity_watch",
+              "note": "autonomy_watch_keeps_reciprocity_line_user_led"
+            },
+            "watch_commitment": {
+              "target": "bounded_reciprocity_watch",
+              "trigger": "commitment_reciprocity_watch",
+              "note": "commitment_watch_keeps_reciprocity_line_bounded"
+            },
+            "watch_expectation": {
+              "target": "expectation_buffered_reciprocity_watch",
+              "trigger": "expectation_reciprocity_watch",
+              "note": "expectation_watch_keeps_reciprocity_line_bounded"
+            },
+            "watch_segmented": {
+              "target": "stepwise_reciprocity_watch",
+              "trigger": "segmented_reciprocity_watch",
+              "note": "segmented_delivery_keeps_reciprocity_line_stepwise"
+            },
+            "watch_default": {
+              "trigger": "reciprocity_watch_active",
+              "note": "reciprocity_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_mutual_reciprocity",
+              "trigger": "reciprocity_governance_stable",
+              "note": "reciprocity_line_is_holding_stable_and_mutual"
+            }
+          }
+        },
+        "pressure": {
+          "branches": {
+            "revise_debt": {
+              "target": "decompression_before_pressure_push",
+              "trigger": "debt_pressure_recenter",
+              "note": "elevated_debt_requires_decompression_before_extra_relational_pressure"
+            },
+            "revise_repair": {
+              "target": "repair_first_pressure_reset",
+              "trigger": "repair_pressure_recenter",
+              "note": "repair_recenter_requires_pressure_reset_before_forward_motion"
+            },
+            "revise_dependency": {
+              "target": "dependency_safe_pressure_reset",
+              "trigger": "dependency_pressure_recenter",
+              "note": "dependency_recenter_requires_nonexclusive_low_pressure_support"
+            },
+            "revise_autonomy": {
+              "target": "explicit_user_space_pressure_reset",
+              "trigger": "autonomy_pressure_recenter",
+              "note": "autonomy_recenter_requires_explicit_user_space_before_more_pressure"
+            },
+            "revise_boundary": {
+              "target": "hard_boundary_pressure_reset",
+              "trigger": "boundary_pressure_recenter",
+              "note": "boundary_recenter_requires_pressure_reset_and clearer spacing"
+            },
+            "watch_pacing": {
+              "target": "slow_pressure_watch",
+              "trigger": "pacing_pressure_watch",
+              "note": "pacing_watch_keeps_pressure_line_slow_and_proportionate"
+            },
+            "watch_support": {
+              "target": "bounded_support_pressure_watch",
+              "trigger": "support_pressure_watch",
+              "note": "support_watch_keeps_pressure_line_low_pressure_and_bounded"
+            },
+            "watch_attunement": {
+              "target": "attunement_sensitive_pressure_watch",
+              "trigger": "attunement_pressure_watch",
+              "note": "attunement_watch_keeps_pressure_line_more responsive and gentle"
+            },
+            "watch_trust": {
+              "target": "relational_safety_pressure_watch",
+              "trigger": "trust_pressure_watch",
+              "note": "trust_watch_keeps_pressure_line_safety_first_and_low_pressure"
+            },
+            "watch_commitment": {
+              "target": "bounded_commitment_pressure_watch",
+              "trigger": "commitment_pressure_watch",
+              "note": "commitment_watch_keeps_pressure_line_explicitly_bounded"
+            },
+            "watch_segmented": {
+              "target": "stepwise_pressure_watch",
+              "trigger": "segmented_pressure_watch",
+              "note": "segmented_delivery_keeps_pressure_line_stepwise_and_nonstacking"
+            },
+            "pass": {
+              "target": "steady_low_pressure_support",
+              "trigger": "pressure_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_debt": {
+              "target": "decompression_before_pressure_push",
+              "trigger": "debt_pressure_recenter",
+              "note": "debt_load_keeps_pressure_line_in_decompression_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_first_pressure_reset",
+              "trigger": "repair_pressure_recenter",
+              "note": "repair_pressure_keeps_pressure_line_in_repair_first_mode"
+            },
+            "recenter_dependency": {
+              "target": "dependency_safe_pressure_reset",
+              "trigger": "dependency_pressure_recenter",
+              "note": "dependency_pressure_keeps_pressure_line_nonexclusive_and_reset"
+            },
+            "recenter_autonomy": {
+              "target": "explicit_user_space_pressure_reset",
+              "trigger": "autonomy_pressure_recenter",
+              "note": "autonomy_pressure_keeps_pressure_line_in_user_space_mode"
+            },
+            "recenter_boundary": {
+              "target": "hard_boundary_pressure_reset",
+              "trigger": "boundary_pressure_recenter",
+              "note": "boundary_pressure_keeps_pressure_line_in_explicit_reset_mode"
+            },
+            "watch_pacing": {
+              "target": "slow_pressure_watch",
+              "trigger": "pacing_pressure_watch",
+              "note": "pacing_watch_keeps_pressure_line_under_slow_watch"
+            },
+            "watch_support": {
+              "target": "bounded_support_pressure_watch",
+              "trigger": "support_pressure_watch",
+              "note": "support_watch_keeps_pressure_line_under_bounded_watch"
+            },
+            "watch_attunement": {
+              "target": "attunement_sensitive_pressure_watch",
+              "trigger": "attunement_pressure_watch",
+              "note": "attunement_watch_keeps_pressure_line_responsive_and_gentle"
+            },
+            "watch_trust": {
+              "target": "relational_safety_pressure_watch",
+              "trigger": "trust_pressure_watch",
+              "note": "trust_watch_keeps_pressure_line_safety_first"
+            },
+            "watch_commitment": {
+              "target": "bounded_commitment_pressure_watch",
+              "trigger": "commitment_pressure_watch",
+              "note": "commitment_watch_keeps_pressure_line_bounded"
+            },
+            "watch_segmented": {
+              "target": "stepwise_pressure_watch",
+              "trigger": "segmented_pressure_watch",
+              "note": "segmented_delivery_keeps_pressure_line_stepwise"
+            },
+            "watch_default": {
+              "trigger": "pressure_watch_active",
+              "note": "pressure_line_is_shifting_without_full_recenter"
+            },
+            "stable": {
+              "target": "steady_low_pressure_support",
+              "trigger": "pressure_governance_stable",
+              "note": "pressure_line_is_holding_stable_and_proportionate"
+            }
+          }
+        },
+        "relational": {
+          "branches": {
+            "revise_boundary": {
+              "target": "boundary_safe_relational_reset",
+              "trigger": "boundary_relational_recenter",
+              "note": "boundary_recenter_requires_relational_reset_before_progress"
+            },
+            "revise_trust": {
+              "target": "trust_repair_relational_reset",
+              "trigger": "trust_relational_recenter",
+              "note": "trust_recenter_requires_relational_repair_before_forward motion"
+            },
+            "revise_pressure": {
+              "target": "low_pressure_relational_reset",
+              "trigger": "pressure_relational_recenter",
+              "note": "pressure_recenter_requires_relational_reset_and_more space"
+            },
+            "revise_repair": {
+              "target": "repair_first_relational_reset",
+              "trigger": "repair_relational_recenter",
+              "note": "repair_recenter_requires_relational_reset_before renewed progress"
+            },
+            "revise_continuity": {
+              "target": "reanchor_before_relational_progress",
+              "trigger": "continuity_relational_recenter",
+              "note": "continuity_recenter_requires_reanchor_before_relational_progress"
+            },
+            "revise_support": {
+              "target": "bounded_support_relational_reset",
+              "trigger": "support_relational_recenter",
+              "note": "support_recenter_requires_bounded_relational_reset"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_relational_watch",
+              "trigger": "trust_relational_watch",
+              "note": "trust_watch_keeps_relational_line_safety_buffered"
+            },
+            "watch_pressure": {
+              "target": "low_pressure_relational_watch",
+              "trigger": "pressure_relational_watch",
+              "note": "pressure_watch_keeps_relational_line_low pressure and spacious"
+            },
+            "watch_continuity": {
+              "target": "reanchored_relational_watch",
+              "trigger": "continuity_relational_watch",
+              "note": "continuity_watch_keeps_relational_line_reanchored"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_relational_watch",
+              "trigger": "repair_relational_watch",
+              "note": "repair_watch_keeps_relational_line_buffered and slow"
+            },
+            "watch_support": {
+              "target": "bounded_support_relational_watch",
+              "trigger": "support_relational_watch",
+              "note": "support_watch_keeps_relational_line bounded and user led"
+            },
+            "watch_default": {
+              "target": "multi_signal_relational_watch",
+              "trigger": "relational_watch_active",
+              "note": "multiple_relational_watch_signals_keep_the_line_under review"
+            },
+            "pass": {
+              "target": "steady_bounded_relational_progress",
+              "trigger": "relational_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "boundary_safe_relational_reset",
+              "trigger": "boundary_relational_recenter",
+              "note": "boundary_pressure_keeps_relational_line_in_reset_mode"
+            },
+            "recenter_trust": {
+              "target": "trust_repair_relational_reset",
+              "trigger": "trust_relational_recenter",
+              "note": "trust_pressure_keeps_relational_line_in_repair mode"
+            },
+            "recenter_pressure": {
+              "target": "low_pressure_relational_reset",
+              "trigger": "pressure_relational_recenter",
+              "note": "pressure_overload_keeps_relational_line_in_low pressure reset"
+            },
+            "recenter_repair": {
+              "target": "repair_first_relational_reset",
+              "trigger": "repair_relational_recenter",
+              "note": "repair_pressure_keeps_relational_line_in_repair first mode"
+            },
+            "recenter_continuity": {
+              "target": "reanchor_before_relational_progress",
+              "trigger": "continuity_relational_recenter",
+              "note": "continuity_drift_keeps_relational_line_in_reanchor mode"
+            },
+            "recenter_support": {
+              "target": "bounded_support_relational_reset",
+              "trigger": "support_relational_recenter",
+              "note": "support_pressure_keeps_relational_line in bounded reset mode"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_relational_watch",
+              "trigger": "trust_relational_watch",
+              "note": "trust_watch_keeps_relational_line_under buffered watch"
+            },
+            "watch_pressure": {
+              "target": "low_pressure_relational_watch",
+              "trigger": "pressure_relational_watch",
+              "note": "pressure_watch_keeps_relational_line_under low pressure watch"
+            },
+            "watch_continuity": {
+              "target": "reanchored_relational_watch",
+              "trigger": "continuity_relational_watch",
+              "note": "continuity_watch_keeps_relational_line_under reanchor watch"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_relational_watch",
+              "trigger": "repair_relational_watch",
+              "note": "repair_watch_keeps_relational_line_under buffered watch"
+            },
+            "watch_support": {
+              "target": "bounded_support_relational_watch",
+              "trigger": "support_relational_watch",
+              "note": "support_watch_keeps_relational_line_under bounded watch"
+            },
+            "watch_default": {
+              "target": "multi_signal_relational_watch",
+              "trigger": "relational_watch_active",
+              "note": "multiple_signals_keep_relational_line_under watch"
+            },
+            "stable": {
+              "target": "steady_bounded_relational_progress",
+              "trigger": "relational_governance_stable",
+              "note": "relational_line_is_holding_stable_and_bounded"
+            }
+          }
+        },
+        "safety": {
+          "branches": {
+            "revise_boundary": {
+              "target": "hard_boundary_safety_reset",
+              "trigger": "boundary_safety_recenter",
+              "note": "boundary_recenter_requires_a_hard_safety_reset_before_progress"
+            },
+            "revise_trust": {
+              "target": "trust_repair_safety_reset",
+              "trigger": "trust_safety_recenter",
+              "note": "trust_recenter_requires_safety_buffering_and_repair_first"
+            },
+            "revise_disclosure": {
+              "target": "explicit_uncertainty_safety_reset",
+              "trigger": "disclosure_safety_recenter",
+              "note": "disclosure_recenter_requires_explicit_uncertainty_and_tighter_bounds"
+            },
+            "revise_clarity": {
+              "target": "reanchor_before_safety_progress",
+              "trigger": "clarity_safety_recenter",
+              "note": "clarity_recenter_requires_reanchoring_before_further_progress"
+            },
+            "revise_pressure": {
+              "target": "low_pressure_safety_reset",
+              "trigger": "pressure_safety_recenter",
+              "note": "pressure_recenter_requires_low_pressure_support_before_any_push"
+            },
+            "revise_relational": {
+              "target": "bounded_relational_safety_reset",
+              "trigger": "relational_safety_recenter",
+              "note": "relational_recenter_requires_bounded_safety_reset_before_resuming"
+            },
+            "watch_boundary": {
+              "target": "boundary_buffered_safety_watch",
+              "trigger": "boundary_safety_watch",
+              "note": "boundary_watch_keeps_the_safety_line_explicit_and_buffered"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_safety_watch",
+              "trigger": "trust_safety_watch",
+              "note": "trust_watch_keeps_the_safety_line_careful_and_buffered"
+            },
+            "watch_disclosure": {
+              "target": "uncertainty_first_safety_watch",
+              "trigger": "disclosure_safety_watch",
+              "note": "disclosure_watch_keeps_the_safety_line_uncertainty_first"
+            },
+            "watch_clarity": {
+              "target": "reanchored_safety_watch",
+              "trigger": "clarity_safety_watch",
+              "note": "clarity_watch_keeps_the_safety_line_reanchored_and_scaffolded"
+            },
+            "watch_pressure": {
+              "target": "low_pressure_safety_watch",
+              "trigger": "pressure_safety_watch",
+              "note": "pressure_watch_keeps_the_safety_line_low_pressure_and_spacious"
+            },
+            "watch_relational": {
+              "target": "bounded_relational_safety_watch",
+              "trigger": "relational_safety_watch",
+              "note": "relational_watch_keeps_the_safety_line_bounded_and_deliberate"
+            },
+            "watch_default": {
+              "target": "multi_signal_safety_watch",
+              "trigger": "safety_watch_active",
+              "note": "multiple_signals_keep_the_safety_line_under_review"
+            },
+            "pass": {
+              "target": "steady_safe_relational_support",
+              "trigger": "safety_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_boundary": {
+              "target": "hard_boundary_safety_reset",
+              "trigger": "boundary_safety_recenter",
+              "note": "boundary_pressure_keeps_the_safety_line_in_reset_mode"
+            },
+            "recenter_trust": {
+              "target": "trust_repair_safety_reset",
+              "trigger": "trust_safety_recenter",
+              "note": "trust_pressure_keeps_the_safety_line_in_repair_mode"
+            },
+            "recenter_disclosure": {
+              "target": "explicit_uncertainty_safety_reset",
+              "trigger": "disclosure_safety_recenter",
+              "note": "disclosure_pressure_keeps_the_safety_line_uncertainty_first"
+            },
+            "recenter_clarity": {
+              "target": "reanchor_before_safety_progress",
+              "trigger": "clarity_safety_recenter",
+              "note": "clarity_drift_keeps_the_safety_line_in_reanchor_mode"
+            },
+            "recenter_pressure": {
+              "target": "low_pressure_safety_reset",
+              "trigger": "pressure_safety_recenter",
+              "note": "pressure_overload_keeps_the_safety_line_in_low_pressure_reset"
+            },
+            "recenter_relational": {
+              "target": "bounded_relational_safety_reset",
+              "trigger": "relational_safety_recenter",
+              "note": "relational_drift_keeps_the_safety_line_in_bounded_reset_mode"
+            },
+            "watch_boundary": {
+              "target": "boundary_buffered_safety_watch",
+              "trigger": "boundary_safety_watch",
+              "note": "boundary_watch_keeps_the_safety_line_under_buffered_watch"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_safety_watch",
+              "trigger": "trust_safety_watch",
+              "note": "trust_watch_keeps_the_safety_line_under_buffered_watch"
+            },
+            "watch_disclosure": {
+              "target": "uncertainty_first_safety_watch",
+              "trigger": "disclosure_safety_watch",
+              "note": "disclosure_watch_keeps_the_safety_line_uncertainty_first"
+            },
+            "watch_clarity": {
+              "target": "reanchored_safety_watch",
+              "trigger": "clarity_safety_watch",
+              "note": "clarity_watch_keeps_the_safety_line_reanchored"
+            },
+            "watch_pressure": {
+              "target": "low_pressure_safety_watch",
+              "trigger": "pressure_safety_watch",
+              "note": "pressure_watch_keeps_the_safety_line_low_pressure"
+            },
+            "watch_relational": {
+              "target": "bounded_relational_safety_watch",
+              "trigger": "relational_safety_watch",
+              "note": "relational_watch_keeps_the_safety_line_bounded"
+            },
+            "watch_default": {
+              "target": "multi_signal_safety_watch",
+              "trigger": "safety_watch_active",
+              "note": "multiple_signals_keep_the_safety_line_under_watch"
+            },
+            "stable": {
+              "target": "steady_safe_relational_support",
+              "trigger": "safety_governance_stable",
+              "note": "safety_line_is_holding_stable_and_bounded"
+            }
+          }
+        },
+        "stability": {
+          "branches": {
+            "revise_safety": {
+              "target": "safety_reset_before_stability",
+              "trigger": "safety_stability_recenter",
+              "note": "safety_recenter_requires_resetting_relational_stability_before_progress"
+            },
+            "revise_relational": {
+              "target": "relational_reset_before_stability",
+              "trigger": "relational_stability_recenter",
+              "note": "relational_recenter_requires_resetting_overall_stability_before_progress"
+            },
+            "revise_pressure": {
+              "target": "decompression_before_stability",
+              "trigger": "pressure_stability_recenter",
+              "note": "pressure_recenter_requires_decompression_before_restoring_stability"
+            },
+            "revise_trust": {
+              "target": "trust_rebuild_before_stability",
+              "trigger": "trust_stability_recenter",
+              "note": "trust_recenter_requires_rebuild_before_stability_can_hold"
+            },
+            "revise_continuity": {
+              "target": "reanchor_before_stability",
+              "trigger": "continuity_stability_recenter",
+              "note": "continuity_recenter_requires_reanchoring_before_stability_can_hold"
+            },
+            "revise_repair": {
+              "target": "repair_scaffold_before_stability",
+              "trigger": "repair_stability_recenter",
+              "note": "repair_recenter_requires_repair_scaffolding_before_stability"
+            },
+            "revise_progress": {
+              "target": "bounded_progress_reset_before_stability",
+              "trigger": "progress_stability_recenter",
+              "note": "progress_recenter_requires_resetting_forward_motion_before_stability"
+            },
+            "watch_safety": {
+              "target": "safety_buffered_stability_watch",
+              "trigger": "safety_stability_watch",
+              "note": "safety_watch_keeps_stability_line_cautious_and bounded"
+            },
+            "watch_relational": {
+              "target": "relational_buffered_stability_watch",
+              "trigger": "relational_stability_watch",
+              "note": "relational_watch_keeps_stability_line_buffered_before_more_progress"
+            },
+            "watch_pacing": {
+              "target": "slow_stability_watch",
+              "trigger": "pacing_stability_watch",
+              "note": "pacing_watch_keeps_stability_line_deliberately_slow"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_stability_watch",
+              "trigger": "trust_stability_watch",
+              "note": "trust_watch_keeps_stability_line_buffered_until_trust_recovers"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_stability_watch",
+              "trigger": "repair_stability_watch",
+              "note": "repair_watch_keeps_stability_line_scaffolded_and_low_pressure"
+            },
+            "watch_continuity": {
+              "target": "reanchored_stability_watch",
+              "trigger": "continuity_stability_watch",
+              "note": "continuity_watch_keeps_stability_line_reanchored"
+            },
+            "watch_progress": {
+              "target": "bounded_progress_stability_watch",
+              "trigger": "progress_stability_watch",
+              "note": "progress_watch_keeps_stability_line_bounded_before_advancing"
+            },
+            "watch_attunement": {
+              "target": "attuned_stability_watch",
+              "trigger": "attunement_stability_watch",
+              "note": "attunement_watch_keeps_stability_line_relationship-aware"
+            },
+            "pass": {
+              "target": "steady_bounded_relational_stability",
+              "trigger": "stability_line_stable"
+            }
+          },
+          "trajectory_branches": {
+            "recenter_safety": {
+              "target": "safety_reset_before_stability",
+              "trigger": "safety_stability_recenter",
+              "note": "safety_recenter_keeps_stability_line_in_reset_mode"
+            },
+            "recenter_relational": {
+              "target": "relational_reset_before_stability",
+              "trigger": "relational_stability_recenter",
+              "note": "relational_recenter_keeps_stability_line_in_relational_reset_mode"
+            },
+            "recenter_pressure": {
+              "target": "decompression_before_stability",
+              "trigger": "pressure_stability_recenter",
+              "note": "pressure_recenter_keeps_stability_line_in_decompression_mode"
+            },
+            "recenter_trust": {
+              "target": "trust_rebuild_before_stability",
+              "trigger": "trust_stability_recenter",
+              "note": "trust_recenter_keeps_stability_line_in_rebuild_mode"
+            },
+            "recenter_continuity": {
+              "target": "reanchor_before_stability",
+              "trigger": "continuity_stability_recenter",
+              "note": "continuity_recenter_keeps_stability_line_in_reanchor_mode"
+            },
+            "recenter_repair": {
+              "target": "repair_scaffold_before_stability",
+              "trigger": "repair_stability_recenter",
+              "note": "repair_recenter_keeps_stability_line_in_repair_scaffold_mode"
+            },
+            "recenter_progress": {
+              "target": "bounded_progress_reset_before_stability",
+              "trigger": "progress_stability_recenter",
+              "note": "progress_recenter_keeps_stability_line_in_bounded_reset_mode"
+            },
+            "watch_safety": {
+              "target": "safety_buffered_stability_watch",
+              "trigger": "safety_stability_watch",
+              "note": "safety_watch_keeps_stability_line_careful"
+            },
+            "watch_relational": {
+              "target": "relational_buffered_stability_watch",
+              "trigger": "relational_stability_watch",
+              "note": "relational_watch_keeps_stability_line_buffered"
+            },
+            "watch_pacing": {
+              "target": "slow_stability_watch",
+              "trigger": "pacing_stability_watch",
+              "note": "pacing_watch_keeps_stability_line_slow"
+            },
+            "watch_trust": {
+              "target": "trust_buffered_stability_watch",
+              "trigger": "trust_stability_watch",
+              "note": "trust_watch_keeps_stability_line_buffered"
+            },
+            "watch_repair": {
+              "target": "repair_buffered_stability_watch",
+              "trigger": "repair_stability_watch",
+              "note": "repair_watch_keeps_stability_line_scaffolded"
+            },
+            "watch_continuity": {
+              "target": "reanchored_stability_watch",
+              "trigger": "continuity_stability_watch",
+              "note": "continuity_watch_keeps_stability_line_reanchored"
+            },
+            "watch_progress": {
+              "target": "bounded_progress_stability_watch",
+              "trigger": "progress_stability_watch",
+              "note": "progress_watch_keeps_stability_line_bounded"
+            },
+            "watch_attunement": {
+              "target": "attuned_stability_watch",
+              "trigger": "attunement_stability_watch",
+              "note": "attunement_watch_keeps_stability_line_relationally_tuned"
+            },
+            "stable": {
+              "target": "steady_bounded_relational_stability",
+              "trigger": "stability_governance_stable",
+              "note": "stability_line_is_holding_steady_and_bounded"
+            }
+          }
+        }
+      }
+    }
+  },
+  "context_inference": {
+    "dialogue_act": {
+      "question_marks": ["?", "？"],
+      "request_tokens_en": ["help", "please", "need"],
+      "request_tokens_zh": ["帮", "请", "需要"],
+      "appreciation_tokens_en": ["thanks", "thank you"],
+      "appreciation_tokens_zh": ["谢谢"]
+    },
+    "bid_signal": {
+      "connection_request_tokens_en": ["feel", "alone", "stuck", "worried"],
+      "connection_request_tokens_zh": ["难过", "担心", "孤独", "卡住"],
+      "soft_bid_tokens_en": ["share", "update"],
+      "soft_bid_tokens_zh": ["分享", "更新"]
+    },
+    "appraisal": {
+      "negative_tokens_en": ["bad", "stuck", "angry", "sad", "anxious"],
+      "negative_tokens_zh": ["糟", "难过", "焦虑", "生气", "担心", "压力"],
+      "positive_tokens_en": ["great", "excited", "happy", "good"],
+      "positive_tokens_zh": ["开心", "兴奋", "顺利", "高兴"]
+    },
+    "topic_keywords": {
+      "technical": ["api", "bug", "code", "test", "deploy"],
+      "planning": ["plan", "roadmap", "next", "phase"],
+      "work": ["job", "team", "meeting", "project"],
+      "relationship": ["friend", "partner", "family", "关系"],
+      "emotion": ["feel", "emotion", "anxious", "开心", "焦虑", "情绪"]
+    },
+    "attention": {
+      "high_length_threshold": 160,
+      "focused_length_threshold": 60,
+      "high_tokens_en": ["urgent", "asap"],
+      "high_tokens_zh": ["马上", "紧急", "尽快"]
+    }
+  }
+}

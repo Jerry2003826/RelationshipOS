@@ -1,0 +1,27 @@
+{% if cards %}
+  {% for card in cards %}
+  <article class="list-card">
+    <button
+      class="session-pick"
+      hx-get="{{ card.detail_url }}"
+      hx-target="#console-session-detail"
+      hx-swap="innerHTML"
+      x-on:click="selectedSession = {{ card.selected_session_js | safe }}; window.relationshipOSConsole?.selectSession({{ card.selected_session_js | safe }})"
+    >
+      <div class="list-title">{{ card.title }}</div>
+      <div class="list-meta">
+        {% for badge in card.badges %}
+        <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+        {% endfor %}
+      </div>
+      <p>{{ card.detail }}</p>
+      <p class="muted">{{ card.muted_detail }}</p>
+    </button>
+  </article>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <h3>{{ empty_title }}</h3>
+    <p>{{ empty_detail }}</p>
+  </div>
+{% endif %}

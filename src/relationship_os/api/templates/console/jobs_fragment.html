@@ -1,0 +1,19 @@
+{% if cards %}
+  {% for card in cards %}
+  <article class="list-card">
+    <div class="list-title">{{ card.title }}</div>
+    <div class="list-meta">
+      {% for badge in card.badges %}
+      <span class="badge badge-{{ badge.tone }}">{{ badge.label }}</span>
+      {% endfor %}
+    </div>
+    <p>{{ card.detail }}</p>
+    <p class="muted">{{ card.muted_detail }}</p>
+  </article>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <h3>{{ empty_title }}</h3>
+    <p>{{ empty_detail }}</p>
+  </div>
+{% endif %}

@@ -29,75 +29,79 @@ class SessionTemporalKGProjector(Projector[dict[str, Any]]):
             "edge_count": 0,
         }
 
-    def apply(self, state: dict[str, Any], event: StoredEvent) -> dict[str, Any]:
-        next_state = {
+    def _clone_state(self, state: dict[str, Any]) -> dict[str, Any]:
+        return {
             **state,
             "nodes": [dict(item) for item in state["nodes"]],
             "edges": [dict(item) for item in state["edges"]],
         }
 
-        if event.event_type == SESSION_STARTED:
-            next_state["session_id"] = event.payload.get("session_id", event.stream_id)
-            return next_state
+    def _apply_session_started(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        next_state["session_id"] = event.payload.get("session_id", event.stream_id)
+        return next_state
 
-        if event.event_type != MEMORY_BUNDLE_UPDATED:
-            return next_state
+    def _build_memory_bundle_items(
+        self,
+        *,
+        event: StoredEvent,
+    ) -> dict[str, list[str]]:
+        return {
+            "working_memory": _compact_strings(
+                list(event.payload.get("working_memory", [])),
+                limit=4,
+            ),
+            "episodic_memory": _compact_strings(
+                list(event.payload.get("episodic_memory", [])),
+                limit=4,
+            ),
+            "semantic_memory": _compact_strings(
+                list(event.payload.get("semantic_memory", [])),
+                limit=6,
+            ),
+            "relational_memory": _compact_strings(
+                list(event.payload.get("relational_memory", [])),
+                limit=6,
+            ),
+            "reflective_memory": _compact_strings(
+                list(event.payload.get("reflective_memory", [])),
+                limit=6,
+            ),
+        }
 
-        occurred_at = event.occurred_at.isoformat()
-        next_state["session_id"] = next_state["session_id"] or event.stream_id
-        next_state["last_updated_at"] = occurred_at
+    def _build_memory_nodes(
+        self,
+        *,
+        existing: list[dict[str, Any]],
+        layer_items: dict[str, list[str]],
+        source_version: int,
+        occurred_at: str,
+    ) -> list[dict[str, Any]]:
+        nodes = list(existing)
+        for layer, limit_items in layer_items.items():
+            nodes = _append_graph_nodes(
+                existing=nodes,
+                values=limit_items,
+                node_type=layer,
+                source_version=source_version,
+                occurred_at=occurred_at,
+            )
+        return nodes
 
-        working_items = _compact_strings(list(event.payload.get("working_memory", [])), limit=4)
-        episodic_items = _compact_strings(list(event.payload.get("episodic_memory", [])), limit=4)
-        semantic_items = _compact_strings(list(event.payload.get("semantic_memory", [])), limit=6)
-        relational_items = _compact_strings(
-            list(event.payload.get("relational_memory", [])),
-            limit=6,
-        )
-        reflective_items = _compact_strings(
-            list(event.payload.get("reflective_memory", [])),
-            limit=6,
-        )
-
-        nodes = list(next_state["nodes"])
-        nodes = _append_graph_nodes(
-            existing=nodes,
-            values=working_items,
-            node_type="working_memory",
-            source_version=event.version,
-            occurred_at=occurred_at,
-        )
-        nodes = _append_graph_nodes(
-            existing=nodes,
-            values=episodic_items,
-            node_type="episodic_memory",
-            source_version=event.version,
-            occurred_at=occurred_at,
-        )
-        nodes = _append_graph_nodes(
-            existing=nodes,
-            values=semantic_items,
-            node_type="semantic_memory",
-            source_version=event.version,
-            occurred_at=occurred_at,
-        )
-        nodes = _append_graph_nodes(
-            existing=nodes,
-            values=relational_items,
-            node_type="relational_memory",
-            source_version=event.version,
-            occurred_at=occurred_at,
-        )
-        nodes = _append_graph_nodes(
-            existing=nodes,
-            values=reflective_items,
-            node_type="reflective_memory",
-            source_version=event.version,
-            occurred_at=occurred_at,
-        )
-        next_state["nodes"] = nodes
-
+    def _build_memory_relations(
+        self,
+        *,
+        layer_items: dict[str, list[str]],
+    ) -> list[tuple[str, str, str, str, str]]:
         relations: list[tuple[str, str, str, str, str]] = []
+        episodic_items = layer_items["episodic_memory"]
+        semantic_items = layer_items["semantic_memory"]
+        relational_items = layer_items["relational_memory"]
+        working_items = layer_items["working_memory"]
+        reflective_items = layer_items["reflective_memory"]
         for episodic_item in episodic_items:
             for semantic_item in semantic_items:
                 relations.append(
@@ -172,7 +176,24 @@ class SessionTemporalKGProjector(Projector[dict[str, Any]]):
                         "informs",
                     )
                 )
+        return relations
 
+    def _apply_memory_bundle(
+        self,
+        next_state: dict[str, Any],
+        event: StoredEvent,
+    ) -> dict[str, Any]:
+        occurred_at = event.occurred_at.isoformat()
+        layer_items = self._build_memory_bundle_items(event=event)
+        next_state["session_id"] = next_state["session_id"] or event.stream_id
+        next_state["last_updated_at"] = occurred_at
+        next_state["nodes"] = self._build_memory_nodes(
+            existing=next_state["nodes"],
+            layer_items=layer_items,
+            source_version=event.version,
+            occurred_at=occurred_at,
+        )
+        relations = self._build_memory_relations(layer_items=layer_items)
         next_state["edges"] = _append_graph_edges(
             existing=next_state["edges"],
             relations=relations,
@@ -182,3 +203,11 @@ class SessionTemporalKGProjector(Projector[dict[str, Any]]):
         next_state["node_count"] = len(next_state["nodes"])
         next_state["edge_count"] = len(next_state["edges"])
         return next_state
+
+    def apply(self, state: dict[str, Any], event: StoredEvent) -> dict[str, Any]:
+        next_state = self._clone_state(state)
+        if event.event_type == SESSION_STARTED:
+            return self._apply_session_started(next_state, event)
+        if event.event_type != MEMORY_BUNDLE_UPDATED:
+            return next_state
+        return self._apply_memory_bundle(next_state, event)

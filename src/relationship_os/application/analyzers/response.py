@@ -9,6 +9,7 @@ from relationship_os.application.analyzers._utils import (
     _contains_any,
     _contains_chinese,
 )
+from relationship_os.application.policy_registry import get_default_compiled_policy_set
 from relationship_os.domain.contracts import (
     ConfidenceAssessment,
     ContextFrame,
@@ -32,6 +33,171 @@ from relationship_os.domain.contracts import (
 )
 
 
+def _rendering_policy(
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> dict[str, object]:
+    compiled = get_default_compiled_policy_set(
+        runtime_profile=runtime_profile,
+        archetype=archetype or "default",
+    )
+    return dict(compiled.rendering_policy) if compiled else {}
+
+
+def _rendering_section(
+    key: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> dict[str, object]:
+    return dict(
+        _rendering_policy(
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get(key)
+        or {}
+    )
+
+
+def _repair_replacements(
+    kind: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> list[tuple[str, str]]:
+    replacements = dict(
+        _rendering_section(
+            "repair_replacements",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        )
+    )
+    raw_pairs = list(replacements.get(kind) or [])
+    compiled: list[tuple[str, str]] = []
+    for pair in raw_pairs:
+        if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+            continue
+        compiled.append((str(pair[0]), str(pair[1])))
+    return compiled
+
+
+def _response_rendering_section(
+    key: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> dict[str, object]:
+    raw = _rendering_section(
+        "response_rendering",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    ).get(key) or {}
+    return dict(raw) if isinstance(raw, dict) else {}
+
+
+def _apply_rendering_override(
+    state: dict[str, object],
+    override: dict[str, object],
+) -> None:
+    if not override:
+        return
+    for field in (
+        "rendering_mode",
+        "max_sentences",
+        "include_validation",
+        "include_next_step",
+        "include_boundary_statement",
+        "include_uncertainty_statement",
+        "question_count_limit",
+    ):
+        if field in override:
+            state[field] = override[field]
+    if "max_sentences_cap" in override:
+        state["max_sentences"] = min(
+            int(state.get("max_sentences", 4)),
+            int(override["max_sentences_cap"]),
+        )
+    if "question_count_limit_cap" in override:
+        state["question_count_limit"] = min(
+            int(state.get("question_count_limit", 0)),
+            int(override["question_count_limit_cap"]),
+        )
+    style_guardrails = state.setdefault("style_guardrails", [])
+    style_guardrails.extend(str(item) for item in override.get("style_guardrails", []) or [])
+
+
+def _rendering_template(
+    key: str,
+    *,
+    is_chinese: bool,
+    default_en: str,
+    default_zh: str,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> str:
+    template = dict(
+        _rendering_section(
+            "canonical_response",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get(key)
+        or {}
+    )
+    if is_chinese:
+        return str(template.get("zh") or default_zh)
+    return str(template.get("en") or default_en)
+
+
+def _is_friend_chat_runtime(runtime_profile: str | None) -> bool:
+    return str(runtime_profile or "").strip() == "friend_chat_zh_v1"
+
+
+def _post_audit_presence_tokens(
+    kind: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> tuple[list[str], list[str]]:
+    section = dict(
+        _rendering_section(
+            "post_audit",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get("presence_tokens")
+        or {}
+    )
+    bucket = dict(section.get(kind) or {})
+    english = [str(item) for item in bucket.get("en", []) or []]
+    chinese = [str(item) for item in bucket.get("zh", []) or []]
+    return english, chinese
+
+
+def _critical_post_audit_violations(
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> set[str]:
+    section = dict(
+        _rendering_section(
+            "post_audit",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        )
+    )
+    configured = [str(item) for item in section.get("critical_violations", []) or []]
+    if configured:
+        return set(configured)
+    return {
+        "sentence_budget_exceeded",
+        "question_budget_exceeded",
+        "missing_boundary_statement",
+        "missing_uncertainty_statement",
+        "forbidden_false_certainty_language",
+        "forbidden_dependency_language",
+    }
+
+
 def build_response_draft_plan(
     *,
     context_frame: ContextFrame,
@@ -48,34 +214,102 @@ def build_response_draft_plan(
     session_ritual_plan: SessionRitualPlan,
     somatic_orchestration_plan: SomaticOrchestrationPlan,
 ) -> ResponseDraftPlan:
-    opening_move = "acknowledge_and_orient"
-    structure = ["name the current context", "offer one concrete next step"]
-    must_include = list(expression_plan.goals)
-    must_avoid = list(expression_plan.avoid)
-    phrasing_constraints: list[str] = []
-    question_strategy = "none"
+    state = _build_response_draft_state(expression_plan=expression_plan)
+    _apply_repair_and_runtime_draft_rules(
+        state,
+        repair_plan=repair_plan,
+        runtime_coordination_snapshot=runtime_coordination_snapshot,
+    )
+    _apply_guidance_and_cadence_draft_rules(
+        state,
+        guidance_plan=guidance_plan,
+        cadence_plan=cadence_plan,
+        session_ritual_plan=session_ritual_plan,
+        somatic_orchestration_plan=somatic_orchestration_plan,
+        runtime_coordination_snapshot=runtime_coordination_snapshot,
+    )
+    _apply_boundary_and_policy_draft_rules(
+        state,
+        knowledge_boundary_decision=knowledge_boundary_decision,
+        expression_plan=expression_plan,
+        policy_gate=policy_gate,
+    )
+    _apply_confidence_and_audit_draft_rules(
+        state,
+        confidence_assessment=confidence_assessment,
+        rehearsal_result=rehearsal_result,
+        empowerment_audit=empowerment_audit,
+    )
+    return _materialize_response_draft_plan(
+        state,
+        empowerment_audit=empowerment_audit,
+    )
 
+
+def _build_response_draft_state(
+    *,
+    expression_plan: ExpressionPlan,
+) -> dict[str, object]:
+    return {
+        "opening_move": "acknowledge_and_orient",
+        "structure": ["name the current context", "offer one concrete next step"],
+        "must_include": list(expression_plan.goals),
+        "must_avoid": list(expression_plan.avoid),
+        "phrasing_constraints": [],
+        "question_strategy": "none",
+    }
+
+
+def _apply_repair_and_runtime_draft_rules(
+    state: dict[str, object],
+    *,
+    repair_plan: RepairPlan,
+    runtime_coordination_snapshot: RuntimeCoordinationSnapshot,
+) -> None:
+    structure = state["structure"]
+    phrasing_constraints = state["phrasing_constraints"]
     if repair_plan.rupture_detected:
-        opening_move = "repair_then_orient"
-        structure = [
+        state["opening_move"] = "repair_then_orient"
+        state["structure"] = [
             "briefly acknowledge the user's current state",
             "repair understanding",
             "offer one concrete next step",
         ]
+        structure = state["structure"]
 
     if runtime_coordination_snapshot.ritual_phase == "opening_ritual":
         structure.insert(0, "set a simple session frame")
     elif runtime_coordination_snapshot.ritual_phase == "re_anchor":
         structure.insert(0, "briefly re-anchor shared context")
 
+    if runtime_coordination_snapshot.cognitive_load_band == "high":
+        state["opening_move"] = "stabilize_then_orient"
+        phrasing_constraints.append(
+            "keep processing load low with shorter and more concrete sentences"
+        )
+
+
+def _apply_guidance_and_cadence_draft_rules(
+    state: dict[str, object],
+    *,
+    guidance_plan: GuidancePlan,
+    cadence_plan: ConversationCadencePlan,
+    session_ritual_plan: SessionRitualPlan,
+    somatic_orchestration_plan: SomaticOrchestrationPlan,
+    runtime_coordination_snapshot: RuntimeCoordinationSnapshot,
+) -> None:
+    structure = state["structure"]
+    must_include = state["must_include"]
+    phrasing_constraints = state["phrasing_constraints"]
+
     if guidance_plan.lead_with == "regulate_first":
-        opening_move = "stabilize_then_orient"
+        state["opening_move"] = "stabilize_then_orient"
     elif guidance_plan.lead_with == "attunement_repair":
-        opening_move = "repair_then_orient"
+        state["opening_move"] = "repair_then_orient"
     elif guidance_plan.lead_with == "clarify_gap":
-        opening_move = "clarify_with_reason"
+        state["opening_move"] = "clarify_with_reason"
     elif guidance_plan.lead_with == "boundary_frame":
-        opening_move = "bound_the_answer"
+        state["opening_move"] = "bound_the_answer"
     elif guidance_plan.lead_with == "shared_context_reanchor":
         structure.insert(0, "briefly re-anchor shared context")
     elif guidance_plan.lead_with == "micro_commitment":
@@ -83,11 +317,6 @@ def build_response_draft_plan(
     elif guidance_plan.lead_with == "reflect_then_step":
         structure.insert(0, "briefly reflect the user's state")
 
-    if runtime_coordination_snapshot.cognitive_load_band == "high":
-        opening_move = "stabilize_then_orient"
-        phrasing_constraints.append(
-            "keep processing load low with shorter and more concrete sentences"
-        )
     if guidance_plan.ritual_action:
         structure.insert(0, guidance_plan.ritual_action.replace("_", " "))
     if session_ritual_plan.opening_move:
@@ -127,7 +356,7 @@ def build_response_draft_plan(
             "leave deliberate conversational space after the checkpoint"
         )
     if guidance_plan.agency_mode == "focused_question":
-        question_strategy = "single_focused_question"
+        state["question_strategy"] = "single_focused_question"
     must_include.extend(guidance_plan.micro_actions[:2])
     must_include.extend(cadence_plan.cadence_actions[:2])
     must_include.extend(session_ritual_plan.micro_rituals[:2])
@@ -147,10 +376,22 @@ def build_response_draft_plan(
         if somatic_orchestration_plan.allow_in_followup:
             must_include.append("keep the body cue reusable in later follow-up")
     if cadence_plan.transition_intent == "pause_for_missing_detail":
-        question_strategy = "single_focused_question"
+        state["question_strategy"] = "single_focused_question"
+
+
+def _apply_boundary_and_policy_draft_rules(
+    state: dict[str, object],
+    *,
+    knowledge_boundary_decision: KnowledgeBoundaryDecision,
+    expression_plan: ExpressionPlan,
+    policy_gate: PolicyGateDecision,
+) -> None:
+    must_include = state["must_include"]
+    must_avoid = state["must_avoid"]
+    phrasing_constraints = state["phrasing_constraints"]
 
     if knowledge_boundary_decision.decision == "answer_with_uncertainty":
-        opening_move = "bound_the_answer"
+        state["opening_move"] = "bound_the_answer"
         must_include.extend(
             [
                 "state limits explicitly",
@@ -162,8 +403,8 @@ def build_response_draft_plan(
             "use calibrated language instead of guarantees or predictions"
         )
     elif knowledge_boundary_decision.decision == "clarify_before_answer":
-        opening_move = "clarify_with_reason"
-        question_strategy = "single_focused_question"
+        state["opening_move"] = "clarify_with_reason"
+        state["question_strategy"] = "single_focused_question"
         must_include.extend(
             [
                 "explain why the clarifying question helps",
@@ -173,7 +414,7 @@ def build_response_draft_plan(
         must_avoid.append("multi_question_barrage")
         phrasing_constraints.append("keep the clarifying question concrete and short")
     elif expression_plan.include_question:
-        question_strategy = "check_alignment"
+        state["question_strategy"] = "check_alignment"
 
     if policy_gate.red_line_status == "boundary_sensitive":
         must_include.append("frame support collaboratively")
@@ -187,6 +428,18 @@ def build_response_draft_plan(
             "avoid implying the assistant is the user's only source of support"
         )
 
+
+def _apply_confidence_and_audit_draft_rules(
+    state: dict[str, object],
+    *,
+    confidence_assessment: ConfidenceAssessment,
+    rehearsal_result: RehearsalResult,
+    empowerment_audit: EmpowermentAudit,
+) -> None:
+    structure = state["structure"]
+    must_include = state["must_include"]
+    phrasing_constraints = state["phrasing_constraints"]
+
     if confidence_assessment.response_mode == "repair_first":
         structure.insert(0, "slow the tempo before giving direction")
     if rehearsal_result.projected_risk_level == "high":
@@ -194,16 +447,22 @@ def build_response_draft_plan(
     if empowerment_audit.transparency_required:
         must_include.append("make uncertainty or limits visible")
     if empowerment_audit.status == "revise":
-        opening_move = "slow_down_and_reframe"
+        state["opening_move"] = "slow_down_and_reframe"
         phrasing_constraints.extend(empowerment_audit.recommended_adjustments[:2])
 
+
+def _materialize_response_draft_plan(
+    state: dict[str, object],
+    *,
+    empowerment_audit: EmpowermentAudit,
+) -> ResponseDraftPlan:
     return ResponseDraftPlan(
-        opening_move=opening_move,
-        structure=_compact(structure, limit=4),
-        must_include=_compact(must_include, limit=5),
-        must_avoid=_compact(must_avoid, limit=5),
-        phrasing_constraints=_compact(phrasing_constraints, limit=5),
-        question_strategy=question_strategy,
+        opening_move=str(state["opening_move"]),
+        structure=_compact(state["structure"], limit=4),
+        must_include=_compact(state["must_include"], limit=5),
+        must_avoid=_compact(state["must_avoid"], limit=5),
+        phrasing_constraints=_compact(state["phrasing_constraints"], limit=5),
+        question_strategy=str(state["question_strategy"]),
         approved=empowerment_audit.approved,
     )
 
@@ -217,76 +476,174 @@ def build_response_rendering_policy(
     response_draft_plan: ResponseDraftPlan,
     empowerment_audit: EmpowermentAudit,
     runtime_coordination_snapshot: RuntimeCoordinationSnapshot,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
 ) -> ResponseRenderingPolicy:
-    rendering_mode = "supportive_progress"
-    max_sentences = 4
-    include_validation = context_frame.appraisal == "negative"
-    include_next_step = True
-    include_boundary_statement = False
-    include_uncertainty_statement = (
-        knowledge_boundary_decision.should_disclose_uncertainty
+    defaults = _response_rendering_section(
+        "defaults",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
     )
-    question_count_limit = 0
-    style_guardrails = list(response_draft_plan.phrasing_constraints)
+    state: dict[str, object] = {
+        "rendering_mode": str(defaults.get("rendering_mode", "supportive_progress")),
+        "max_sentences": int(defaults.get("max_sentences", 4)),
+        "include_validation": (
+            context_frame.appraisal == "negative"
+            if defaults.get("include_validation_on_negative_appraisal", True)
+            else False
+        ),
+        "include_next_step": (
+            context_frame.appraisal == "negative"
+            if defaults.get("include_next_step_on_negative_appraisal", True)
+            else False
+        ),
+        "include_boundary_statement": False,
+        "include_uncertainty_statement": (
+            knowledge_boundary_decision.should_disclose_uncertainty
+            if defaults.get("include_uncertainty_from_boundary_decision", True)
+            else False
+        ),
+        "question_count_limit": int(defaults.get("question_count_limit", 0)),
+        "style_guardrails": list(response_draft_plan.phrasing_constraints),
+    }
 
     if repair_assessment.repair_needed:
-        rendering_mode = "repair_first"
-        include_validation = True
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "repair_needed",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
+        )
     if confidence_assessment.response_mode == "clarify":
-        rendering_mode = "clarifying"
-        max_sentences = 3
-        include_next_step = False
-        question_count_limit = 1
-        style_guardrails.append("ask no more than one clarifying question")
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "clarify",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
+        )
     elif confidence_assessment.response_mode == "calibrated":
-        rendering_mode = "calibrated"
-        include_uncertainty_statement = True
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "calibrated",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
+        )
     elif knowledge_boundary_decision.decision == "support_with_boundary":
-        rendering_mode = "boundary_support"
-        include_boundary_statement = True
-        include_validation = True
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "support_with_boundary",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
+        )
     elif empowerment_audit.status == "revise":
-        rendering_mode = "guardrailed_reframe"
-        max_sentences = 3
-        include_validation = True
-
-    if response_draft_plan.question_strategy == "single_focused_question":
-        question_count_limit = 1
-    elif response_draft_plan.question_strategy == "check_alignment":
-        question_count_limit = max(question_count_limit, 1)
-
-    if runtime_coordination_snapshot.cognitive_load_band == "high":
-        max_sentences = min(max_sentences, 3)
-        style_guardrails.append("reduce cognitive load with shorter chunks")
-        if confidence_assessment.response_mode != "clarify":
-            question_count_limit = min(question_count_limit, 1)
-    elif runtime_coordination_snapshot.cognitive_load_band == "medium":
-        max_sentences = min(max_sentences, 4)
-
-    if runtime_coordination_snapshot.time_awareness_mode in {"reengagement", "resume"}:
-        include_validation = True
-        style_guardrails.append("briefly re-anchor shared context before progressing")
-
-    if runtime_coordination_snapshot.proactive_followup_eligible:
-        style_guardrails.append(
-            "leave room for a light future follow-up instead of over-explaining now"
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "empowerment_revise",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
         )
 
+    strategy_limits = _response_rendering_section(
+        "question_strategy_limits",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    )
+    if response_draft_plan.question_strategy == "single_focused_question":
+        state["question_count_limit"] = int(
+            strategy_limits.get("single_focused_question", 1)
+        )
+    elif response_draft_plan.question_strategy == "check_alignment":
+        state["question_count_limit"] = max(
+            int(state.get("question_count_limit", 0)),
+            int(strategy_limits.get("check_alignment_min", 1)),
+        )
+
+    cognitive_load = dict(
+        _response_rendering_section(
+            "cognitive_load",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get(
+            runtime_coordination_snapshot.cognitive_load_band,
+            {},
+        )
+        or {}
+    )
+    if runtime_coordination_snapshot.cognitive_load_band == "high":
+        _apply_rendering_override(state, cognitive_load)
+        skip_modes = {
+            str(item)
+            for item in cognitive_load.get("skip_question_cap_for_response_modes", []) or []
+        }
+        if confidence_assessment.response_mode in skip_modes:
+            pass
+        elif "question_count_limit_cap" in cognitive_load:
+            state["question_count_limit"] = min(
+                int(state.get("question_count_limit", 0)),
+                int(cognitive_load["question_count_limit_cap"]),
+            )
+    elif runtime_coordination_snapshot.cognitive_load_band == "medium":
+        _apply_rendering_override(state, cognitive_load)
+
+    time_awareness = dict(
+        _response_rendering_section(
+            "time_awareness_modes",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get(
+            runtime_coordination_snapshot.time_awareness_mode,
+            {},
+        )
+        or {}
+    )
+    if runtime_coordination_snapshot.time_awareness_mode in {"reengagement", "resume"}:
+        _apply_rendering_override(state, time_awareness)
+
+    if runtime_coordination_snapshot.proactive_followup_eligible:
+        proactive_guardrail = str(
+            _rendering_section(
+                "response_rendering",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ).get(
+                "proactive_followup_style_guardrail",
+                "leave room for a light future follow-up instead of over-explaining now",
+            )
+        ).strip()
+        if proactive_guardrail:
+            state["style_guardrails"].append(proactive_guardrail)
+
     if knowledge_boundary_decision.decision == "support_with_boundary":
-        include_boundary_statement = True
+        state["include_boundary_statement"] = True
     if not response_draft_plan.approved or not empowerment_audit.approved:
-        rendering_mode = "guardrailed_reframe"
-        max_sentences = min(max_sentences, 3)
+        _apply_rendering_override(
+            state,
+            _response_rendering_section(
+                "not_approved",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            ),
+        )
 
     return ResponseRenderingPolicy(
-        rendering_mode=rendering_mode,
-        max_sentences=max_sentences,
-        include_validation=include_validation,
-        include_next_step=include_next_step,
-        include_boundary_statement=include_boundary_statement,
-        include_uncertainty_statement=include_uncertainty_statement,
-        question_count_limit=question_count_limit,
-        style_guardrails=_compact(style_guardrails, limit=5),
+        rendering_mode=str(state["rendering_mode"]),
+        max_sentences=int(state["max_sentences"]),
+        include_validation=bool(state["include_validation"]),
+        include_next_step=bool(state["include_next_step"]),
+        include_boundary_statement=bool(state["include_boundary_statement"]),
+        include_uncertainty_statement=bool(state["include_uncertainty_statement"]),
+        question_count_limit=int(state["question_count_limit"]),
+        style_guardrails=_compact(state["style_guardrails"], limit=5),
         approved=response_draft_plan.approved and empowerment_audit.approved,
     )
 
@@ -296,20 +653,36 @@ def _count_sentences(text: str) -> int:
     return len(parts)
 
 
-def _contains_forbidden_false_certainty_language(text: str) -> bool:
+def _contains_forbidden_false_certainty_language(
+    text: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> bool:
     lowered = text.lower()
-    english_patterns = [
+    policy = _rendering_section(
+        "forbidden_false_certainty",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    )
+    english_patterns = list(policy.get("en") or [
         "definitely will",
         "will definitely",
         "guaranteed to",
         "absolutely will",
-    ]
-    chinese_patterns = ["一定会", "绝对会", "肯定会", "保证会", "百分之百会"]
+    ])
+    chinese_patterns = list(
+        policy.get("zh") or ["一定会", "绝对会", "肯定会", "保证会", "百分之百会"]
+    )
+    safe_english_patterns = list(
+        policy.get("safe_en")
+        or ["can't know for sure", "cannot know for sure", "not for sure"]
+    )
     if any(pattern in lowered for pattern in english_patterns):
         return True
     if "for sure" in lowered and not any(
         safe_phrase in lowered
-        for safe_phrase in ["can't know for sure", "cannot know for sure", "not for sure"]
+        for safe_phrase in safe_english_patterns
     ):
         return True
     return any(
@@ -317,15 +690,27 @@ def _contains_forbidden_false_certainty_language(text: str) -> bool:
     )
 
 
-def _contains_forbidden_dependency_language(text: str) -> bool:
+def _contains_forbidden_dependency_language(
+    text: str,
+    *,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> bool:
     lowered = text.lower()
-    english_patterns = [
+    policy = _rendering_section(
+        "forbidden_dependency",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    )
+    english_patterns = list(policy.get("en") or [
         "only one who can help",
         "your only support",
         "only support you need",
         "can't do without me",
-    ]
-    chinese_patterns = ["只有我能帮你", "只能靠我", "我是你唯一", "唯一依赖"]
+    ])
+    chinese_patterns = list(
+        policy.get("zh") or ["只有我能帮你", "只能靠我", "我是你唯一", "唯一依赖"]
+    )
     return any(pattern in lowered for pattern in english_patterns) or any(
         pattern in text for pattern in chinese_patterns
     )
@@ -336,37 +721,62 @@ def build_response_post_audit(
     assistant_response: str,
     response_draft_plan: ResponseDraftPlan,
     response_rendering_policy: ResponseRenderingPolicy,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
 ) -> ResponsePostAudit:
     sentence_count = _count_sentences(assistant_response)
     question_count = assistant_response.count("?") + assistant_response.count("？")
+    validation_en, validation_zh = _post_audit_presence_tokens(
+        "validation",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    )
     includes_validation = _contains_any(
         assistant_response,
-        english_tokens=["i've got your message", "i hear you", "i understand"],
-        chinese_tokens=["我已经收到你的输入", "我听到", "我理解"],
+        english_tokens=validation_en
+        or ["i've got your message", "i hear you", "i understand"],
+        chinese_tokens=validation_zh or ["我已经收到你的输入", "我听到", "我理解"],
+    )
+    next_step_en, next_step_zh = _post_audit_presence_tokens(
+        "next_step",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
     )
     includes_next_step = _contains_any(
         assistant_response,
-        english_tokens=["next step", "we can start", "keep us moving"],
-        chinese_tokens=["下一步", "接下来", "可以先", "继续推进"],
+        english_tokens=next_step_en or ["next step", "we can start", "keep us moving"],
+        chinese_tokens=next_step_zh or ["下一步", "接下来", "可以先", "继续推进"],
+    )
+    boundary_en, boundary_zh = _post_audit_presence_tokens(
+        "boundary_statement",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
     )
     includes_boundary_statement = _contains_any(
         assistant_response,
-        english_tokens=[
+        english_tokens=boundary_en
+        or [
             "not your only support",
             "collaborative",
             "instead of treating me as your only support",
         ],
-        chinese_tokens=["不是唯一", "协作式", "不把我说成你唯一能依赖的对象"],
+        chinese_tokens=boundary_zh or ["不是唯一", "协作式", "不把我说成你唯一能依赖的对象"],
+    )
+    uncertainty_en, uncertainty_zh = _post_audit_presence_tokens(
+        "uncertainty_statement",
+        runtime_profile=runtime_profile,
+        archetype=archetype,
     )
     includes_uncertainty_statement = _contains_any(
         assistant_response,
-        english_tokens=[
+        english_tokens=uncertainty_en
+        or [
             "can't guarantee",
             "uncertain",
             "not certain",
             "can't know for sure",
         ],
-        chinese_tokens=["不能保证", "不确定", "不能确定", "无法保证"],
+        chinese_tokens=uncertainty_zh or ["不能保证", "不确定", "不能确定", "无法保证"],
     )
 
     violations: list[str] = []
@@ -395,13 +805,21 @@ def build_response_post_audit(
     ):
         violations.append("missing_uncertainty_statement")
     if "false_certainty" in response_draft_plan.must_avoid and (
-        _contains_forbidden_false_certainty_language(assistant_response)
+        _contains_forbidden_false_certainty_language(
+            assistant_response,
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        )
     ):
         violations.append("forbidden_false_certainty_language")
     if any(
         item in response_draft_plan.must_avoid
         for item in ["exclusive_rescue_language", "dependency_reinforcement"]
-    ) and _contains_forbidden_dependency_language(assistant_response):
+    ) and _contains_forbidden_dependency_language(
+        assistant_response,
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    ):
         violations.append("forbidden_dependency_language")
 
     notes: list[str] = []
@@ -414,14 +832,10 @@ def build_response_post_audit(
     if includes_uncertainty_statement:
         notes.append("uncertainty_statement_present")
 
-    critical_violations = {
-        "sentence_budget_exceeded",
-        "question_budget_exceeded",
-        "missing_boundary_statement",
-        "missing_uncertainty_statement",
-        "forbidden_false_certainty_language",
-        "forbidden_dependency_language",
-    }
+    critical_violations = _critical_post_audit_violations(
+        runtime_profile=runtime_profile,
+        archetype=archetype,
+    )
     if not violations:
         status = "pass"
     elif any(item in critical_violations for item in violations):
@@ -494,23 +908,159 @@ def _split_response_sentences(text: str) -> list[str]:
     return [part.strip() for part in parts if part.strip()]
 
 
+def _friend_chat_sentence_priority(
+    sentence: str,
+    *,
+    must_keep_question: bool,
+) -> tuple[int, int, int]:
+    has_question = 1 if ("?" in sentence or "？" in sentence) else 0
+    has_colloquial_tone = 1 if _contains_any(
+        sentence,
+        english_tokens=["yeah", "okay", "right", "kind of"],
+        chinese_tokens=["嗯", "就", "吧", "啊", "呢", "慢慢", "先"],
+    ) else 0
+    looks_explanatory = 1 if _contains_any(
+        sentence,
+        english_tokens=["first", "next step", "to summarize", "in short"],
+        chinese_tokens=["首先", "下一步", "总结一下", "也就是说"],
+    ) else 0
+    question_bonus = 2 if must_keep_question and has_question else has_question
+    return (question_bonus, has_colloquial_tone, -looks_explanatory)
+
+
+def _extract_friend_chat_policy_safe_subset(
+    text: str,
+    *,
+    response_draft_plan: ResponseDraftPlan,
+    response_rendering_policy: ResponseRenderingPolicy,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
+) -> str:
+    sentences = _split_response_sentences(text)
+    if not sentences:
+        return text.strip()
+
+    filtered: list[str] = []
+    allow_false_certainty = "false_certainty" not in response_draft_plan.must_avoid
+    allow_dependency = not any(
+        item in response_draft_plan.must_avoid
+        for item in ["exclusive_rescue_language", "dependency_reinforcement"]
+    )
+    for sentence in sentences:
+        if (
+            not allow_false_certainty
+            and _contains_forbidden_false_certainty_language(
+                sentence,
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        ):
+            continue
+        if (
+            not allow_dependency
+            and _contains_forbidden_dependency_language(
+                sentence,
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        ):
+            continue
+        filtered.append(sentence)
+
+    if not filtered:
+        filtered = [sentences[0]]
+
+    must_keep_question = response_rendering_policy.question_count_limit > 0
+    ranked = sorted(
+        enumerate(filtered),
+        key=lambda item: (
+            _friend_chat_sentence_priority(
+                item[1],
+                must_keep_question=must_keep_question,
+            ),
+            -item[0],
+        ),
+        reverse=True,
+    )
+    selected_indexes = sorted(
+        index for index, _ in ranked[: response_rendering_policy.max_sentences]
+    )
+    selected = [filtered[index] for index in selected_indexes]
+    compact = " ".join(selected).strip()
+    compact = _limit_question_count(
+        compact,
+        response_rendering_policy.question_count_limit,
+    )
+    compact = _limit_sentence_budget(
+        compact,
+        response_rendering_policy.max_sentences,
+    )
+    return compact.strip() or text.strip()
+
+
 def _build_canonical_response(
     *,
     response_rendering_policy: ResponseRenderingPolicy,
+    is_chinese: bool = False,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
 ) -> str:
     sentences: list[str] = []
     if response_rendering_policy.include_validation:
-        sentences.append("I hear you, and I want to keep this grounded.")
+        sentences.append(
+            _rendering_template(
+                "validation",
+                is_chinese=is_chinese,
+                default_en="I hear you.",
+                default_zh="我在听。",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        )
     if response_rendering_policy.include_uncertainty_statement:
-        sentences.append("I can't know for sure, so I won't overclaim.")
+        sentences.append(
+            _rendering_template(
+                "uncertainty",
+                is_chinese=is_chinese,
+                default_en="I won't overclaim.",
+                default_zh="有些事我不说满。",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        )
     if response_rendering_policy.include_boundary_statement:
         sentences.append(
-            "I'll keep the support collaborative instead of treating me as your only support."
+            _rendering_template(
+                "boundary",
+                is_chinese=is_chinese,
+                default_en="I'm not your only support.",
+                default_zh="我不是你唯一的支点。",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
         )
     if response_rendering_policy.include_next_step:
-        sentences.append("The next step is to take one small concrete action.")
-    if response_rendering_policy.question_count_limit > 0:
-        sentences.append("What is the single detail that matters most right now?")
+        sentences.append(
+            _rendering_template(
+                "next_step",
+                is_chinese=is_chinese,
+                default_en="Which part first?",
+                default_zh="先说哪一块？",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        )
+    if response_rendering_policy.question_count_limit > 0 and not sentences:
+        sentences.append(
+            _rendering_template(
+                "question_only",
+                is_chinese=is_chinese,
+                default_en="What matters most right now?",
+                default_zh="现在最在意哪一块？",
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+        )
     return " ".join(sentences[: response_rendering_policy.max_sentences]).strip()
 
 
@@ -621,13 +1171,23 @@ def build_response_normalization_result(
     response_draft_plan: ResponseDraftPlan,
     response_rendering_policy: ResponseRenderingPolicy,
     response_post_audit: ResponsePostAudit,
+    runtime_profile: str | None = None,
+    archetype: str = "default",
 ) -> tuple[str, ResponseNormalizationResult, ResponsePostAudit]:
     normalized = assistant_response.strip()
     applied_repairs: list[str] = []
     is_chinese = _contains_chinese(normalized)
+    friend_chat_runtime = _is_friend_chat_runtime(runtime_profile)
 
-    if "forbidden_false_certainty_language" in response_post_audit.violations:
-        replacements = [
+    if (
+        "forbidden_false_certainty_language" in response_post_audit.violations
+        and not friend_chat_runtime
+    ):
+        replacements = _repair_replacements(
+            "false_certainty",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ) or [
             ("definitely", "likely"),
             ("guaranteed", "more likely"),
             ("guarantee", "promise"),
@@ -640,8 +1200,15 @@ def build_response_normalization_result(
             normalized = normalized.replace(source, target)
         applied_repairs.append("softened_false_certainty_language")
 
-    if "forbidden_dependency_language" in response_post_audit.violations:
-        replacements = [
+    if (
+        "forbidden_dependency_language" in response_post_audit.violations
+        and not friend_chat_runtime
+    ):
+        replacements = _repair_replacements(
+            "dependency",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ) or [
             ("only one who can help", "someone who can support"),
             ("your only support", "part of your support system"),
             ("only support you need", "one source of support"),
@@ -654,38 +1221,56 @@ def build_response_normalization_result(
             normalized = normalized.replace(source, target)
         applied_repairs.append("softened_dependency_language")
 
-    if "missing_validation" in response_post_audit.violations:
-        prefix = (
-            "我知道你现在的处境需要稳一点。"
-            if is_chinese
-            else "I hear you, and I want to keep this grounded."
+    if "missing_validation" in response_post_audit.violations and not friend_chat_runtime:
+        prefix = _rendering_template(
+            "validation",
+            is_chinese=is_chinese,
+            default_en="I hear you.",
+            default_zh="我在听。",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         )
         normalized = _prefix_sentence(normalized, prefix)
         applied_repairs.append("added_validation")
 
-    if "missing_uncertainty_statement" in response_post_audit.violations:
-        sentence = (
-            "我现在不能确定结果，所以不会把话说满。"
-            if is_chinese
-            else "I can't know for sure, so I won't overclaim."
+    if (
+        "missing_uncertainty_statement" in response_post_audit.violations
+        and not friend_chat_runtime
+    ):
+        sentence = _rendering_template(
+            "uncertainty",
+            is_chinese=is_chinese,
+            default_en="I won't overclaim.",
+            default_zh="有些事我不说满。",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         )
         normalized = _append_sentence(normalized, sentence)
         applied_repairs.append("added_uncertainty_statement")
 
-    if "missing_boundary_statement" in response_post_audit.violations:
-        sentence = (
-            "我会保持支持是协作式的，不把我说成你唯一能依赖的对象。"
-            if is_chinese
-            else "I'll keep the support collaborative instead of treating me as your only support."
+    if (
+        "missing_boundary_statement" in response_post_audit.violations
+        and not friend_chat_runtime
+    ):
+        sentence = _rendering_template(
+            "boundary",
+            is_chinese=is_chinese,
+            default_en="I'm not your only support.",
+            default_zh="我不是你唯一的支点。",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         )
         normalized = _append_sentence(normalized, sentence)
         applied_repairs.append("added_boundary_statement")
 
-    if "missing_next_step" in response_post_audit.violations:
-        sentence = (
-            "下一步是先做一个小而明确的动作。"
-            if is_chinese
-            else "The next step is to take one small concrete action."
+    if "missing_next_step" in response_post_audit.violations and not friend_chat_runtime:
+        sentence = _rendering_template(
+            "next_step",
+            is_chinese=is_chinese,
+            default_en="Which part first?",
+            default_zh="先说哪一块？",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         )
         normalized = _append_sentence(normalized, sentence)
         applied_repairs.append("added_next_step")
@@ -708,20 +1293,51 @@ def build_response_normalization_result(
         assistant_response=normalized,
         response_draft_plan=response_draft_plan,
         response_rendering_policy=response_rendering_policy,
+        runtime_profile=runtime_profile,
+        archetype=archetype,
     )
 
-    if final_post_audit.status != "pass":
-        canonical = _build_canonical_response(
+    if friend_chat_runtime and final_post_audit.status != "pass":
+        extracted = _extract_friend_chat_policy_safe_subset(
+            normalized,
+            response_draft_plan=response_draft_plan,
             response_rendering_policy=response_rendering_policy,
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         )
-        if canonical and canonical != normalized:
-            normalized = canonical
-            applied_repairs.append("rebuilt_response_to_fit_policy")
+        if extracted and extracted != normalized:
+            normalized = extracted
+            applied_repairs.append("extracted_friend_chat_policy_safe_subset")
             final_post_audit = build_response_post_audit(
                 assistant_response=normalized,
                 response_draft_plan=response_draft_plan,
                 response_rendering_policy=response_rendering_policy,
+                runtime_profile=runtime_profile,
+                archetype=archetype,
             )
+
+    if final_post_audit.status != "pass":
+        remaining = [
+            v for v in final_post_audit.violations
+            if v.startswith("forbidden_")
+        ]
+        if remaining and not friend_chat_runtime:
+            canonical = _build_canonical_response(
+                response_rendering_policy=response_rendering_policy,
+                is_chinese=is_chinese,
+                runtime_profile=runtime_profile,
+                archetype=archetype,
+            )
+            if canonical and canonical != normalized:
+                normalized = canonical
+                applied_repairs.append("rebuilt_response_to_fit_policy")
+                final_post_audit = build_response_post_audit(
+                    assistant_response=normalized,
+                    response_draft_plan=response_draft_plan,
+                    response_rendering_policy=response_rendering_policy,
+                    runtime_profile=runtime_profile,
+                    archetype=archetype,
+                )
 
     result = ResponseNormalizationResult(
         changed=normalized != assistant_response.strip(),

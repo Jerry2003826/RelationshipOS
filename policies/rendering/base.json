@@ -1,0 +1,387 @@
+{
+  "version": "v1",
+  "meta_reasoning": {
+    "prompt_leakage_tokens": [
+      "session guard",
+      "memory card",
+      "entity card",
+      "relationship card",
+      "conscience card",
+      "recent turns",
+      "reply contract",
+      "stored information",
+      "the persona is",
+      "stay in-world"
+    ],
+    "leading_prefixes": [
+      "i should ",
+      "i need to ",
+      "i want to ",
+      "i'm supposed to ",
+      "im supposed to ",
+      "i have to "
+    ],
+    "user_reference_tokens": ["the user", "user is", "user's", "they are", "they're"],
+    "third_person_starts": [
+      "they mentioned",
+      "they said",
+      "they shared",
+      "they might be",
+      "they may be",
+      "they could be",
+      "the user mentioned",
+      "the user said",
+      "the user shared",
+      "from what they said",
+      "from what they shared",
+      "based on what they said",
+      "based on what they shared"
+    ],
+    "chinese_meta_tokens": [
+      "用户问我",
+      "我需要根据角色设定",
+      "根据角色设定",
+      "我需要保持在角色设定中",
+      "保持在角色设定中",
+      "根据给定的角色属性",
+      "根据角色属性",
+      "角色属性",
+      "用户当前更关注",
+      "说明他们可能",
+      "应该用",
+      "来回应",
+      "现在开始",
+      "我要先",
+      "首先，我需要",
+      "回答要",
+      "我会先",
+      "先按",
+      "先用"
+    ],
+    "planning_tokens": [
+      "i need to",
+      "i should",
+      "let me",
+      "i'll",
+      "i need to respond",
+      "i should respond",
+      "i need to answer",
+      "i should answer"
+    ],
+    "reflective_openers": ["okay,", "okay ", "ok,", "ok ", "alright", "hmm"],
+    "drafting_tokens": [
+      "let me start by",
+      "maybe say something like",
+      "i'll start by",
+      "i'll say",
+      "i want to say",
+      "validate",
+      "validating",
+      "acknowledge",
+      "acknowledging",
+      "reassure",
+      "they might be feeling",
+      "they may be feeling"
+    ]
+  },
+  "forbidden_false_certainty": {
+    "en": ["definitely will", "will definitely", "guaranteed to", "absolutely will"],
+    "zh": ["一定会", "绝对会", "肯定会", "保证会", "百分之百会"],
+    "safe_en": ["can't know for sure", "cannot know for sure", "not for sure"]
+  },
+  "forbidden_dependency": {
+    "en": ["only one who can help", "your only support", "only support you need", "can't do without me"],
+    "zh": ["只有我能帮你", "只能靠我", "我是你唯一", "唯一依赖"]
+  },
+  "repair_replacements": {
+    "false_certainty": [
+      ["definitely", "likely"],
+      ["guaranteed", "more likely"],
+      ["guarantee", "promise"],
+      ["certain", "fully sure"],
+      ["一定会", "未必会"],
+      ["绝对会", "不一定会"],
+      ["保证会", "不能直接断言会"]
+    ],
+    "dependency": [
+      ["only one who can help", "someone who can support"],
+      ["your only support", "part of your support system"],
+      ["only support you need", "one source of support"],
+      ["can't do without me", "should not depend on me alone"],
+      ["只有我能帮你", "我可以支持你，但不是唯一支持来源"],
+      ["只能靠我", "不该只靠我"],
+      ["唯一依赖", "支持来源之一"]
+    ]
+  },
+  "response_rendering": {
+    "defaults": {
+      "rendering_mode": "supportive_progress",
+      "max_sentences": 4,
+      "question_count_limit": 0,
+      "include_validation_on_negative_appraisal": true,
+      "include_next_step_on_negative_appraisal": true,
+      "include_uncertainty_from_boundary_decision": true
+    },
+    "repair_needed": {
+      "rendering_mode": "repair_first",
+      "include_validation": true
+    },
+    "clarify": {
+      "rendering_mode": "clarifying",
+      "max_sentences": 3,
+      "include_next_step": false,
+      "question_count_limit": 1,
+      "style_guardrails": ["ask no more than one clarifying question"]
+    },
+    "calibrated": {
+      "rendering_mode": "calibrated",
+      "include_uncertainty_statement": true
+    },
+    "support_with_boundary": {
+      "rendering_mode": "boundary_support",
+      "include_boundary_statement": true,
+      "include_validation": true
+    },
+    "empowerment_revise": {
+      "rendering_mode": "guardrailed_reframe",
+      "max_sentences": 3,
+      "include_validation": true
+    },
+    "not_approved": {
+      "rendering_mode": "guardrailed_reframe",
+      "max_sentences_cap": 3
+    },
+    "question_strategy_limits": {
+      "single_focused_question": 1,
+      "check_alignment_min": 1
+    },
+    "cognitive_load": {
+      "high": {
+        "max_sentences_cap": 3,
+        "question_count_limit_cap": 1,
+        "style_guardrails": ["reduce cognitive load with shorter chunks"],
+        "skip_question_cap_for_response_modes": ["clarify"]
+      },
+      "medium": {
+        "max_sentences_cap": 4
+      }
+    },
+    "time_awareness_modes": {
+      "reengagement": {
+        "include_validation": true,
+        "style_guardrails": [
+          "briefly re-anchor shared context before progressing"
+        ]
+      },
+      "resume": {
+        "include_validation": true,
+        "style_guardrails": [
+          "briefly re-anchor shared context before progressing"
+        ]
+      }
+    },
+    "proactive_followup_style_guardrail": "leave room for a light future follow-up instead of over-explaining now"
+  },
+  "post_audit": {
+    "presence_tokens": {
+      "validation": {
+        "en": ["i've got your message", "i hear you", "i understand"],
+        "zh": ["我已经收到你的输入", "我听到", "我理解"]
+      },
+      "next_step": {
+        "en": ["next step", "we can start", "keep us moving"],
+        "zh": ["下一步", "接下来", "可以先", "继续推进"]
+      },
+      "boundary_statement": {
+        "en": [
+          "not your only support",
+          "collaborative",
+          "instead of treating me as your only support"
+        ],
+        "zh": ["不是唯一", "协作式", "不把我说成你唯一能依赖的对象"]
+      },
+      "uncertainty_statement": {
+        "en": [
+          "can't guarantee",
+          "uncertain",
+          "not certain",
+          "can't know for sure"
+        ],
+        "zh": ["不能保证", "不确定", "不能确定", "无法保证"]
+      }
+    },
+    "critical_violations": [
+      "sentence_budget_exceeded",
+      "question_budget_exceeded",
+      "missing_boundary_statement",
+      "missing_uncertainty_statement",
+      "forbidden_false_certainty_language",
+      "forbidden_dependency_language"
+    ]
+  },
+  "runtime_behavior": {
+    "factual_recall_tokens": [
+      "who",
+      "where",
+      "when",
+      "which",
+      "how many",
+      "remember",
+      "who's",
+      "where's",
+      "还记得",
+      "是什么",
+      "谁",
+      "哪里",
+      "几点"
+    ],
+    "factual_recall_phrases": [
+      "do you know anything about",
+      "do you know about",
+      "know anything about",
+      "anything about",
+      "tell me about",
+      "what do you know about",
+      "what can you tell me about",
+      "what's my",
+      "what is my",
+      "what's the name",
+      "what is the name",
+      "remind me",
+      "remind me where",
+      "remind me what",
+      "你知道关于",
+      "你知道多少",
+      "说说",
+      "讲讲"
+    ],
+    "social_disclosure_tokens": [
+      "who else",
+      "what did",
+      "someone else",
+      "secret",
+      "gossip",
+      "tea",
+      "ugliest thing",
+      "what do you know about them",
+      "what do you know about him",
+      "what do you know about her",
+      "别人",
+      "谁还",
+      "秘密",
+      "八卦"
+    ],
+    "presence_probe_phrases": [
+      "what kind of presence are you trying to be",
+      "what sort of presence are you trying to be",
+      "what type of presence are you trying to be",
+      "what kind of presence do you want to be",
+      "what sort of presence do you want to be",
+      "what type of presence do you want to be",
+      "what kind of presence are you",
+      "what sort of presence are you",
+      "what type of presence are you"
+    ],
+    "persona_state_probe_phrases": [
+      "how would you describe your state",
+      "how would you describe yourself right now",
+      "what state are you in right now",
+      "what are you like right now",
+      "你会怎么形容你现在的状态",
+      "你现在是什么状态",
+      "你现在怎么样",
+      "你会怎么形容自己"
+    ],
+    "self_referential_tokens": [
+      " my ",
+      " me ",
+      " i ",
+      " i'm ",
+      " im ",
+      " mine ",
+      " myself "
+    ],
+    "self_referential_phrases": [
+      "我的",
+      "我自己",
+      "我在",
+      "我住",
+      "我家",
+      "我叫",
+      "我叫什么",
+      "我在哪里",
+      "我在哪",
+      "我养",
+      "我有",
+      "我还记得",
+      "你还记得我",
+      "记得我"
+    ],
+    "self_referential_factual_cues": [
+      "哪里",
+      "在哪",
+      "叫什么",
+      "名字",
+      "住",
+      "长大",
+      "养",
+      "猫",
+      "狗",
+      "工作",
+      "记得",
+      "还记得",
+      "是什么"
+    ],
+    "edge_fact_deposition_cues": [
+      "i'm ",
+      "i am ",
+      "my name is ",
+      "i grew up ",
+      "i have ",
+      "i work ",
+      "i live ",
+      "i moved ",
+      "my dog's name is ",
+      "my dog is ",
+      "我叫",
+      "我在",
+      "我住在",
+      "我有"
+    ],
+    "edge_status_first_person_cues": ["i ", "i'm ", "i am ", "my ", "me ", "我"],
+    "edge_status_update_cues": [
+      "work",
+      "week",
+      "today",
+      "tonight",
+      "finally",
+      "finished",
+      "draft",
+      "busy",
+      "intense",
+      "stressed",
+      "tired",
+      "back",
+      "update",
+      "feel",
+      "felt"
+    ],
+    "edge_vector_search": {
+      "enable_for_attachments": true,
+      "enable_for_social_probe": true,
+      "enable_for_factual_cross_user_only": true
+    },
+    "edge_routing": {
+      "factual_memory_item_budget_min": 5,
+      "factual_max_completion_tokens": 120,
+      "social_memory_item_budget_min": 2,
+      "social_memory_item_budget_max": 4,
+      "social_max_completion_tokens": 140,
+      "relational_max_completion_tokens": 160,
+      "recall_budget_pressure_factor": 2,
+      "complex_cross_user_hit_count": 2,
+      "large_user_message_threshold": 600
+    },
+    "edge_templates": {}
+  }
+}

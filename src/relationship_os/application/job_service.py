@@ -123,6 +123,16 @@ class JobRecord:
         }
 
 
+@dataclass(slots=True)
+class _OfflineConsolidationResult:
+    completed_at: str
+    evaluation: dict[str, Any]
+    report: Any
+    snapshot: Any
+    result: dict[str, Any]
+    archive_status: Any
+
+
 class JobService:
     def __init__(
         self,
@@ -130,10 +140,14 @@ class JobService:
         stream_service: StreamService,
         evaluation_service: EvaluationService,
         default_max_attempts: int,
+        runtime_projector_version: str = "v2",
+        entity_service: Any | None = None,
     ) -> None:
         self._stream_service = stream_service
         self._evaluation_service = evaluation_service
         self._default_max_attempts = max(1, default_max_attempts)
+        self._runtime_projector_version = runtime_projector_version
+        self._entity_service = entity_service
 
     async def create_offline_consolidation_job(
         self,
@@ -328,142 +342,213 @@ class JobService:
         await self._append_session_events(
             session_id=record.session_id,
             events=[
-                NewEvent(
-                    event_type=BACKGROUND_JOB_STARTED,
-                    payload={
-                        "job_id": record.job_id,
-                        "job_type": record.job_type,
-                        "session_id": record.session_id,
-                        "status": "running",
-                        "started_at": started_at,
-                        "created_at": record.created_at,
-                        "metadata": dict(record.metadata),
-                        "attempt_count": attempt_count,
-                        "max_attempts": record.max_attempts,
-                        "worker_id": worker_id,
-                        "claim_owner": record.claim_owner,
-                        "claim_token": record.claim_token,
-                        "claimed_at": record.claimed_at,
-                        "lease_expires_at": record.lease_expires_at,
-                    },
+                self._build_job_started_event(
+                    record=record,
+                    attempt_count=attempt_count,
+                    started_at=started_at,
+                    worker_id=worker_id,
                 )
             ],
         )
 
         try:
-            runtime_projection = await self._stream_service.project_stream(
-                stream_id=record.session_id,
-                projector_name="session-runtime",
-                projector_version="v1",
-            )
-            evaluation = await self._evaluation_service.evaluate_session(
-                session_id=record.session_id
-            )
-            report = build_offline_consolidation_report(
-                session_id=record.session_id,
-                runtime_projection=runtime_projection,
-                evaluation=evaluation,
-            )
-            completed_at = utc_now().isoformat()
-            snapshot = build_session_snapshot(
-                snapshot_id=f"snapshot-{uuid4().hex[:12]}",
-                created_at=completed_at,
-                source_job_id=record.job_id,
-                evaluation_summary=evaluation["summary"],
-                report=report,
-                fingerprint=self._stream_service.fingerprint_value(
-                    {
-                        "runtime_state": runtime_projection["state"],
-                        "evaluation_summary": evaluation["summary"],
-                        "report": asdict(report),
-                    }
-                ),
-            )
-            result = {
-                "job_id": record.job_id,
-                "job_type": record.job_type,
-                "session_id": record.session_id,
-                "completed_at": completed_at,
-                "report": asdict(report),
-                "snapshot": asdict(snapshot),
-                "evaluation_summary": evaluation["summary"],
-            }
-            session_events = [
-                NewEvent(
-                    event_type=OFFLINE_CONSOLIDATION_COMPLETED,
-                    payload=result,
-                ),
-                NewEvent(
-                    event_type=SESSION_SNAPSHOT_CREATED,
-                    payload=asdict(snapshot),
-                ),
-            ]
-            archive_status = build_archive_status(
-                created_at=completed_at,
-                snapshot=snapshot,
-                report=report,
-            )
-            if archive_status.archived:
-                session_events.append(
-                    NewEvent(
-                        event_type=SESSION_ARCHIVED,
-                        payload=asdict(archive_status),
-                    )
-                )
-            session_events.append(
-                NewEvent(
-                    event_type=BACKGROUND_JOB_COMPLETED,
-                    payload={
-                        "job_id": record.job_id,
-                        "job_type": record.job_type,
-                        "session_id": record.session_id,
-                        "status": "completed",
-                        "created_at": record.created_at,
-                        "metadata": dict(record.metadata),
-                        "attempt_count": attempt_count,
-                        "max_attempts": record.max_attempts,
-                        "completed_at": completed_at,
-                        "worker_id": worker_id,
-                        "claim_owner": record.claim_owner,
-                        "claim_token": record.claim_token,
-                        "result": result,
-                    },
-                )
-            )
+            consolidation = await self._run_offline_consolidation(record=record)
             await self._append_session_events(
                 session_id=record.session_id,
-                events=session_events,
+                events=self._build_job_completion_events(
+                    record=record,
+                    attempt_count=attempt_count,
+                    worker_id=worker_id,
+                    consolidation=consolidation,
+                ),
             )
         except Exception as exc:
             completed_at = utc_now().isoformat()
             await self._append_session_events(
                 session_id=record.session_id,
                 events=[
-                    NewEvent(
-                        event_type=BACKGROUND_JOB_FAILED,
-                        payload={
-                            "job_id": record.job_id,
-                            "job_type": record.job_type,
-                            "session_id": record.session_id,
-                            "status": "failed",
-                            "created_at": record.created_at,
-                            "metadata": dict(record.metadata),
-                            "attempt_count": attempt_count,
-                            "max_attempts": record.max_attempts,
-                            "completed_at": completed_at,
-                            "worker_id": worker_id,
-                            "claim_owner": record.claim_owner,
-                            "claim_token": record.claim_token,
-                            "error": {
-                                "error_type": type(exc).__name__,
-                                "message": str(exc),
-                            },
-                        },
+                    self._build_job_failed_event(
+                        record=record,
+                        attempt_count=attempt_count,
+                        worker_id=worker_id,
+                        completed_at=completed_at,
+                        exc=exc,
                     )
                 ],
             )
 
         return await self.get_job(job_id=job_id)
+
+    def _build_job_started_event(
+        self,
+        *,
+        record: JobRecord,
+        attempt_count: int,
+        started_at: str,
+        worker_id: str | None,
+    ) -> NewEvent:
+        return NewEvent(
+            event_type=BACKGROUND_JOB_STARTED,
+            payload={
+                "job_id": record.job_id,
+                "job_type": record.job_type,
+                "session_id": record.session_id,
+                "status": "running",
+                "started_at": started_at,
+                "created_at": record.created_at,
+                "metadata": dict(record.metadata),
+                "attempt_count": attempt_count,
+                "max_attempts": record.max_attempts,
+                "worker_id": worker_id,
+                "claim_owner": record.claim_owner,
+                "claim_token": record.claim_token,
+                "claimed_at": record.claimed_at,
+                "lease_expires_at": record.lease_expires_at,
+            },
+        )
+
+    async def _run_offline_consolidation(
+        self,
+        *,
+        record: JobRecord,
+    ) -> _OfflineConsolidationResult:
+        runtime_projection = await self._stream_service.project_stream(
+            stream_id=record.session_id,
+            projector_name="session-runtime",
+            projector_version=self._runtime_projector_version,
+        )
+        evaluation = await self._evaluation_service.evaluate_session(
+            session_id=record.session_id
+        )
+        report = build_offline_consolidation_report(
+            session_id=record.session_id,
+            runtime_projection=runtime_projection,
+            evaluation=evaluation,
+        )
+        completed_at = utc_now().isoformat()
+        snapshot = build_session_snapshot(
+            snapshot_id=f"snapshot-{uuid4().hex[:12]}",
+            created_at=completed_at,
+            source_job_id=record.job_id,
+            evaluation_summary=evaluation["summary"],
+            report=report,
+            fingerprint=self._stream_service.fingerprint_value(
+                {
+                    "runtime_state": runtime_projection["state"],
+                    "evaluation_summary": evaluation["summary"],
+                    "report": asdict(report),
+                }
+            ),
+        )
+        result = {
+            "job_id": record.job_id,
+            "job_type": record.job_type,
+            "session_id": record.session_id,
+            "completed_at": completed_at,
+            "report": asdict(report),
+            "snapshot": asdict(snapshot),
+            "evaluation_summary": evaluation["summary"],
+        }
+        archive_status = build_archive_status(
+            created_at=completed_at,
+            snapshot=snapshot,
+            report=report,
+        )
+        entity_consolidation: dict[str, Any] | None = None
+        if self._entity_service is not None:
+            entity_consolidation = await self._entity_service.consolidate_offline_state(
+                session_id=record.session_id,
+                report_summary=report.summary,
+                recommended_actions=list(report.recommended_actions),
+                evaluation_summary=evaluation["summary"],
+            )
+            result["entity_consolidation"] = entity_consolidation
+        return _OfflineConsolidationResult(
+            completed_at=completed_at,
+            evaluation=evaluation,
+            report=report,
+            snapshot=snapshot,
+            result=result,
+            archive_status=archive_status,
+        )
+
+    def _build_job_completion_events(
+        self,
+        *,
+        record: JobRecord,
+        attempt_count: int,
+        worker_id: str | None,
+        consolidation: _OfflineConsolidationResult,
+    ) -> list[NewEvent]:
+        session_events = [
+            NewEvent(
+                event_type=OFFLINE_CONSOLIDATION_COMPLETED,
+                payload=consolidation.result,
+            ),
+            NewEvent(
+                event_type=SESSION_SNAPSHOT_CREATED,
+                payload=asdict(consolidation.snapshot),
+            ),
+        ]
+        if consolidation.archive_status.archived:
+            session_events.append(
+                NewEvent(
+                    event_type=SESSION_ARCHIVED,
+                    payload=asdict(consolidation.archive_status),
+                )
+            )
+        session_events.append(
+            NewEvent(
+                event_type=BACKGROUND_JOB_COMPLETED,
+                payload={
+                    "job_id": record.job_id,
+                    "job_type": record.job_type,
+                    "session_id": record.session_id,
+                    "status": "completed",
+                    "created_at": record.created_at,
+                    "metadata": dict(record.metadata),
+                    "attempt_count": attempt_count,
+                    "max_attempts": record.max_attempts,
+                    "completed_at": consolidation.completed_at,
+                    "worker_id": worker_id,
+                    "claim_owner": record.claim_owner,
+                    "claim_token": record.claim_token,
+                    "result": consolidation.result,
+                },
+            )
+        )
+        return session_events
+
+    def _build_job_failed_event(
+        self,
+        *,
+        record: JobRecord,
+        attempt_count: int,
+        worker_id: str | None,
+        completed_at: str,
+        exc: Exception,
+    ) -> NewEvent:
+        return NewEvent(
+            event_type=BACKGROUND_JOB_FAILED,
+            payload={
+                "job_id": record.job_id,
+                "job_type": record.job_type,
+                "session_id": record.session_id,
+                "status": "failed",
+                "created_at": record.created_at,
+                "metadata": dict(record.metadata),
+                "attempt_count": attempt_count,
+                "max_attempts": record.max_attempts,
+                "completed_at": completed_at,
+                "worker_id": worker_id,
+                "claim_owner": record.claim_owner,
+                "claim_token": record.claim_token,
+                "error": {
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                },
+            },
+        )
 
     async def get_job(self, *, job_id: str) -> dict[str, Any]:
         return (await self._get_job_record(job_id)).to_dict()

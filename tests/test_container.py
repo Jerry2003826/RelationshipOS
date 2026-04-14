@@ -1,7 +1,7 @@
 import pytest
 
 from relationship_os.application.container import build_container
-from relationship_os.application.llm import LiteLLMClient, MockLLMClient
+from relationship_os.application.llm import LiteLLMClient, MiniMaxClient, MockLLMClient
 from relationship_os.core.config import Settings
 from relationship_os.infrastructure.event_store.memory import InMemoryEventStore
 from relationship_os.infrastructure.event_store.postgres import PostgresEventStore
@@ -22,6 +22,7 @@ def test_build_container_defaults_to_in_memory_event_store() -> None:
     assert container.runtime_service is not None
     assert container.llm_client is not None
     assert container.database_engine is None
+    assert container.memory_service._factual_backend_mode == "mem0_shadow"
 
 
 def test_build_container_can_switch_to_postgres_event_store() -> None:
@@ -58,3 +59,15 @@ def test_build_container_can_switch_to_litellm_client() -> None:
     )
 
     assert isinstance(container.llm_client, LiteLLMClient)
+
+
+def test_build_container_can_switch_to_minimax_client() -> None:
+    container = build_container(
+        Settings(
+            llm_backend="minimax",
+            llm_model="M2-her",
+            llm_api_base="https://api.minimax.io",
+        )
+    )
+
+    assert isinstance(container.llm_client, MiniMaxClient)

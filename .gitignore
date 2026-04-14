@@ -1,9 +1,16 @@
 .env
 .venv/
+.cursor/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+benchmark_results/
+benchmark_results*/
+benchmark_archive_*/
+.playwright-cli/
+.relationship_os/
+.pytest_memory_index/
 dist/
 build/
 *.pyc

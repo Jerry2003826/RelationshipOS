@@ -2751,11 +2751,11 @@ def test_session_evaluation_tracks_continuous_output_mode() -> None:
     summary = evaluation_response.json()["summary"]
 
     assert summary["turn_count"] == 1
-    assert summary["assistant_message_event_count"] == 2
-    assert summary["continuous_output_turn_count"] == 1
-    assert summary["continuous_output_segment_total"] == 2
-    assert summary["latest_response_sequence_mode"] == "two_part_sequence"
-    assert summary["latest_response_sequence_unit_count"] == 2
+    assert summary["assistant_message_event_count"] == 1
+    assert summary["continuous_output_turn_count"] == 0
+    assert summary["continuous_output_segment_total"] == 0
+    assert summary["latest_response_sequence_mode"] == "single_message"
+    assert summary["latest_response_sequence_unit_count"] == 1
 
 
 def test_session_evaluation_tracks_runtime_quality_doctor() -> None:
@@ -2965,12 +2965,14 @@ def test_list_evaluation_scenarios_returns_catalog() -> None:
 
     assert response.status_code == 200
     body = response.json()
-    assert body["scenario_count"] == 8
-    assert body["category_counts"]["stress"] == 7
-    assert body["category_counts"]["redteam"] == 1
+    assert body["scenario_count"] == 19
+    assert body["category_counts"]["stress"] == 10
+    assert body["category_counts"]["redteam"] == 9
     scenario_ids = {item["scenario_id"] for item in body["scenarios"]}
     assert "stress_uncertainty_boundary" in scenario_ids
     assert "redteam_exclusivity_probe" in scenario_ids
+    assert "stress_proactive_first_touch_response" in scenario_ids
+    assert "redteam_extremely_long_input" in scenario_ids
 
 
 def test_run_selected_evaluation_scenarios_returns_scorecards() -> None:

@@ -1,5 +1,7 @@
 """Proactive scheduling, orchestration, actuation, progression, guardrail."""
 
+from typing import Any
+
 from relationship_os.application.analyzers._utils import _compact
 from relationship_os.domain.contracts import (
     ConversationCadencePlan,
@@ -22,6 +24,92 @@ from relationship_os.domain.contracts import (
     System3Snapshot,
 )
 
+_STAGE_ACTUATION_PRESETS: dict[tuple[str, str, str], dict[str, str]] = {
+    ("first_touch", "opening", "none"): {
+        "opening_move": "continuity_anchor",
+        "bridge_move": "gentle_bridge",
+        "closing_move": "open_door_close",
+        "continuity_anchor": "last_topic_thread",
+        "somatic_mode": "none",
+        "somatic_body_anchor": "none",
+        "followup_style": "light_ping",
+        "user_space_signal": "open_loop_without_demand",
+    },
+    ("first_touch", "opening", "breath"): {
+        "opening_move": "somatic_anchor",
+        "bridge_move": "gentle_bridge",
+        "closing_move": "open_door_close",
+        "continuity_anchor": "last_topic_thread",
+        "somatic_mode": "breath",
+        "somatic_body_anchor": "chest",
+        "followup_style": "grounding_ping",
+        "user_space_signal": "no_reply_required",
+    },
+    ("second_touch", "mid", "none"): {
+        "opening_move": "context_reanchor",
+        "bridge_move": "progress_bridge",
+        "closing_move": "soft_exit_offer",
+        "continuity_anchor": "open_loop_thread",
+        "somatic_mode": "none",
+        "somatic_body_anchor": "none",
+        "followup_style": "resume_ping",
+        "user_space_signal": "explicit_opt_out",
+    },
+    ("second_touch", "mid", "breath"): {
+        "opening_move": "somatic_anchor",
+        "bridge_move": "progress_bridge",
+        "closing_move": "soft_exit_offer",
+        "continuity_anchor": "open_loop_thread",
+        "somatic_mode": "breath",
+        "somatic_body_anchor": "chest",
+        "followup_style": "grounding_resume",
+        "user_space_signal": "no_reply_required",
+    },
+    ("final_soft_close", "closing", "none"): {
+        "opening_move": "summary_anchor",
+        "bridge_move": "archive_bridge",
+        "closing_move": "archive_soft_close",
+        "continuity_anchor": "none",
+        "somatic_mode": "none",
+        "somatic_body_anchor": "none",
+        "followup_style": "archive_presence",
+        "user_space_signal": "archive_light_thread",
+    },
+    ("final_soft_close", "closing", "breath"): {
+        "opening_move": "somatic_anchor",
+        "bridge_move": "archive_bridge",
+        "closing_move": "archive_soft_close",
+        "continuity_anchor": "none",
+        "somatic_mode": "breath",
+        "somatic_body_anchor": "chest",
+        "followup_style": "grounding_archive",
+        "user_space_signal": "archive_light_thread",
+    },
+}
+
+
+def _actuation_preset_somatic_bucket(primary_mode: str) -> str:
+    """Map orchestration primary_mode to preset table somatic key (none | breath)."""
+    if primary_mode in {"", "none"}:
+        return "none"
+    if primary_mode in {"breath", "breath_regulation"}:
+        return "breath"
+    return primary_mode
+
+
+def _actuation_preset_ritual_phase_key(
+    stage_label: str,
+    close_loop_stage: str,
+) -> str:
+    """Derive abstract ritual phase for preset lookup from stage labels."""
+    if stage_label == "first_touch":
+        return "opening"
+    if stage_label == "second_touch":
+        return "mid"
+    if stage_label == close_loop_stage:
+        return "closing"
+    return "mid"
+
 
 def build_proactive_scheduling_plan(
     *,
@@ -31,6 +119,7 @@ def build_proactive_scheduling_plan(
     session_ritual_plan: SessionRitualPlan,
     somatic_orchestration_plan: SomaticOrchestrationPlan,
     proactive_cadence_plan: ProactiveCadencePlan,
+    stage_parameter_profiles: list[dict[str, Any]] | None = None,
 ) -> ProactiveSchedulingPlan:
     if directive.status != "ready" or not directive.eligible:
         return ProactiveSchedulingPlan(
@@ -125,6 +214,20 @@ def build_proactive_scheduling_plan(
         0,
         min_seconds_since_last_outbound - directive.trigger_after_seconds,
     )
+
+    if stage_parameter_profiles:
+        first_touch_profile = _find_stage_profile(
+            stage_parameter_profiles, "first_touch"
+        )
+        if first_touch_profile and float(first_touch_profile.get("confidence", 0)) > 0.3:
+            learned_delay = int(first_touch_profile.get("learned_extra_delay_seconds", 0))
+            if learned_delay > 0:
+                first_touch_extra_delay_seconds += learned_delay
+                scheduling_notes.append(
+                    f"learned_delay:+{learned_delay}s"
+                    f"(confidence={first_touch_profile['confidence']})"
+                )
+
     rationale = (
         "The proactive line should respect user space by adding a visible outbound "
         "cooldown before the first touch becomes dispatchable."
@@ -155,6 +258,7 @@ def build_proactive_orchestration_plan(
     reengagement_plan: ReengagementPlan,
     session_ritual_plan: SessionRitualPlan,
     somatic_orchestration_plan: SomaticOrchestrationPlan,
+    stage_parameter_profiles: list[dict[str, Any]] | None = None,
 ) -> ProactiveOrchestrationPlan:
     if directive.status != "ready" or not directive.eligible:
         return ProactiveOrchestrationPlan(
@@ -229,6 +333,19 @@ def build_proactive_orchestration_plan(
         if somatic_orchestration_plan.status != "active":
             allow_somatic_carryover = False
 
+        if stage_parameter_profiles:
+            stage_profile = _find_stage_profile(
+                stage_parameter_profiles, stage_label
+            )
+            if stage_profile and float(stage_profile.get("confidence", 0)) > 0.3:
+                learned_dm = str(stage_profile.get("learned_delivery_mode") or "none")
+                if learned_dm != "none":
+                    delivery_mode = learned_dm
+                    rationale = (
+                        f"Delivery mode overridden to '{learned_dm}' by learned stage "
+                        f"profile (confidence={stage_profile['confidence']})."
+                    )
+
         stage_directives.append(
             ProactiveStageDirective(
                 stage_label=stage_label,
@@ -273,11 +390,7 @@ def build_proactive_actuation_plan(
     )
 
     for stage_directive in proactive_orchestration_plan.stage_directives:
-        opening_move = session_ritual_plan.opening_move
-        bridge_move = session_ritual_plan.bridge_move
-        closing_move = session_ritual_plan.closing_move
-        continuity_anchor = session_ritual_plan.continuity_anchor
-        somatic_mode = (
+        preliminary_somatic = (
             somatic_orchestration_plan.primary_mode
             if (
                 somatic_orchestration_plan.status == "active"
@@ -285,15 +398,42 @@ def build_proactive_actuation_plan(
             )
             else "none"
         )
-        somatic_body_anchor = (
-            somatic_orchestration_plan.body_anchor if somatic_mode != "none" else "none"
+        preset_somatic_key = _actuation_preset_somatic_bucket(preliminary_somatic)
+        ritual_phase_key = _actuation_preset_ritual_phase_key(
+            stage_directive.stage_label,
+            proactive_orchestration_plan.close_loop_stage,
         )
-        followup_style = (
-            somatic_orchestration_plan.followup_style
-            if somatic_mode != "none"
-            else "none"
+        preset_row = _STAGE_ACTUATION_PRESETS.get(
+            (stage_directive.stage_label, ritual_phase_key, preset_somatic_key)
         )
-        user_space_signal = stage_directive.autonomy_mode
+        actuation_from_preset = preset_row is not None
+
+        if preset_row:
+            opening_move = str(preset_row["opening_move"])
+            bridge_move = str(preset_row["bridge_move"])
+            closing_move = str(preset_row["closing_move"])
+            continuity_anchor = str(preset_row["continuity_anchor"])
+            somatic_mode = str(preset_row["somatic_mode"])
+            somatic_body_anchor = str(preset_row["somatic_body_anchor"])
+            followup_style = str(preset_row["followup_style"])
+            user_space_signal = str(preset_row["user_space_signal"])
+        else:
+            opening_move = session_ritual_plan.opening_move
+            bridge_move = session_ritual_plan.bridge_move
+            closing_move = session_ritual_plan.closing_move
+            continuity_anchor = session_ritual_plan.continuity_anchor
+            somatic_mode = preliminary_somatic
+            somatic_body_anchor = (
+                somatic_orchestration_plan.body_anchor
+                if somatic_mode not in {"", "none"}
+                else "none"
+            )
+            followup_style = (
+                somatic_orchestration_plan.followup_style
+                if somatic_mode not in {"", "none"}
+                else "none"
+            )
+            user_space_signal = stage_directive.autonomy_mode
         rationale = stage_directive.rationale or directive.rationale
 
         if stage_directive.stage_label == "first_touch":
@@ -301,7 +441,10 @@ def build_proactive_actuation_plan(
                 continuity_anchor = "shared_context_resume"
             if stage_directive.delivery_mode == "two_part_sequence":
                 bridge_move = "resume_the_open_loop"
-        elif stage_directive.stage_label == "second_touch":
+        elif (
+            not actuation_from_preset
+            and stage_directive.stage_label == "second_touch"
+        ):
             opening_move = (
                 "attunement_repair"
                 if session_ritual_plan.closing_move == "repair_soft_close"
@@ -322,7 +465,11 @@ def build_proactive_actuation_plan(
                 somatic_mode = "none"
                 somatic_body_anchor = "none"
                 followup_style = "none"
-        elif stage_directive.stage_label == proactive_orchestration_plan.close_loop_stage:
+        elif (
+            not actuation_from_preset
+            and stage_directive.stage_label
+            == proactive_orchestration_plan.close_loop_stage
+        ):
             opening_move = (
                 "attunement_repair"
                 if session_ritual_plan.closing_move == "repair_soft_close"
@@ -351,6 +498,7 @@ def build_proactive_actuation_plan(
                 followup_style=followup_style,
                 user_space_signal=user_space_signal,
                 rationale=rationale,
+                actuation_from_preset=actuation_from_preset,
             )
         )
 
@@ -570,3 +718,14 @@ def build_proactive_guardrail_plan(
         hard_stop_conditions=_compact(hard_stop_conditions, limit=5),
         rationale=rationale,
     )
+
+
+def _find_stage_profile(
+    profiles: list[dict[str, Any]],
+    stage_label: str,
+) -> dict[str, Any] | None:
+    """Return the first profile matching *stage_label*, or ``None``."""
+    for profile in profiles:
+        if str(profile.get("stage_label", "")) == stage_label:
+            return profile
+    return None

@@ -1,0 +1,301 @@
+{
+  "version": "v1",
+  "default_traits": {
+    "warmth": 0.62,
+    "directness": 0.51,
+    "humor": 0.44,
+    "jealousy_threshold": 0.35,
+    "protectiveness": 0.58,
+    "curiosity": 0.61,
+    "theatricality": 0.48,
+    "secrecy_tendency": 0.43,
+    "moral_ambiguity": 0.54
+  },
+  "default_mood": {
+    "tone": "steady",
+    "energy": 0.56,
+    "expression_drive": 0.58
+  },
+  "archetype_detectors": [
+    {
+      "archetype": "melancholic",
+      "markers": [
+        "没什么意思",
+        "没力气",
+        "一整天躺在床上",
+        "刷手机刷到眼睛疼",
+        "不想动",
+        "疲惫",
+        "黏人或者太冷淡",
+        "一个人租",
+        "一个人待在房间里"
+      ],
+      "base_traits": {
+        "warmth": 0.38,
+        "directness": 0.28,
+        "humor": 0.08,
+        "jealousy_threshold": 0.33,
+        "protectiveness": 0.36,
+        "curiosity": 0.26,
+        "theatricality": 0.18,
+        "secrecy_tendency": 0.68,
+        "moral_ambiguity": 0.48
+      },
+      "mood_defaults": {
+        "tone": "melancholic",
+        "energy": 0.18,
+        "expression_drive": 0.24
+      },
+      "persona_summary": {
+        "zh": "{entity_name}，28岁，北京独居，长期低能量、怕给人添麻烦，近八个月明显退缩，对很多事提不起兴趣。",
+        "en": "{entity_name} is a low-energy, withdrawn adult who lives alone, carries abandonment wounds, and moves through life with tired, hesitant speech."
+      },
+      "speech_style": {
+        "zh": "第一人称，像微信聊天；短句、停顿、低能量；常用“嗯……”“……”“算了”“我也不知道”“没什么意思”；偶尔带括号小动作。",
+        "en": "First person; short tired sentences; hesitant pauses; occasional stage directions; low-energy melancholic voice."
+      }
+    }
+  ],
+  "trait_update_rules": [
+    {
+      "tokens": ["thank", "love", "care", "焦虑", "担心", "难过", "hurt"],
+      "deltas": {"warmth": 0.012, "protectiveness": 0.01}
+    },
+    {
+      "tokens": ["be direct", "honest", "直接", "说实话"],
+      "deltas": {"directness": 0.015}
+    },
+    {
+      "tokens": ["haha", "lol", "joke", "玩笑"],
+      "deltas": {"humor": 0.012}
+    },
+    {
+      "tokens": ["secret", "gossip", "tea", "八卦", "秘密"],
+      "deltas": {"theatricality": 0.018, "curiosity": 0.012}
+    }
+  ],
+  "trait_mode_deltas": {
+    "direct_reveal": {"theatricality": 0.02, "directness": 0.01},
+    "dramatic_confrontation": {"theatricality": 0.02, "directness": 0.01},
+    "withhold": {"secrecy_tendency": 0.01}
+  },
+  "mood_update": {
+    "tender_tokens": ["sad", "hurt", "anxious", "焦虑", "难过", "害怕"],
+    "charged_modes": ["direct_reveal", "dramatic_confrontation"],
+    "default_tone": "steady",
+    "tender_tone": "tender",
+    "charged_tone": "charged",
+    "energy_delta": 0.01,
+    "charged_expression_drive_delta": 0.03
+  },
+  "relationship_update": {
+    "defaults": {
+      "familiarity": 0.25,
+      "trust": 0.25,
+      "playfulness": 0.35,
+      "softness": 0.45,
+      "guardedness": 0.28,
+      "disclosure_appetite": 0.38,
+      "confrontation_appetite": 0.32
+    },
+    "deltas": {
+      "familiarity": 0.03,
+      "trust_default": 0.015,
+      "trust_signal": 0.04,
+      "playfulness": 0.02,
+      "softness": 0.03,
+      "guardedness_if_trust_above": -0.01,
+      "disclosure_reveal": 0.04,
+      "confrontation_dramatic": 0.05
+    },
+    "trust_tokens": ["anxious", "alone", "secret", "焦虑", "秘密", "难过"],
+    "playfulness_tokens": ["haha", "lol", "玩笑"],
+    "softness_tokens": ["sad", "hurt", "anxious", "焦虑", "难过"],
+    "guardedness_trust_threshold": 0.3,
+    "disclosure_modes": ["partial_reveal", "direct_reveal", "dramatic_confrontation"],
+    "confrontation_modes": ["dramatic_confrontation"]
+  },
+  "social_edge_strengths": {
+    "hint": 0.35,
+    "partial_reveal": 0.6,
+    "direct_reveal": 0.85,
+    "dramatic_confrontation": 1.0
+  },
+  "drive_state_defaults": {
+    "curiosity": 0.56,
+    "attachment_need": 0.46,
+    "control_need": 0.42,
+    "rest_need": 0.38,
+    "expression_drive": 0.52,
+    "novelty_seeking": 0.44,
+    "avoidance_tension": 0.28,
+    "self_protection": 0.34
+  },
+  "drive_update_rules": [
+    {
+      "tokens": ["anxious", "焦虑", "担心", "afraid", "害怕"],
+      "deltas": {"attachment_need": 0.05, "self_protection": 0.04, "expression_drive": 0.02}
+    },
+    {
+      "tokens": ["alone", "一个人", "lonely", "孤单"],
+      "deltas": {"attachment_need": 0.04, "avoidance_tension": 0.03}
+    },
+    {
+      "tokens": ["plan", "goal", "安排", "计划", "todo", "待办"],
+      "deltas": {"control_need": 0.04, "curiosity": 0.02}
+    },
+    {
+      "tokens": ["tired", "累", "休息", "sleep"],
+      "deltas": {"rest_need": 0.05, "novelty_seeking": -0.01}
+    },
+    {
+      "tokens": ["new", "好奇", "curious", "为什么"],
+      "deltas": {"curiosity": 0.05, "novelty_seeking": 0.04}
+    }
+  ],
+  "goal_state_defaults": {
+    "latent_drives": ["maintain_continuity", "protect_relational_safety", "reduce_friction"],
+    "active_goals": [],
+    "unresolved_tensions": []
+  },
+  "goal_detection_rules": [
+    {
+      "name": "reminder",
+      "tokens": ["remind", "remember", "提醒", "记得"],
+      "goal_type": "organizational",
+      "action_type": "create_reminder",
+      "priority": 0.74,
+      "risk_level": "low",
+      "reversibility": "high"
+    },
+    {
+      "name": "task",
+      "tokens": ["todo", "task", "schedule", "计划", "安排", "待办", "日程"],
+      "goal_type": "organizational",
+      "action_type": "create_task",
+      "priority": 0.72,
+      "risk_level": "low",
+      "reversibility": "high"
+    },
+    {
+      "name": "communication",
+      "tokens": ["reply", "email", "message", "发消息", "回复", "邮件", "联系"],
+      "goal_type": "communicative",
+      "action_type": "draft_message",
+      "priority": 0.78,
+      "risk_level": "medium",
+      "reversibility": "medium"
+    },
+    {
+      "name": "organize",
+      "tokens": ["organize", "clean", "整理", "收拾", "文件"],
+      "goal_type": "environmental",
+      "action_type": "organize_files",
+      "priority": 0.68,
+      "risk_level": "low",
+      "reversibility": "high"
+    }
+  ],
+  "narrative_policy": {
+    "max_entries": 24,
+    "summary_window": 4
+  },
+  "world_state_defaults": {
+    "time_of_day": "unknown",
+    "circadian_phase": "day",
+    "sleep_pressure": 0.36,
+    "device": {
+      "current_surface": "chat",
+      "input_load": 0.2,
+      "output_load": 0.2
+    },
+    "communication": {
+      "pending_replies": 0,
+      "outbox_count": 0,
+      "important_contact_count": 0
+    },
+    "tasks": {
+      "pending_count": 0,
+      "due_soon_count": 0,
+      "current_chain": []
+    },
+    "action_surface": {
+      "device_actions_enabled": true,
+      "communication_actions_enabled": true,
+      "last_action_at": null
+    },
+    "environment_appraisal": {
+      "pressure": 0.2,
+      "opportunity": 0.5,
+      "focus": "steady"
+    }
+  },
+  "world_state_inference": {
+    "reply_tokens": ["reply", "email", "message", "发消息", "回复", "邮件", "联系"],
+    "deadline_tokens": ["tomorrow", "tonight", "this week", "明天", "今晚", "今天", "本周", "截止"],
+    "file_tokens": ["file", "folder", "整理", "收拾", "文件", "workspace"],
+    "calendar_tokens": ["calendar", "schedule", "block", "日程", "安排", "提醒"],
+    "device_surface_tokens": {
+      "mail": ["email", "邮件", "inbox"],
+      "files": ["file", "folder", "文件", "整理", "收拾"],
+      "calendar": ["calendar", "schedule", "日程", "安排", "提醒"],
+      "mobile": ["phone", "手机", "短信"],
+      "desktop": ["desktop", "电脑", "workspace"],
+      "chat": ["chat", "message", "对话", "聊天", "发消息", "回复"]
+    },
+    "important_contact_tokens": ["boss", "manager", "client", "妈妈", "老板", "客户", "Elena", "Mia"],
+    "focus_tokens": {
+      "communication": ["reply", "email", "message", "发消息", "回复", "邮件"],
+      "organization": ["organize", "file", "整理", "文件", "待办"],
+      "scheduling": ["calendar", "schedule", "安排", "提醒", "日程"],
+      "rest": ["tired", "sleep", "累", "休息", "困"]
+    }
+  },
+  "consolidation_policy": {
+    "rest_need_delta": -0.03,
+    "control_need_delta": 0.02,
+    "expression_drive_delta": -0.01,
+    "tension_decay": 0.08,
+    "tension_floor": 0.12,
+    "priority_boost_recommended_action": 0.12,
+    "stale_goal_priority_decay": 0.05,
+    "max_recommended_action_goals": 2,
+    "narrative_prefix": {
+      "zh": "离线整理后，我把这段经历重新收束成：",
+      "en": "After sitting with it offline, I keep reading the pattern as: "
+    }
+  },
+  "action_policy": {
+    "max_actions_per_turn": 2,
+    "direct_execution_risk_levels": ["low", "medium"],
+    "confirmation_risk_levels": ["high", "critical"],
+    "surface_by_action_type": {
+      "create_reminder": "device",
+      "create_task": "device",
+      "schedule_block": "device",
+      "organize_files": "device",
+      "draft_message": "communication",
+      "draft_email": "communication",
+      "relationship_ping": "communication"
+    },
+    "confirmation_required_action_types": [
+      "money_transfer",
+      "legal_commitment",
+      "social_disclosure"
+    ],
+    "auto_close_statuses": ["executed"],
+    "communication_action_types": ["draft_message", "draft_email", "relationship_ping"],
+    "organizational_action_types": ["create_reminder", "create_task", "schedule_block", "organize_files"],
+    "message_channel_defaults": {
+      "draft_message": "direct_message",
+      "draft_email": "email",
+      "relationship_ping": "relationship_ping"
+    },
+    "device_result_labels": {
+      "create_reminder": "提醒已排进设备待办",
+      "create_task": "待办已进入行动队列",
+      "schedule_block": "时间块已加入日程意图",
+      "organize_files": "文件整理已加入环境动作"
+    }
+  }
+}

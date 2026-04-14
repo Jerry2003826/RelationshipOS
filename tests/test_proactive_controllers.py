@@ -5,6 +5,17 @@ from relationship_os.application.analyzers import (
     build_proactive_aggregate_governance_assessment,
     build_proactive_dispatch_envelope_decision,
     build_proactive_dispatch_gate_decision,
+    build_proactive_line_controller_decision,
+    build_proactive_line_machine_decision,
+    build_proactive_line_state_decision,
+    build_proactive_line_transition_decision,
+    build_proactive_orchestration_controller_decision,
+    build_proactive_stage_controller_decision,
+    build_proactive_stage_machine_decision,
+    build_proactive_stage_replan_assessment,
+    build_proactive_stage_transition_decision,
+)
+from relationship_os.application.analyzers.proactive.lifecycle import (
     build_proactive_lifecycle_activation_decision,
     build_proactive_lifecycle_ancestry_decision,
     build_proactive_lifecycle_arming_decision,
@@ -68,15 +79,6 @@ from relationship_os.application.analyzers import (
     build_proactive_lifecycle_trigger_decision,
     build_proactive_lifecycle_verification_decision,
     build_proactive_lifecycle_window_decision,
-    build_proactive_line_controller_decision,
-    build_proactive_line_machine_decision,
-    build_proactive_line_state_decision,
-    build_proactive_line_transition_decision,
-    build_proactive_orchestration_controller_decision,
-    build_proactive_stage_controller_decision,
-    build_proactive_stage_machine_decision,
-    build_proactive_stage_replan_assessment,
-    build_proactive_stage_transition_decision,
 )
 from relationship_os.domain.contracts import (
     GuidancePlan,
@@ -84,7 +86,6 @@ from relationship_os.domain.contracts import (
     ProactiveDispatchFeedbackAssessment,
     ProactiveDispatchGateDecision,
     ProactiveFollowupDirective,
-    ProactiveLifecycleQueueDecision,
     ProactiveLineControllerDecision,
     ProactiveLineStateDecision,
     ProactiveLineTransitionDecision,
@@ -98,6 +99,7 @@ from relationship_os.domain.contracts import (
     SomaticOrchestrationPlan,
     System3Snapshot,
 )
+from relationship_os.domain.contracts.lifecycle import ProactiveLifecycleQueueDecision
 
 
 def _system3_snapshot(**overrides: object) -> System3Snapshot:

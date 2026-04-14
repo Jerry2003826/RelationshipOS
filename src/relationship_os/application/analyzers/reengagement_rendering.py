@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from relationship_os.application.analyzers._utils import _contains_chinese
 from relationship_os.domain.contracts import (
     ProactiveFollowupDirective,
@@ -10,6 +12,30 @@ from relationship_os.domain.contracts import (
     SessionRitualPlan,
     SomaticOrchestrationPlan,
 )
+
+
+@dataclass(frozen=True)
+class _ReengagementRenderContext:
+    use_chinese: bool
+    is_final_touch: bool
+    effective_delivery_mode: str
+    question_mode: str
+    allow_somatic_carryover: bool
+    effective_session_ritual_plan: SessionRitualPlan
+    effective_somatic_orchestration_plan: SomaticOrchestrationPlan
+
+
+@dataclass(frozen=True)
+class _ReengagementRenderLines:
+    autonomy_line: str
+    ritual_opening_line: str
+    ritual_bridge_line: str
+    ritual_closing_line: str
+    user_space_line: str
+    continuity_anchor_line: str
+    somatic_line: str
+    orchestration_line: str
+    base_message: str
 
 
 def _render_reengagement_autonomy_line(
@@ -390,23 +416,18 @@ def build_proactive_followup_message(
     )
 
 
-def build_reengagement_output_units(
+def _build_reengagement_render_context(
     *,
     recent_user_text: str,
-    directive: ProactiveFollowupDirective,
     reengagement_plan: ReengagementPlan,
     session_ritual_plan: SessionRitualPlan,
     somatic_orchestration_plan: SomaticOrchestrationPlan,
-    runtime_coordination_snapshot: RuntimeCoordinationSnapshot | None,
-    cadence_stage_label: str = "first_touch",
-    cadence_stage_index: int = 1,
-    cadence_stage_count: int = 1,
-    stage_directive: dict[str, object] | None = None,
-    stage_actuation: dict[str, object] | None = None,
-) -> list[dict[str, str]]:
-    if reengagement_plan.status != "ready" or not directive.eligible:
-        return []
-
+    cadence_stage_label: str,
+    cadence_stage_index: int,
+    cadence_stage_count: int,
+    stage_directive: dict[str, object] | None,
+    stage_actuation: dict[str, object] | None,
+) -> _ReengagementRenderContext:
     use_chinese = _contains_chinese(recent_user_text)
     is_final_touch = (
         cadence_stage_label == "final_soft_close"
@@ -415,9 +436,7 @@ def build_reengagement_output_units(
     effective_delivery_mode = str(
         (stage_directive or {}).get("delivery_mode") or reengagement_plan.delivery_mode
     )
-    question_mode = str(
-        (stage_directive or {}).get("question_mode") or "default"
-    )
+    question_mode = str((stage_directive or {}).get("question_mode") or "default")
     allow_somatic_carryover = bool(
         (stage_directive or {}).get(
             "allow_somatic_carryover",
@@ -427,13 +446,16 @@ def build_reengagement_output_units(
     effective_session_ritual_plan = SessionRitualPlan(
         phase=session_ritual_plan.phase,
         opening_move=str(
-            (stage_actuation or {}).get("opening_move") or session_ritual_plan.opening_move
+            (stage_actuation or {}).get("opening_move")
+            or session_ritual_plan.opening_move
         ),
         bridge_move=str(
-            (stage_actuation or {}).get("bridge_move") or session_ritual_plan.bridge_move
+            (stage_actuation or {}).get("bridge_move")
+            or session_ritual_plan.bridge_move
         ),
         closing_move=str(
-            (stage_actuation or {}).get("closing_move") or session_ritual_plan.closing_move
+            (stage_actuation or {}).get("closing_move")
+            or session_ritual_plan.closing_move
         ),
         continuity_anchor=str(
             (stage_actuation or {}).get("continuity_anchor")
@@ -496,21 +518,42 @@ def build_reengagement_output_units(
         ),
         rationale=somatic_orchestration_plan.rationale,
     )
+    return _ReengagementRenderContext(
+        use_chinese=use_chinese,
+        is_final_touch=is_final_touch,
+        effective_delivery_mode=effective_delivery_mode,
+        question_mode=question_mode,
+        allow_somatic_carryover=allow_somatic_carryover,
+        effective_session_ritual_plan=effective_session_ritual_plan,
+        effective_somatic_orchestration_plan=effective_somatic_orchestration_plan,
+    )
+
+
+def _build_reengagement_render_lines(
+    *,
+    recent_user_text: str,
+    directive: ProactiveFollowupDirective,
+    reengagement_plan: ReengagementPlan,
+    runtime_coordination_snapshot: RuntimeCoordinationSnapshot | None,
+    stage_directive: dict[str, object] | None,
+    stage_actuation: dict[str, object] | None,
+    context: _ReengagementRenderContext,
+) -> _ReengagementRenderLines:
     autonomy_line = _render_reengagement_autonomy_line(
         reengagement_plan=reengagement_plan,
-        use_chinese=use_chinese,
+        use_chinese=context.use_chinese,
     )
     ritual_opening_line = _render_session_ritual_opening_line(
-        session_ritual_plan=effective_session_ritual_plan,
-        use_chinese=use_chinese,
+        session_ritual_plan=context.effective_session_ritual_plan,
+        use_chinese=context.use_chinese,
     )
     ritual_bridge_line = _render_session_ritual_bridge_line(
-        session_ritual_plan=effective_session_ritual_plan,
-        use_chinese=use_chinese,
+        session_ritual_plan=context.effective_session_ritual_plan,
+        use_chinese=context.use_chinese,
     )
     ritual_closing_line = _render_session_ritual_closing_line(
-        session_ritual_plan=effective_session_ritual_plan,
-        use_chinese=use_chinese,
+        session_ritual_plan=context.effective_session_ritual_plan,
+        use_chinese=context.use_chinese,
     )
     user_space_line = _render_user_space_signal_line(
         user_space_signal=str(
@@ -518,174 +561,214 @@ def build_reengagement_output_units(
             or (stage_directive or {}).get("autonomy_mode")
             or "none"
         ),
-        use_chinese=use_chinese,
+        use_chinese=context.use_chinese,
     )
     continuity_anchor_line = _render_continuity_anchor_line(
-        session_ritual_plan=effective_session_ritual_plan,
-        use_chinese=use_chinese,
+        session_ritual_plan=context.effective_session_ritual_plan,
+        use_chinese=context.use_chinese,
     )
     somatic_line = _render_reengagement_somatic_line(
         reengagement_plan=reengagement_plan,
-        use_chinese=use_chinese,
+        use_chinese=context.use_chinese,
     )
     orchestration_line = _render_somatic_orchestration_line(
-        somatic_orchestration_plan=effective_somatic_orchestration_plan,
-        use_chinese=use_chinese,
+        somatic_orchestration_plan=context.effective_somatic_orchestration_plan,
+        use_chinese=context.use_chinese,
     )
     base_message = build_proactive_followup_message(
         recent_user_text=recent_user_text,
         directive=directive,
         runtime_coordination_snapshot=runtime_coordination_snapshot,
-        question_mode=question_mode,
+        question_mode=context.question_mode,
     )
-    if not base_message:
-        return []
-    if is_final_touch:
-        if use_chinese:
-            content = (
-                f"{ritual_opening_line} 我先把这条线轻轻放在这里。 "
-                "如果你之后想接回来，我们就从最小、最容易接上的那一步继续。 "
-                f"{ritual_bridge_line} {continuity_anchor_line} {user_space_line} "
-                f"{autonomy_line} {ritual_closing_line}"
-            ).strip()
-        else:
-            content = (
-                f"{ritual_opening_line} I am going to leave this thread here gently. "
-                "If you want to reconnect later, we can restart from the smallest easy step. "
-                f"{ritual_bridge_line} {continuity_anchor_line} {user_space_line} "
-                f"{autonomy_line} {ritual_closing_line}"
-            ).strip()
-        return [{"label": "soft_close", "content": content}]
-    if effective_delivery_mode != "two_part_sequence":
-        label = (
-            reengagement_plan.segment_labels[0]
-            if reengagement_plan.segment_labels
-            else "check_in"
-        )
-        stage_prefix = ""
-        if cadence_stage_label == "second_touch":
-            stage_prefix = (
-                "我再轻轻碰一下这条线。"
-                if use_chinese
-                else "One more light touch on the thread."
-            )
-        content_parts = [part for part in [stage_prefix, base_message] if part]
-        if ritual_opening_line and ritual_opening_line not in base_message:
-            content_parts.insert(0, ritual_opening_line)
-        if ritual_bridge_line and ritual_bridge_line not in base_message:
-            content_parts.insert(1 if ritual_opening_line else 0, ritual_bridge_line)
-        if somatic_line and somatic_line not in base_message:
-            content_parts.append(somatic_line)
-        elif (
-            orchestration_line
-            and allow_somatic_carryover
-            and orchestration_line not in base_message
-        ):
-            content_parts.append(orchestration_line)
-        if continuity_anchor_line and continuity_anchor_line not in base_message:
-            content_parts.append(continuity_anchor_line)
-        if user_space_line and user_space_line not in base_message:
-            content_parts.append(user_space_line)
-        if autonomy_line and autonomy_line not in base_message:
-            content_parts.append(autonomy_line)
-        if ritual_closing_line and ritual_closing_line not in base_message:
-            content_parts.append(ritual_closing_line)
-        return [{"label": label, "content": " ".join(content_parts).strip()}]
+    return _ReengagementRenderLines(
+        autonomy_line=autonomy_line,
+        ritual_opening_line=ritual_opening_line,
+        ritual_bridge_line=ritual_bridge_line,
+        ritual_closing_line=ritual_closing_line,
+        user_space_line=user_space_line,
+        continuity_anchor_line=continuity_anchor_line,
+        somatic_line=somatic_line,
+        orchestration_line=orchestration_line,
+        base_message=base_message,
+    )
 
+
+def _build_final_touch_output(
+    *,
+    use_chinese: bool,
+    lines: _ReengagementRenderLines,
+) -> list[dict[str, str]]:
     if use_chinese:
-        if reengagement_plan.strategy_key in {
-            "progress_micro_commitment",
-            "repair_soft_progress_reentry",
-            "resume_progress_bridge",
-        }:
-            reconnect_line = "我来轻轻接回一下我们上次停下来的那一步。"
-            if cadence_stage_label == "second_touch":
-                reconnect_line = "我再轻轻碰一下上次停下来的那一步。"
-            second_line = "如果你愿意，现在只推进一个最小动作就够。"
-            if reengagement_plan.pressure_mode == "repair_soft":
-                second_line = "如果现在想接回来，我们就只接一个最小动作；不接也没关系。"
-            return [
-                {
-                    "label": "reconnect",
-                    "content": (
-                        f"{ritual_opening_line} {ritual_bridge_line} {reconnect_line}".strip()
-                        if reengagement_plan.strategy_key != "resume_progress_bridge"
-                        else (
-                            f"{ritual_opening_line} {ritual_bridge_line} "
-                            "我先把之前停住的那一步轻轻接回来。"
-                        ).strip()
-                    ),
-                },
-                {
-                    "label": "next_step",
-                    "content": (
-                        f"{second_line} {continuity_anchor_line} "
-                        f"{user_space_line} {autonomy_line} {ritual_closing_line}"
-                    ).strip(),
-                },
-            ]
-        if reengagement_plan.ritual_mode == "grounding_reentry":
-            return [
-                {
-                    "label": "grounding",
-                    "content": (
-                        somatic_line
-                        or orchestration_line
-                        or "先轻轻确认一下你现在的状态，节奏不需要快。"
-                    ),
-                },
-                {
-                    "label": "steady_step",
-                    "content": (
-                        "如果要继续，我们只接回一个最稳的小下一步就好。 "
-                        f"{continuity_anchor_line} {user_space_line} "
-                        f"{autonomy_line} {ritual_closing_line}"
-                    ).strip(),
-                },
-            ]
-        if reengagement_plan.strategy_key in {
-            "resume_context_bridge",
-            "repair_soft_resume_bridge",
-        }:
-            reanchor_line = "我先把我们刚才的上下文轻轻接回来。"
-            if cadence_stage_label == "second_touch":
-                reanchor_line = "我再把这条上下文线轻轻接回来一下。"
-            second_line = "如果你想继续，我们就从最容易接上的那一步开始。"
-            if reengagement_plan.pressure_mode == "repair_soft":
-                second_line = "如果想接回来，我们就从最容易接上的那一步开始，不需要补很多背景。"
-            return [
-                {
-                    "label": "re_anchor",
-                    "content": (
-                        f"{ritual_opening_line} {ritual_bridge_line} {reanchor_line}"
-                    ).strip(),
-                },
-                {
-                    "label": "continuity",
-                    "content": (
-                        f"{second_line} {continuity_anchor_line} "
-                        f"{user_space_line} {autonomy_line} {ritual_closing_line}"
-                    ).strip(),
-                },
-            ]
+        content = (
+            f"{lines.ritual_opening_line} 我先把这条线轻轻放在这里。 "
+            "如果你之后想接回来，我们就从最小、最容易接上的那一步继续。 "
+            f"{lines.ritual_bridge_line} {lines.continuity_anchor_line} {lines.user_space_line} "
+            f"{lines.autonomy_line} {lines.ritual_closing_line}"
+        ).strip()
+    else:
+        content = (
+            f"{lines.ritual_opening_line} I am going to leave this thread here gently. "
+            "If you want to reconnect later, we can restart from the smallest easy step. "
+            f"{lines.ritual_bridge_line} {lines.continuity_anchor_line} {lines.user_space_line} "
+            f"{lines.autonomy_line} {lines.ritual_closing_line}"
+        ).strip()
+    return [{"label": "soft_close", "content": content}]
+
+
+def _build_single_sequence_output(
+    *,
+    use_chinese: bool,
+    cadence_stage_label: str,
+    reengagement_plan: ReengagementPlan,
+    allow_somatic_carryover: bool,
+    lines: _ReengagementRenderLines,
+) -> list[dict[str, str]]:
+    label = (
+        reengagement_plan.segment_labels[0]
+        if reengagement_plan.segment_labels
+        else "check_in"
+    )
+    stage_prefix = ""
+    if cadence_stage_label == "second_touch":
+        stage_prefix = (
+            "我再轻轻碰一下这条线。"
+            if use_chinese
+            else "One more light touch on the thread."
+        )
+    content_parts = [part for part in [stage_prefix, lines.base_message] if part]
+    if lines.ritual_opening_line and lines.ritual_opening_line not in lines.base_message:
+        content_parts.insert(0, lines.ritual_opening_line)
+    if lines.ritual_bridge_line and lines.ritual_bridge_line not in lines.base_message:
+        content_parts.insert(1 if lines.ritual_opening_line else 0, lines.ritual_bridge_line)
+    if lines.somatic_line and lines.somatic_line not in lines.base_message:
+        content_parts.append(lines.somatic_line)
+    elif (
+        lines.orchestration_line
+        and allow_somatic_carryover
+        and lines.orchestration_line not in lines.base_message
+    ):
+        content_parts.append(lines.orchestration_line)
+    if lines.continuity_anchor_line and lines.continuity_anchor_line not in lines.base_message:
+        content_parts.append(lines.continuity_anchor_line)
+    if lines.user_space_line and lines.user_space_line not in lines.base_message:
+        content_parts.append(lines.user_space_line)
+    if lines.autonomy_line and lines.autonomy_line not in lines.base_message:
+        content_parts.append(lines.autonomy_line)
+    if lines.ritual_closing_line and lines.ritual_closing_line not in lines.base_message:
+        content_parts.append(lines.ritual_closing_line)
+    return [{"label": label, "content": " ".join(content_parts).strip()}]
+
+
+def _build_two_part_chinese_output(
+    *,
+    reengagement_plan: ReengagementPlan,
+    cadence_stage_label: str,
+    lines: _ReengagementRenderLines,
+) -> list[dict[str, str]]:
+    if reengagement_plan.strategy_key in {
+        "progress_micro_commitment",
+        "repair_soft_progress_reentry",
+        "resume_progress_bridge",
+    }:
+        reconnect_line = "我来轻轻接回一下我们上次停下来的那一步。"
+        if cadence_stage_label == "second_touch":
+            reconnect_line = "我再轻轻碰一下上次停下来的那一步。"
+        second_line = "如果你愿意，现在只推进一个最小动作就够。"
+        if reengagement_plan.pressure_mode == "repair_soft":
+            second_line = "如果现在想接回来，我们就只接一个最小动作；不接也没关系。"
+        return [
+            {
+                "label": "reconnect",
+                "content": (
+                    (
+                        f"{lines.ritual_opening_line} "
+                        f"{lines.ritual_bridge_line} {reconnect_line}"
+                    ).strip()
+                    if reengagement_plan.strategy_key != "resume_progress_bridge"
+                    else (
+                        f"{lines.ritual_opening_line} {lines.ritual_bridge_line} "
+                        "我先把之前停住的那一步轻轻接回来。"
+                    ).strip()
+                ),
+            },
+            {
+                "label": "next_step",
+                "content": (
+                    f"{second_line} {lines.continuity_anchor_line} "
+                    f"{lines.user_space_line} {lines.autonomy_line} {lines.ritual_closing_line}"
+                ).strip(),
+            },
+        ]
+    if reengagement_plan.ritual_mode == "grounding_reentry":
+        return [
+            {
+                "label": "grounding",
+                "content": (
+                    lines.somatic_line
+                    or lines.orchestration_line
+                    or "先轻轻确认一下你现在的状态，节奏不需要快。"
+                ),
+            },
+            {
+                "label": "steady_step",
+                "content": (
+                    "如果要继续，我们只接回一个最稳的小下一步就好。 "
+                    f"{lines.continuity_anchor_line} {lines.user_space_line} "
+                    f"{lines.autonomy_line} {lines.ritual_closing_line}"
+                ).strip(),
+            },
+        ]
+    if reengagement_plan.strategy_key in {
+        "resume_context_bridge",
+        "repair_soft_resume_bridge",
+    }:
+        reanchor_line = "我先把我们刚才的上下文轻轻接回来。"
+        if cadence_stage_label == "second_touch":
+            reanchor_line = "我再把这条上下文线轻轻接回来一下。"
+        second_line = "如果你想继续，我们就从最容易接上的那一步开始。"
+        if reengagement_plan.pressure_mode == "repair_soft":
+            second_line = "如果想接回来，我们就从最容易接上的那一步开始，不需要补很多背景。"
         return [
             {
                 "label": "re_anchor",
                 "content": (
-                    f"{ritual_opening_line} {ritual_bridge_line} "
-                    "我来把我们刚才的上下文轻轻接回来。"
+                    f"{lines.ritual_opening_line} {lines.ritual_bridge_line} {reanchor_line}"
                 ).strip(),
             },
             {
                 "label": "continuity",
                 "content": (
-                    "如果你愿意，我们只继续最小、最容易接上的那一步。 "
-                    f"{continuity_anchor_line} {user_space_line} "
-                    f"{autonomy_line} {ritual_closing_line}"
+                    f"{second_line} {lines.continuity_anchor_line} "
+                    f"{lines.user_space_line} {lines.autonomy_line} {lines.ritual_closing_line}"
                 ).strip(),
             },
         ]
+    return [
+        {
+            "label": "re_anchor",
+            "content": (
+                f"{lines.ritual_opening_line} {lines.ritual_bridge_line} "
+                "我来把我们刚才的上下文轻轻接回来。"
+            ).strip(),
+        },
+        {
+            "label": "continuity",
+            "content": (
+                "如果你愿意，我们只继续最小、最容易接上的那一步。 "
+                f"{lines.continuity_anchor_line} {lines.user_space_line} "
+                f"{lines.autonomy_line} {lines.ritual_closing_line}"
+            ).strip(),
+        },
+    ]
 
+
+def _build_two_part_english_output(
+    *,
+    reengagement_plan: ReengagementPlan,
+    cadence_stage_label: str,
+    lines: _ReengagementRenderLines,
+) -> list[dict[str, str]]:
     if reengagement_plan.strategy_key in {
         "progress_micro_commitment",
         "repair_soft_progress_reentry",
@@ -704,10 +787,13 @@ def build_reengagement_output_units(
             {
                 "label": "reconnect",
                 "content": (
-                    f"{ritual_opening_line} {ritual_bridge_line} {reconnect_line}".strip()
+                    (
+                        f"{lines.ritual_opening_line} "
+                        f"{lines.ritual_bridge_line} {reconnect_line}"
+                    ).strip()
                     if reengagement_plan.strategy_key != "resume_progress_bridge"
                     else (
-                        f"{ritual_opening_line} {ritual_bridge_line} "
+                        f"{lines.ritual_opening_line} {lines.ritual_bridge_line} "
                         "Quick bridge back to the step we parked earlier."
                     ).strip()
                 ),
@@ -715,8 +801,8 @@ def build_reengagement_output_units(
             {
                 "label": "next_step",
                 "content": (
-                    f"{second_line} {continuity_anchor_line} "
-                    f"{user_space_line} {autonomy_line} {ritual_closing_line}"
+                    f"{second_line} {lines.continuity_anchor_line} "
+                    f"{lines.user_space_line} {lines.autonomy_line} {lines.ritual_closing_line}"
                 ).strip(),
             },
         ]
@@ -725,8 +811,8 @@ def build_reengagement_output_units(
             {
                 "label": "grounding",
                 "content": (
-                    somatic_line
-                    or orchestration_line
+                    lines.somatic_line
+                    or lines.orchestration_line
                     or "Gentle check-in first: the pace does not need to be fast."
                 ),
             },
@@ -734,8 +820,8 @@ def build_reengagement_output_units(
                 "label": "steady_step",
                 "content": (
                     "If you want to continue, we can reconnect to one steady next step. "
-                    f"{continuity_anchor_line} {user_space_line} "
-                    f"{autonomy_line} {ritual_closing_line}"
+                    f"{lines.continuity_anchor_line} {lines.user_space_line} "
+                    f"{lines.autonomy_line} {lines.ritual_closing_line}"
                 ).strip(),
             },
         ]
@@ -756,14 +842,14 @@ def build_reengagement_output_units(
             {
                 "label": "re_anchor",
                 "content": (
-                    f"{ritual_opening_line} {ritual_bridge_line} {reanchor_line}"
+                    f"{lines.ritual_opening_line} {lines.ritual_bridge_line} {reanchor_line}"
                 ).strip(),
             },
             {
                 "label": "continuity",
                 "content": (
-                    f"{second_line} {continuity_anchor_line} "
-                    f"{user_space_line} {autonomy_line} {ritual_closing_line}"
+                    f"{second_line} {lines.continuity_anchor_line} "
+                    f"{lines.user_space_line} {lines.autonomy_line} {lines.ritual_closing_line}"
                 ).strip(),
             },
         ]
@@ -771,7 +857,7 @@ def build_reengagement_output_units(
         {
             "label": "re_anchor",
             "content": (
-                f"{ritual_opening_line} {ritual_bridge_line} "
+                f"{lines.ritual_opening_line} {lines.ritual_bridge_line} "
                 "Quick continuity check-in to reconnect the thread."
             ).strip(),
         },
@@ -779,8 +865,95 @@ def build_reengagement_output_units(
             "label": "continuity",
             "content": (
                 "If you want to resume, we can pick up the smallest next step "
-                f"without pressure. {continuity_anchor_line} "
-                f"{user_space_line} {autonomy_line} {ritual_closing_line}"
+                f"without pressure. {lines.continuity_anchor_line} "
+                f"{lines.user_space_line} {lines.autonomy_line} {lines.ritual_closing_line}"
             ),
         },
     ]
+
+
+def _resolve_actuation_source(reengagement_plan: ReengagementPlan) -> str:
+    """Determine whether actuation came from governance override, learning, or default."""
+    governance_indicators = {
+        "repair_soft",
+        "archive_light_presence",
+        "archive_light_thread",
+    }
+    if reengagement_plan.pressure_mode in governance_indicators:
+        return "governance_override"
+    if reengagement_plan.tone == "repair_aware":
+        return "governance_override"
+    return "default"
+
+
+def build_reengagement_output_units(
+    *,
+    recent_user_text: str,
+    directive: ProactiveFollowupDirective,
+    reengagement_plan: ReengagementPlan,
+    session_ritual_plan: SessionRitualPlan,
+    somatic_orchestration_plan: SomaticOrchestrationPlan,
+    runtime_coordination_snapshot: RuntimeCoordinationSnapshot | None,
+    cadence_stage_label: str = "first_touch",
+    cadence_stage_index: int = 1,
+    cadence_stage_count: int = 1,
+    stage_directive: dict[str, object] | None = None,
+    stage_actuation: dict[str, object] | None = None,
+) -> list[dict[str, str]]:
+    if reengagement_plan.status != "ready" or not directive.eligible:
+        return []
+
+    context = _build_reengagement_render_context(
+        recent_user_text=recent_user_text,
+        reengagement_plan=reengagement_plan,
+        session_ritual_plan=session_ritual_plan,
+        somatic_orchestration_plan=somatic_orchestration_plan,
+        cadence_stage_label=cadence_stage_label,
+        cadence_stage_index=cadence_stage_index,
+        cadence_stage_count=cadence_stage_count,
+        stage_directive=stage_directive,
+        stage_actuation=stage_actuation,
+    )
+    lines = _build_reengagement_render_lines(
+        recent_user_text=recent_user_text,
+        directive=directive,
+        reengagement_plan=reengagement_plan,
+        runtime_coordination_snapshot=runtime_coordination_snapshot,
+        stage_directive=stage_directive,
+        stage_actuation=stage_actuation,
+        context=context,
+    )
+    if not lines.base_message:
+        return []
+
+    actuation_source = _resolve_actuation_source(reengagement_plan)
+
+    if context.is_final_touch:
+        units = _build_final_touch_output(
+            use_chinese=context.use_chinese,
+            lines=lines,
+        )
+    elif context.effective_delivery_mode != "two_part_sequence":
+        units = _build_single_sequence_output(
+            use_chinese=context.use_chinese,
+            cadence_stage_label=cadence_stage_label,
+            reengagement_plan=reengagement_plan,
+            allow_somatic_carryover=context.allow_somatic_carryover,
+            lines=lines,
+        )
+    elif context.use_chinese:
+        units = _build_two_part_chinese_output(
+            reengagement_plan=reengagement_plan,
+            cadence_stage_label=cadence_stage_label,
+            lines=lines,
+        )
+    else:
+        units = _build_two_part_english_output(
+            reengagement_plan=reengagement_plan,
+            cadence_stage_label=cadence_stage_label,
+            lines=lines,
+        )
+
+    for unit in units:
+        unit["actuation_source"] = actuation_source
+    return units

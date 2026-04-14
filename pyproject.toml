@@ -12,6 +12,7 @@ dependencies = [
   "alembic>=1.13.1",
   "fastapi>=0.110.0",
   "httpx>=0.27.0",
+  "jinja2>=3.1.4",
   "litellm>=1.74.0,<2.0",
   "pgvector>=0.2.5",
   "psycopg[binary]>=3.1.18",
@@ -28,6 +29,11 @@ dev = [
   "pytest-cov>=5.0.0",
   "ruff>=0.3.5",
 ]
+benchmark = [
+  "mem0ai>=1.0.7",
+  "qdrant-client>=1.17.1",
+  "sentence-transformers>=5.3.0",
+]
 
 [project.scripts]
 relationship-os = "relationship_os.main:run"
@@ -37,7 +43,7 @@ packages = ["src/relationship_os"]
 
 [tool.pytest.ini_options]
 addopts = "-q"
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.ruff]
@@ -55,6 +61,10 @@ select = [
   "B",
   "UP",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"benchmarks/datasets/*.py" = ["E501"]
+"benchmarks/report.py" = ["E501"]
 
 [tool.uv]
 package = true

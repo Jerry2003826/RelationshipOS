@@ -6,6 +6,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, ValidationError
 
 from relationship_os.api.routes.runtime import build_runtime_overview_payload
+from relationship_os.application.analyzers.proactive.lifecycle_projection import (
+    LegacyLifecycleStreamUnsupportedError,
+)
 from relationship_os.application.container import RuntimeContainer
 from relationship_os.application.job_service import JobNotFoundError
 from relationship_os.domain.event_types import (
@@ -18,7 +21,7 @@ from relationship_os.domain.event_types import (
     BACKGROUND_JOB_SCHEDULED,
     BACKGROUND_JOB_STARTED,
     SESSION_ARCHIVED,
-    TRACE_EVENT_TYPES,
+    is_trace_event_type,
 )
 from relationship_os.domain.events import StoredEvent
 
@@ -65,7 +68,7 @@ class RuntimeSubscriptionState:
         }
 
     def matches_trace_event(self, event: StoredEvent) -> bool:
-        if not self.active or event.event_type not in TRACE_EVENT_TYPES:
+        if not self.active or not is_trace_event_type(event.event_type):
             return False
         if self.stream_id is not None and event.stream_id != self.stream_id:
             return False
@@ -189,21 +192,31 @@ async def _forward_runtime_updates(
                     for event in events
                     if not subscription.event_types
                     or event.event_type in subscription.event_types
-                    or event.event_type in TRACE_EVENT_TYPES
+                    or is_trace_event_type(event.event_type)
                 ]
                 if session_events:
-                    projection = await container.stream_service.project_stream(
-                        stream_id=batch.stream_id,
-                        projector_name="session-runtime",
-                        projector_version="v1",
-                    )
-                    await websocket.send_json(
-                        {
-                            "type": "session_projection",
-                            "stream_id": batch.stream_id,
-                            "projection": projection,
-                        }
-                    )
+                    try:
+                        projection = await container.stream_service.project_stream(
+                            stream_id=batch.stream_id,
+                            projector_name="session-runtime",
+                            projector_version=container.settings.default_projector_version,
+                        )
+                    except LegacyLifecycleStreamUnsupportedError as exc:
+                        await websocket.send_json(
+                            {
+                                "type": "session_projection_error",
+                                "stream_id": batch.stream_id,
+                                **exc.response_detail(),
+                            }
+                        )
+                    else:
+                        await websocket.send_json(
+                            {
+                                "type": "session_projection",
+                                "stream_id": batch.stream_id,
+                                "projection": projection,
+                            }
+                        )
 
             for job_id in subscription.matching_job_ids(events):
                 try:
@@ -281,15 +294,25 @@ async def _send_backlog_snapshot(
             "trace": trace,
         }
     )
-    projection = await container.stream_service.project_stream(
-        stream_id=stream_id,
-        projector_name="session-runtime",
-        projector_version="v1",
-    )
-    await websocket.send_json(
-        {
-            "type": "session_projection",
-            "stream_id": stream_id,
-            "projection": projection,
-        }
-    )
+    try:
+        projection = await container.stream_service.project_stream(
+            stream_id=stream_id,
+            projector_name="session-runtime",
+            projector_version=container.settings.default_projector_version,
+        )
+    except LegacyLifecycleStreamUnsupportedError as exc:
+        await websocket.send_json(
+            {
+                "type": "session_projection_error",
+                "stream_id": stream_id,
+                **exc.response_detail(),
+            }
+        )
+    else:
+        await websocket.send_json(
+            {
+                "type": "session_projection",
+                "stream_id": stream_id,
+                "projection": projection,
+            }
+        )

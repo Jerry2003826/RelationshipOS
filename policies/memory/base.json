@@ -1,0 +1,136 @@
+{
+  "version": "v1",
+  "low_signal_values": [
+    "k",
+    "kk",
+    "ok",
+    "okay",
+    "sure",
+    "yes",
+    "no",
+    "嗯",
+    "好的",
+    "好",
+    "收到"
+  ],
+  "semantic_alias_sets": [
+    {
+      "alias": "identity_name",
+      "patterns": ["my name is", "i am ", "i'm ", "im ", "我叫", "我的名字", "名字叫", "叫什么"]
+    },
+    {
+      "alias": "origin_grew_up",
+      "patterns": ["grew up", "raised in", "from childhood in", "长大", "从小在", "老家", "在哪里长大"]
+    },
+    {
+      "alias": "current_residence",
+      "patterns": ["live in", "living in", "moved to", "住在", "现在住", "搬到", "在哪里住", "住哪"]
+    },
+    {
+      "alias": "occupation",
+      "patterns": ["i work", "work as", "job", "职业", "工作", "上班", "做什么工作"]
+    },
+    {
+      "alias": "pet_dog",
+      "patterns": [" dog", "dog ", "puppy", "狗", "狗狗", "小狗"]
+    },
+    {
+      "alias": "pet_cat",
+      "patterns": [" cat", "cat ", "kitty", "kitten", "猫", "猫咪", "小猫", "橘猫"]
+    },
+    {
+      "alias": "pet_name",
+      "patterns": ["dog's name", "cat's name", "named ", "名字叫", "叫什么", "狗叫", "猫叫", "狗的名字", "猫的名字"]
+    },
+    {
+      "alias": "memory_query",
+      "patterns": ["remember", "remind me", "do you know", "记得", "还记得", "你知道", "提醒我"]
+    },
+    {
+      "alias": "question_where",
+      "patterns": ["where", "哪里", "哪儿", "在哪"]
+    },
+    {
+      "alias": "question_who",
+      "patterns": ["who", "谁"]
+    },
+    {
+      "alias": "question_what",
+      "patterns": ["what", "什么"]
+    },
+    {
+      "alias": "preference_like",
+      "patterns": ["like ", "love ", "prefer ", "喜欢", "爱", "偏爱"]
+    }
+  ],
+  "contradiction_patterns": [
+    {"pattern": "\\b(?:i|i'm|im)\\s+(?:still\\s+)?live in\\b", "key": "location.current_residence"},
+    {"pattern": "\\bmoved to\\b", "key": "location.current_residence"},
+    {"pattern": "\\bmy name is\\b", "key": "identity.name"},
+    {"pattern": "\\bi work (?:in|as|at)\\b", "key": "identity.work"},
+    {"pattern": "我住在", "key": "location.current_residence"},
+    {"pattern": "我搬到", "key": "location.current_residence"},
+    {"pattern": "我叫", "key": "identity.name"}
+  ],
+  "low_signal_entity_prefixes": [
+    "topic:",
+    "appraisal:",
+    "dialogue_act:",
+    "attention:",
+    "psychological_safety:",
+    "dependency_risk:",
+    "bid_signal:",
+    "turbulence_risk:"
+  ],
+  "semantic_anchor_prefixes": ["topic:", "appraisal:", "dialogue_act:"],
+  "relational_guardrail_prefixes": ["dependency_risk:", "psychological_safety:", "bid_signal:", "turbulence_risk:"],
+  "salient_emotion_tokens": ["anxious", "alone", "stuck", "worried", "焦虑", "担心", "卡住"],
+  "thresholds": {
+    "pin": 0.78,
+    "persistent_confidence": 0.82,
+    "persistent_mention_count": 2,
+    "attribution_hint_only_confidence": 0.58,
+    "attribution_attribution_required_confidence": 0.74,
+    "attribution_hint_only_disclosure_risk": 0.82,
+    "attribution_attribution_required_disclosure_risk": 0.68,
+    "integrity_acceptance": 0.62
+  },
+  "weights": {
+    "layer_weights": {
+      "working_memory": 1.25,
+      "episodic_memory": 1.0,
+      "semantic_memory": 0.85,
+      "relational_memory": 0.8,
+      "reflective_memory": 0.9
+    },
+    "provenance_base": {
+      "working_memory": 0.92,
+      "episodic_memory": 0.88,
+      "semantic_memory": 0.72,
+      "relational_memory": 0.76,
+      "reflective_memory": 0.7
+    },
+    "retention_base": {
+      "working_memory": 0.44,
+      "episodic_memory": 0.56,
+      "semantic_memory": 0.74,
+      "relational_memory": 0.78,
+      "reflective_memory": 0.68
+    },
+    "importance_base": {
+      "working_memory": 0.58,
+      "episodic_memory": 0.66,
+      "semantic_memory": 0.82,
+      "relational_memory": 0.84,
+      "reflective_memory": 0.76,
+      "temporal_kg": 0.7
+    },
+    "scope_bonuses": {
+      "user": 0.04,
+      "session": 0.08,
+      "self_user": 0.06,
+      "other_user": 0.0,
+      "global_entity": 0.02
+    }
+  }
+}
