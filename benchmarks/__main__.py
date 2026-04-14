@@ -26,7 +26,11 @@ from benchmarks.datasets.msc import MSC_SCENARIOS
 from benchmarks.datasets.person_memory import PERSON_MEMORY_SCENARIOS
 from benchmarks.datasets.proactive_governance import PROACTIVE_GOVERNANCE_SCENARIOS
 from benchmarks.judge import LLMJudge
-from benchmarks.mem0_client import Mem0BenchmarkClient
+
+try:
+    from benchmarks.mem0_client import Mem0BenchmarkClient
+except ModuleNotFoundError:
+    Mem0BenchmarkClient = None  # type: ignore[assignment,misc]
 from benchmarks.report import generate_benchmark_report
 from benchmarks.scoring import (
     average_scores,
@@ -2058,7 +2062,11 @@ def _build_arm_factories(
         ),
         "mem0_oss": (
             "Mem0 OSS",
-            lambda: Mem0BenchmarkClient(timeout=args.timeout),
+            (
+                lambda: Mem0BenchmarkClient(timeout=args.timeout)
+                if Mem0BenchmarkClient is not None
+                else None
+            ),
         ),
         "system": (
             "RelationshipOS",

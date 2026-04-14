@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest import skipIf
 
 from benchmarks.__main__ import (
     SUITE_RUNNERS,
@@ -28,7 +29,11 @@ from benchmarks.friend_chat_zh_demo import (
     build_friend_chat_zh_env,
 )
 from benchmarks.judge import LLMJudge
-from benchmarks.mem0_client import Mem0BenchmarkClient, _Mem0SessionState
+try:
+    from benchmarks.mem0_client import Mem0BenchmarkClient, _Mem0SessionState
+except ModuleNotFoundError:
+    Mem0BenchmarkClient = None  # type: ignore[assignment,misc]
+    _Mem0SessionState = None  # type: ignore[assignment,misc]
 from benchmarks.minimax_companion_stress_zh_demo import (
     COMPANION_STRESS_ZH_SUITES,
     apply_companion_stress_benchmark_controls,
@@ -1028,6 +1033,7 @@ def test_minimax_backend_normalizes_endpoint_variants() -> None:
     )
 
 
+@skipIf(Mem0BenchmarkClient is None, "mem0 not installed")
 def test_mem0_build_messages_merges_memory_into_first_system_prompt() -> None:
     client = object.__new__(Mem0BenchmarkClient)
     client.retrieval_limit = 6
