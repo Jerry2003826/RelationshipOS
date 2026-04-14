@@ -207,20 +207,24 @@ def _strip_meta_reasoning_prefix(text: str) -> str:
 
 
 def _strip_thinking_tags(text: str) -> str:
-    """Remove ``<think>`` blocks emitted by reasoning models like Qwen3.
-
-    Handles closed ``<think>...</think>`` and unclosed ``<think>...`` (truncated).
-    If the entire response is inside a think block, extracts the reasoning text
-    as a fallback so the user gets *something* rather than raw tags.
-    """
-    if "<think>" not in text:
+    """Extract <spoken_words> tag if present, else strip <internal_thought> and <think>."""
+    # 1. Check for <spoken_words>
+    spoken_match = re.search(r"<spoken_words>([\s\S]*?)(?:</spoken_words>|$)", text)
+    if spoken_match:
+        return _strip_meta_reasoning_prefix(spoken_match.group(1).strip())
+    
+    # 2. Fallback to think/internal_thought strip logic
+    if "<think>" not in text and "<internal_thought>" not in text:
         return _strip_meta_reasoning_prefix(text)
-    stripped = _THINK_CLOSED.sub("", text)
-    stripped = _THINK_UNCLOSED.sub("", stripped).strip()
+        
+    stripped = re.sub(r"<(think|internal_thought)>[\s\S]*?</\1>", "", text)
+    stripped = re.sub(r"<(think|internal_thought)>[\s\S]*", "", stripped).strip()
+    
     if stripped:
         return _strip_meta_reasoning_prefix(stripped)
-    # Entire output was a think block — extract the inner text as fallback
-    inner = text.replace("<think>", "").replace("</think>", "").strip()
+        
+    # Entire output was a think block — extract inner text as fallback
+    inner = re.sub(r"</?(think|internal_thought)>", "", text).strip()
     return _strip_meta_reasoning_prefix(inner if inner else text)
 
 
@@ -2964,30 +2968,16 @@ class LiteLLMClient(LLMClient):
                 "sanitization_mode": "friend_chat_expose_empty",
                 "friend_chat_exposed_empty": True,
             }
-        if cleaned and _should_force_grounded_fallback(cleaned, request):
-            grounded_fallback = _build_mode_grounded_fallback_text(request)
-            if grounded_fallback:
-                self._logger.warning(
-                    "llm_output_forced_to_grounded_fallback",
-                    model=request.model or self._model,
-                    raw_preview=raw_text[:160],
-                    cleaned_preview=cleaned[:160],
-                    rendering_mode=str(
-                        request.metadata.get("rendering_mode", "supportive_progress")
-                    ),
-                )
-                return grounded_fallback, {"sanitization_mode": "grounded_fallback"}
-        grounded_fallback = _build_mode_grounded_fallback_text(request)
-        if cleaned and not _looks_like_meta_reasoning(cleaned):
-            return cleaned, {"sanitization_mode": "clean"}
-        if grounded_fallback:
+        if cleaned and _looks_like_meta_reasoning(cleaned):
             self._logger.warning(
-                "llm_output_sanitized_to_grounded_fallback",
+                "llm_output_meta_exposed_after_fallback_strip",
                 model=request.model or self._model,
                 raw_preview=raw_text[:160],
-                rendering_mode=str(request.metadata.get("rendering_mode", "supportive_progress")),
             )
-            return grounded_fallback, {"sanitization_mode": "grounded_fallback"}
+            return cleaned, {
+                "sanitization_mode": "expose_meta_after_strip",
+            }
+        return cleaned, {"sanitization_mode": "clean"}
 
         last_user_message = next(
             (

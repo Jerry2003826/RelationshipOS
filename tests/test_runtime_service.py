@@ -475,10 +475,17 @@ def test_runtime_service_process_turn_skips_mutating_side_effects_for_probe_sess
         async def plan_and_execute(self, **kwargs):  # type: ignore[no-untyped-def]
             counters["action"] += 1
 
+    class _StubRouterLLM:
+        async def complete(self, request):  # type: ignore[no-untyped-def]
+            from types import SimpleNamespace
+            return SimpleNamespace(output_text='{"route_type":"NEED_DEEP_THINK","reason":"test"}')
+
     service = object.__new__(RuntimeService)
     service._user_service = object()
     service._entity_service = _StubEntityService()
     service._action_service = _StubActionService()
+    service._llm_client = _StubRouterLLM()
+    service._llm_model = "test-model"
     service._entity_id = "entity:test"
 
     async def _load_turn_context(*, session_id: str):  # type: ignore[no-untyped-def]
@@ -509,6 +516,7 @@ def test_runtime_service_process_turn_skips_mutating_side_effects_for_probe_sess
             events=[],
             assistant_response="嗯。",
             assistant_responses=["嗯。"],
+            response_diagnostics={},
         )
 
     async def _build_proactive_artifacts(**kwargs):  # type: ignore[no-untyped-def]

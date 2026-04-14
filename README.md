@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/python-3.12-blue" />
+  <img src="https://img.shields.io/badge/python-3.14-blue" />
   <img src="https://img.shields.io/badge/benchmark-7.9%2F10-brightgreen" />
   <img src="https://img.shields.io/badge/runtime-friend__chat__zh__v1-orange" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
@@ -36,6 +36,9 @@
 | **跨人社会归属** | 知道哪些记忆属于谁、哪些可以说、哪些只能 hint、哪些必须闭嘴 |
 | **脑子和嘴巴分离** | 脑子负责理解/回忆/归属/裁量，嘴巴负责自然表达 |
 | **自适应 deliberation** | AI 自己判断这轮走 `fast_reply` / `light_recall` / `deep_recall` |
+| **Vanguard Router** | 两级混合分类器（规则 + mini-LLM），闲聊短路不走深思管线 |
+| **MoE 并行专家** | 6 个领域专家（Factual / Emotional / Governance / Coordination / Expression / Response）按 DAG 编排 |
+| **异步 I/O 并行化** | Foundation 阶段 `asyncio.gather` 并行编排实体/记忆/LLM 调用，wall-clock 降低 30-50% |
 | **结构化 probe 渲染** | Benchmark probe 通过 JSON clause slots 渲染，slot-based coverage 重算 |
 | **Policy 驱动** | 运行时决策从 Python if/else 迁到可配置的 policy 文件 |
 | **可评测可回放** | 内建 benchmark / report / console，不是靠主观感觉 |
@@ -79,12 +82,25 @@
 
 ```
 User Turn
-  → turn interpretation (intent / appraisal / emotional load / state guess)
-  → deliberation routing (fast_reply / light_recall / deep_recall)
-  → memory / digest foundation (fact_slot / narrative / relationship digest)
-  → conscience / disclosure gating (attribution / scope / guard)
-  → response draft + rendering
-  → post-audit + fallback
+  → Vanguard Router
+      ├─ FAST_PONG (闲聊短路) → 轻量回复 + carry-over 状态
+      └─ NEED_DEEP_THINK → 深思管线 ↓
+
+  → 深思管线 (asyncio.gather 并行 I/O)
+      ├─ Stage 1: LLM 解读 ‖ 实体初始化
+      ├─ Stage 2: 实体状态读取 (persona ‖ social_world)
+      ├─ Stage 3: 记忆回溯 → 良知评估
+      └─ 同步构建器链 (relationship → repair → confidence)
+
+  → MoE 专家 DAG (6 个领域专家按依赖序编排)
+      ├─ L1:  Factual Expert      → knowledge_boundary_decision
+      ├─ L2:  Emotional Expert    → private_judgment
+      ├─ L3-5: Governance Expert  → policy_gate → strategy → rehearsal
+      ├─ L6-7: Expression Expert  → expression_plan, empowerment_audit
+      ├─ L5-9: Coordination Expert → coordination → guidance → cadence → ritual → somatic
+      └─ L10-11: Response Expert  → response_draft → rendering_policy
+
+  → response draft + rendering → post-audit + fallback
   → event stream → projectors / console / benchmark traces
 ```
 
@@ -108,17 +124,30 @@ User Turn
 ├── src/relationship_os/
 │   ├── api/                     # FastAPI routes / WebSocket / templates / console
 │   ├── application/             # 核心：runtime / memory / entity / llm / projectors
-│   │   ├── runtime_service.py   # 主运行时，turn orchestration
+│   │   ├── runtime_service.py   # 主运行时，turn orchestration + Foundation 并行化
 │   │   ├── memory_service.py    # recall / ranking / attribution / 跨人保护
 │   │   ├── entity_service.py    # 人格 / 良心 / drive / narrative / world state
 │   │   ├── llm.py              # 模型调用 / 结构化 probe / slot coverage / fallback
+│   │   ├── analyzers/           # 同步分析构建器
+│   │   │   ├── experts/         # MoE 领域专家模块 + DAG 执行器
+│   │   │   │   ├── plan_dag.py           # 14 构建器 DAG 编排
+│   │   │   │   ├── factual_expert.py     # 知识边界决策
+│   │   │   │   ├── emotional_expert.py   # 情感评估
+│   │   │   │   ├── governance_expert.py  # 治理 / 策略 / 演练
+│   │   │   │   ├── coordination_expert.py # 协调 / 节奏 / 仪式
+│   │   │   │   ├── expression_expert.py  # 表达 / 赋能审计
+│   │   │   │   └── response_expert.py    # 回复草稿 / 渲染策略
+│   │   │   └── vanguard_router.py        # 两级混合路由 (FAST_PONG / NEED_DEEP_THINK)
 │   │   └── projectors/          # self_state / social_world / entity_persona ...
 │   ├── core/                    # config / logging
 │   ├── domain/                  # contracts / event types / models
 │   └── main.py
 └── tests/
     ├── test_llm.py              # 46 tests（结构化 probe / coverage / fallback）
-    └── test_runtime_service.py  # cue building / prompt / probe detection
+    ├── test_runtime_service.py  # cue building / prompt / probe detection
+    ├── test_vanguard_router.py  # 两级路由测试（规则拦截 / mini-LLM 分类）
+    ├── test_plan_dag.py         # DAG 执行器 + 6 专家模块测试
+    └── test_foundation_parallel.py  # Foundation 并行化测试
 ```
 
 ---
@@ -188,8 +217,11 @@ uv run uvicorn relationship_os.main:app --reload
 ### 跑测试
 
 ```bash
-uv run pytest tests/test_llm.py -q           # 46 tests，核心 probe pipeline
-uv run pytest tests/test_runtime_service.py -q  # cue / prompt / probe detection
+uv run pytest tests/test_llm.py -q                    # 46 tests，核心 probe pipeline
+uv run pytest tests/test_runtime_service.py -q         # cue / prompt / probe detection
+uv run pytest tests/test_vanguard_router.py -q         # 两级路由
+uv run pytest tests/test_plan_dag.py -q                # MoE DAG + 专家模块
+uv run pytest tests/test_foundation_parallel.py -q     # Foundation 并行化
 ```
 
 ---

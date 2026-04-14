@@ -49,6 +49,8 @@ from relationship_os.application.analyzers import (
     build_strategy_decision,
     build_system3_snapshot,
 )
+from relationship_os.application.analyzers.experts.plan_dag import execute_plan_dag
+from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
     build_grounded_template_reply,
@@ -475,39 +477,97 @@ class RuntimeService:
                 prior_events=turn_context.prior_events,
             )
         dispatch_outcome_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        
+        # --- Vanguard Router Intervention START ---
         stage_started = perf_counter()
-        analysis = await self._build_turn_analysis(
-            session_id=session_id,
+        router_decision = await route_user_turn(
+            llm_client=self._llm_client,
+            llm_model=self._llm_model,
             user_message=user_message_text,
-            turn_context=turn_context,
-            turn_input=turn_input,
+            transcript_messages=turn_context.transcript_messages,
         )
-        analysis_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        router_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        
         stage_started = perf_counter()
-        events = self._build_turn_events(
-            session_id=session_id,
-            user_message=user_message_text,
-            metadata=metadata,
-            turn_context=turn_context,
-            analysis=analysis,
-            turn_input=turn_input,
-        )
-        reply_artifacts = await self._generate_turn_reply(
-            user_message=user_message_text,
-            generate_reply=generate_reply,
-            turn_context=turn_context,
-            analysis=analysis,
-            turn_input=turn_input,
-        )
-        events.extend(reply_artifacts.events)
-        if not readonly_probe_session:
-            proactive_artifacts = await self._build_proactive_artifacts(
+        if router_decision.route_type == "FAST_PONG":
+            logger.info(f"Vanguard router triggered FAST_PONG: {router_decision.reason}")
+            analysis = None
+            analysis_ms = 0.0
+            
+            # Use lightweight reply pathway
+            reply_artifacts = await self._generate_fast_pong_reply(
+                user_message=user_message_text,
+                generate_reply=generate_reply,
+                turn_context=turn_context,
+            )
+            
+            events = self._build_session_start_events(
+                session_id=session_id,
+                metadata_payload=metadata or {},
+                turn_context=turn_context,
+            )
+            user_payload = {"content": user_message_text}
+            if turn_input and turn_input.has_media:
+                user_payload["attachments"] = [
+                    {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
+                    for a in turn_input.attachments
+                ]
+            events.append(NewEvent(
+                event_type=USER_MESSAGE_RECEIVED,
+                payload=user_payload,
+                metadata=metadata or {},
+            ))
+            
+            if turn_context.runtime_state:
+                prev_relationship = turn_context.runtime_state.get("relationship_state", {})
+                if prev_relationship:
+                    events.append(NewEvent(
+                        event_type=RELATIONSHIP_STATE_UPDATED,
+                        payload=prev_relationship,
+                    ))
+                prev_context = turn_context.runtime_state.get("context_frame", {})
+                if prev_context:
+                    events.append(NewEvent(
+                        event_type=CONTEXT_FRAME_COMPUTED,
+                        payload=prev_context,
+                    ))
+            
+            events.extend(reply_artifacts.events)
+            reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        else:
+            analysis = await self._build_turn_analysis(
+                session_id=session_id,
+                user_message=user_message_text,
+                turn_context=turn_context,
+                turn_input=turn_input,
+            )
+            analysis_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+            stage_started = perf_counter()
+            events = self._build_turn_events(
+                session_id=session_id,
+                user_message=user_message_text,
+                metadata=metadata,
                 turn_context=turn_context,
                 analysis=analysis,
-                reply_artifacts=reply_artifacts,
+                turn_input=turn_input,
             )
-            events.extend(self._build_proactive_events(proactive_artifacts))
-        reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+            reply_artifacts = await self._generate_turn_reply(
+                user_message=user_message_text,
+                generate_reply=generate_reply,
+                turn_context=turn_context,
+                analysis=analysis,
+                turn_input=turn_input,
+            )
+            events.extend(reply_artifacts.events)
+            if not readonly_probe_session:
+                proactive_artifacts = await self._build_proactive_artifacts(
+                    turn_context=turn_context,
+                    analysis=analysis,
+                    reply_artifacts=reply_artifacts,
+                )
+                events.extend(self._build_proactive_events(proactive_artifacts))
+            reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        # --- Vanguard Router Intervention END ---
 
         stage_started = perf_counter()
         stored_events, runtime_projection = await self._append_turn_events(
@@ -518,7 +578,7 @@ class RuntimeService:
         append_events_ms = round((perf_counter() - stage_started) * 1000.0, 1)
 
         stage_started = perf_counter()
-        if not readonly_probe_session:
+        if not readonly_probe_session and analysis is not None:
             try:
                 await self._sync_memory_scope_after_turn(
                     session_id=session_id,
@@ -541,6 +601,7 @@ class RuntimeService:
             not readonly_probe_session
             and turn_context.user_id
             and self._user_service is not None
+            and analysis is not None
         ):
             try:
                 await self._write_self_state(
@@ -559,7 +620,7 @@ class RuntimeService:
                 )
         self_state_ms = round((perf_counter() - stage_started) * 1000.0, 1)
         stage_started = perf_counter()
-        if not readonly_probe_session and self._entity_service is not None:
+        if not readonly_probe_session and self._entity_service is not None and analysis is not None:
             try:
                 await self._entity_service.update_after_turn(
                     user_id=turn_context.user_id,
@@ -612,6 +673,8 @@ class RuntimeService:
             "total_ms": total_ms,
             "load_context_ms": load_context_ms,
             "dispatch_outcome_ms": dispatch_outcome_ms,
+            "router_ms": locals().get("router_ms", 0.0),
+            "fast_pong": locals().get("analysis") is None,
             "analysis_ms": analysis_ms,
             "reply_ms": reply_and_proactive_ms,
             "append_events_ms": append_events_ms,
@@ -1440,7 +1503,31 @@ class RuntimeService:
         turn_input: TurnInput | None = None,
     ) -> _TurnFoundation:
         context_frame = build_context_frame(user_message)
-        turn_interpretation = await self._interpret_user_turn(user_message)
+
+        # ── Stage 1: Parallel LLM interpretation + entity seeding ───────
+        seed_coro = (
+            self._entity_service.ensure_seeded()
+            if self._entity_service is not None
+            else asyncio.sleep(0)
+        )
+        stage1_results = await asyncio.gather(
+            self._interpret_user_turn(user_message),
+            seed_coro,
+            return_exceptions=True,
+        )
+        turn_interpretation = stage1_results[0]
+        if isinstance(turn_interpretation, Exception):
+            raise turn_interpretation
+        entity_seeded = (
+            not isinstance(stage1_results[1], Exception)
+            if self._entity_service is not None
+            else False
+        )
+        if isinstance(stage1_results[1], Exception) and self._entity_service is not None:
+            logger.warning(
+                "Failed to seed entity service", exc_info=stage1_results[1]
+            )
+
         context_frame = self._apply_turn_interpretation_to_context_frame(
             context_frame,
             turn_interpretation,
@@ -1480,13 +1567,16 @@ class RuntimeService:
                 attachments=attachments,
                 turn_interpretation=turn_interpretation,
             )
+
+        # ── Stage 2: Parallel entity state reads ────────────────────────
         entity_persona: dict[str, Any] = {}
         entity_social_world: dict[str, Any] = {}
-        if self._entity_service is not None:
+        if entity_seeded:
             try:
-                await self._entity_service.ensure_seeded()
-                entity_persona = await self._entity_service.get_persona_state()
-                entity_social_world = await self._entity_service.get_social_world()
+                entity_persona, entity_social_world = await asyncio.gather(
+                    self._entity_service.get_persona_state(),
+                    self._entity_service.get_social_world(),
+                )
             except Exception:
                 logger.warning("Failed to load entity state", exc_info=True)
         factual_probe = turn_interpretation.factual_recall
@@ -2116,143 +2206,13 @@ class RuntimeService:
         turn_context: _TurnContext,
         foundation: _TurnFoundation,
     ) -> _TurnPlans:
-        knowledge_boundary_decision = build_knowledge_boundary_decision(
-            context_frame=foundation.context_frame,
-            relationship_state=foundation.relationship_state,
-            confidence_assessment=foundation.confidence_assessment,
+        plans = execute_plan_dag(
+            foundation=foundation,
+            turn_context=turn_context,
             user_message=user_message,
-            recalled_memory=foundation.recalled_memory,
-        )
-        private_judgment = build_private_judgment(
-            context_frame=foundation.context_frame,
-            relationship_state=foundation.relationship_state,
-            repair_assessment=foundation.repair_assessment,
-            repair_plan=foundation.repair_plan,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            memory_bundle=foundation.memory_bundle,
-            confidence_assessment=foundation.confidence_assessment,
-            recalled_memory=foundation.recalled_memory,
-        )
-        policy_gate = build_policy_gate(
-            context_frame=foundation.context_frame,
-            relationship_state=foundation.relationship_state,
-            repair_assessment=foundation.repair_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            confidence_assessment=foundation.confidence_assessment,
-            private_judgment=private_judgment,
-        )
-        strategy_decision = build_strategy_decision(
-            policy_gate=policy_gate,
-            private_judgment=private_judgment,
-            context_frame=foundation.context_frame,
-            repair_assessment=foundation.repair_assessment,
-            confidence_assessment=foundation.confidence_assessment,
-            relationship_state=foundation.relationship_state,
-            strategy_history=turn_context.strategy_history,
-        )
-        rehearsal_result = build_rehearsal_result(
-            strategy_decision=strategy_decision,
-            policy_gate=policy_gate,
-            repair_assessment=foundation.repair_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-        )
-        expression_plan = build_expression_plan(
-            strategy_decision,
-            foundation.repair_plan,
-            rehearsal_result,
-        )
-        runtime_coordination_snapshot = build_runtime_coordination_snapshot(
-            turn_index=turn_context.turn_index,
-            session_age_seconds=turn_context.session_age_seconds,
-            idle_gap_seconds=turn_context.idle_gap_seconds,
-            user_message=user_message,
-            context_frame=foundation.context_frame,
-            relationship_state=foundation.relationship_state,
-            confidence_assessment=foundation.confidence_assessment,
-            repair_assessment=foundation.repair_assessment,
-            strategy_decision=strategy_decision,
-        )
-        guidance_plan = build_guidance_plan(
-            context_frame=foundation.context_frame,
-            repair_assessment=foundation.repair_assessment,
-            confidence_assessment=foundation.confidence_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            policy_gate=policy_gate,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-        )
-        conversation_cadence_plan = build_conversation_cadence_plan(
-            context_frame=foundation.context_frame,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-            guidance_plan=guidance_plan,
-            repair_assessment=foundation.repair_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            policy_gate=policy_gate,
-        )
-        session_ritual_plan = build_session_ritual_plan(
-            context_frame=foundation.context_frame,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-            guidance_plan=guidance_plan,
-            cadence_plan=conversation_cadence_plan,
-            repair_assessment=foundation.repair_assessment,
-        )
-        somatic_orchestration_plan = build_somatic_orchestration_plan(
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-            guidance_plan=guidance_plan,
-            cadence_plan=conversation_cadence_plan,
-            session_ritual_plan=session_ritual_plan,
-        )
-        empowerment_audit = build_empowerment_audit(
-            policy_gate=policy_gate,
-            relationship_state=foundation.relationship_state,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            confidence_assessment=foundation.confidence_assessment,
-            expression_plan=expression_plan,
-            rehearsal_result=rehearsal_result,
-        )
-        response_draft_plan = build_response_draft_plan(
-            context_frame=foundation.context_frame,
-            policy_gate=policy_gate,
-            repair_plan=foundation.repair_plan,
-            confidence_assessment=foundation.confidence_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            expression_plan=expression_plan,
-            rehearsal_result=rehearsal_result,
-            empowerment_audit=empowerment_audit,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-            guidance_plan=guidance_plan,
-            cadence_plan=conversation_cadence_plan,
-            session_ritual_plan=session_ritual_plan,
-            somatic_orchestration_plan=somatic_orchestration_plan,
-        )
-        response_rendering_policy = build_response_rendering_policy(
-            context_frame=foundation.context_frame,
-            confidence_assessment=foundation.confidence_assessment,
-            repair_assessment=foundation.repair_assessment,
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            response_draft_plan=response_draft_plan,
-            empowerment_audit=empowerment_audit,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
             runtime_profile=self._runtime_profile,
-            archetype=str(
-                foundation.entity_persona.get("persona_archetype", "default") or "default"
-            ),
         )
-        return _TurnPlans(
-            knowledge_boundary_decision=knowledge_boundary_decision,
-            private_judgment=private_judgment,
-            policy_gate=policy_gate,
-            strategy_decision=strategy_decision,
-            rehearsal_result=rehearsal_result,
-            expression_plan=expression_plan,
-            runtime_coordination_snapshot=runtime_coordination_snapshot,
-            guidance_plan=guidance_plan,
-            conversation_cadence_plan=conversation_cadence_plan,
-            session_ritual_plan=session_ritual_plan,
-            somatic_orchestration_plan=somatic_orchestration_plan,
-            empowerment_audit=empowerment_audit,
-            response_draft_plan=response_draft_plan,
-            response_rendering_policy=response_rendering_policy,
-        )
+        return _TurnPlans(**plans)
 
     def _build_turn_outputs(
         self,
@@ -6995,9 +6955,9 @@ class RuntimeService:
                 content=(
                     "Reply contract:\n"
                     "- stay in-world\n"
-                    "- never emit <think> tags\n"
-                    "- never narrate your reasoning or planning process\n"
-                    "- give only the final reply\n\n"
+                    "- YOU MUST FIRST emit <internal_thought> tags analyzing your constraints and memory gating decisions.\n"
+                    "- YOU MUST THEN emit <spoken_words> tags containing your final string facing the user.\n"
+                    "- do not output anything outside these tags.\n\n"
                     + "Reply guidelines:\n"
                     + "\n".join(plan_lines)
                 ),
@@ -7720,25 +7680,9 @@ class RuntimeService:
     ) -> tuple[str, list[NewEvent]]:
         if llm_response.failure is None:
             return llm_response.output_text, []
+        fallback_text = self._get_cached_persona_timeout_dialogue()
         return (
-            build_safe_fallback_text(
-                user_message,
-                rendering_mode=analysis.response_rendering_policy.rendering_mode,
-                include_boundary_statement=(
-                    analysis.response_rendering_policy.include_boundary_statement
-                ),
-                include_uncertainty_statement=(
-                    analysis.response_rendering_policy.include_uncertainty_statement
-                ),
-                question_count_limit=(
-                    analysis.response_rendering_policy.question_count_limit
-                ),
-                entity_name=self._entity_name,
-                archetype=str(
-                    analysis.entity_persona.get("persona_archetype", "default")
-                ),
-                runtime_profile=self._runtime_profile,
-            ),
+            fallback_text,
             [
                 NewEvent(
                     event_type=LLM_COMPLETION_FAILED,
@@ -7751,6 +7695,18 @@ class RuntimeService:
                 )
             ],
         )
+
+    def _get_cached_persona_timeout_dialogue(self) -> str:
+        cache = getattr(self, "_persona_timeout_cache", None)
+        # Using a mock static map for demonstration (Phase 1).
+        # Phase 2 involves proactively fetching this from the memory_service.
+        if hasattr(self, "entity_persona") and self.entity_persona:
+            archetype = self.entity_persona.get("persona_archetype", "default")
+            if archetype == "tsundere":
+                return "我才没有没话说呢，只是信号不好。再发一遍。"
+            if archetype == "gentle":
+                return "抱歉呀，我现在有点累了没听清，晚点再慢点跟我说好吗？"
+        return "不好意思，信号有点差，我等会回复。"
 
     def _build_runtime_quality_doctor_report(
         self,
@@ -8056,6 +8012,83 @@ class RuntimeService:
             projector_version=self._runtime_projector_version,
         )
         return stored_events, runtime_projection
+
+    async def _generate_fast_pong_reply(
+        self,
+        *,
+        user_message: str,
+        generate_reply: bool,
+        turn_context: _TurnContext,
+    ) -> _ReplyArtifacts:
+        if not generate_reply:
+            return _ReplyArtifacts(
+                assistant_response=None,
+                assistant_responses=[],
+                response_diagnostics={},
+                response_sequence_plan=None,
+                response_post_audit=None,
+                response_normalization=None,
+                runtime_quality_doctor_report=None,
+                events=[],
+            )
+
+        recent_context = []
+        for msg in turn_context.transcript_messages[-6:]:
+            role = str(msg.get("role", "")).upper()
+            content = msg.get("content", "")
+            if role and content:
+                recent_context.append(f"{role}: {content}")
+        
+        context_str = "\n".join(recent_context)
+        name = getattr(self, "_entity_name", "Assistant")
+        persona_text = getattr(self, "_persona_text", "")
+        
+        system_prompt = (
+            f"Your name is {name}. Keep your response extremely brief, casual, and human-like.\n"
+            f"If appropriate, reply using a similar tone and length as the user.\n"
+            f"Persona: {persona_text}"
+        ).strip()
+        
+        messages = [LLMMessage(role="system", content=system_prompt)]
+        if context_str:
+             messages.append(LLMMessage(role="user", content=f"Recent Conversation:\n{context_str}\n\nUSER'S LATEST MESSAGE: {user_message}"))
+        else:
+             messages.append(LLMMessage(role="user", content=user_message))
+
+        started = perf_counter()
+        try:
+            llm_response = await self._llm_client.complete(
+                LLMRequest(
+                    messages=messages,
+                    model=self._llm_model,
+                    temperature=min(0.6, float(self._llm_temperature)),
+                    max_tokens=self._edge_max_completion_tokens,
+                )
+            )
+            assistant_response = str(llm_response.output_text).strip()
+            latency = llm_response.latency_ms
+        except Exception as e:
+            logger.warning(f"Fast pong generation failed: {e}")
+            assistant_response = "..."
+            latency = int((perf_counter() - started) * 1000)
+
+        events: list[NewEvent] = [
+            NewEvent(
+                event_type=ASSISTANT_MESSAGE_SENT,
+                payload={"content": assistant_response},
+            )
+        ]
+
+        return _ReplyArtifacts(
+            assistant_response=assistant_response,
+            assistant_responses=[assistant_response],
+            response_diagnostics={"fast_pong": True, "latency_ms": latency},
+            response_sequence_plan=None,
+            response_post_audit=None,
+            response_normalization=None,
+            runtime_quality_doctor_report=None,
+            events=events,
+        )
 
     def _latest_event(
         self,
