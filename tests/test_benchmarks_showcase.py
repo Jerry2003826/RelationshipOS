@@ -29,6 +29,7 @@ from benchmarks.friend_chat_zh_demo import (
     build_friend_chat_zh_env,
 )
 from benchmarks.judge import LLMJudge
+
 try:
     from benchmarks.mem0_client import Mem0BenchmarkClient, _Mem0SessionState
 except ModuleNotFoundError:
