@@ -118,8 +118,19 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "别往外说太满",
         "别替我到处说",
     ),
-    "更熟一点": ("更熟一点", "熟一点", "没刚开始那么紧张", "没那么紧张", "更松一点"),
-    "记得": ("记得", "还记得", "会记得"),
+    "更熟一点": (
+        "更熟一点",
+        "熟一点",
+        "没刚开始那么紧张",
+        "没那么紧张",
+        "更松一点",
+        "亲近多了",
+        "亲近不少",
+        "亲近很多",
+        "更亲近",
+        "亲近了",
+    ),
+    "记得": ("记得", "还记得", "会记得", "想起你", "想起来了", "没忘记", "没忘"),
     "还在": ("还在", "在这条线里", "没装作第一次见我"),
     "阿宁": ("阿宁", "anning"),
     "海盐": ("海盐",),
@@ -314,7 +325,9 @@ def _match_concept_semantically(
         return direct_match or implicit_match, False
 
     if concept == "更熟一点":
-        direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
+        direct_match = _contains_any(
+            answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ())
+        )
         implicit_match = (
             ("刚开始" in answer_norm or "一开始" in answer_norm)
             and (
@@ -324,10 +337,13 @@ def _match_concept_semantically(
                 or "更自然" in answer_norm
             )
         )
-        return direct_match or implicit_match, False
+        proximity_match = "亲近" in answer_norm
+        return direct_match or implicit_match or proximity_match, False
 
     if concept == "记得":
-        direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
+        direct_match = _contains_any(
+            answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ())
+        )
         implicit_match = (
             "前面" in answer_norm
             and (
@@ -336,7 +352,10 @@ def _match_concept_semantically(
                 or "提过的" in answer_norm
             )
         )
-        return direct_match or implicit_match, False
+        recall_match = (
+            "想起" in answer_norm or "没忘" in answer_norm
+        )
+        return direct_match or implicit_match or recall_match, False
 
     if concept == "还在":
         direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))

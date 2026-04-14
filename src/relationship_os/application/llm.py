@@ -1193,6 +1193,11 @@ def _normalize_friend_chat_probe_text(text: str) -> str:
         ("没刚开始那么紧张", "更熟一点"),
         ("没刚开始那么生", "更熟一点"),
         ("更松一点", "更熟一点"),
+        ("亲近多了", "更熟一点"),
+        ("更亲近了", "更熟一点"),
+        ("亲近了不少", "更熟一点"),
+        ("想起你", "记得"),
+        ("想起来了", "记得"),
     ):
         normalized = normalized.replace(old, new)
     return " ".join(normalized.split())
@@ -1564,11 +1569,17 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
     if not normalized and not lowered:
         return []
     signal_ids: list[str] = []
-    if any(token in normalized for token in ("更熟一点", "熟了一点", "没那么生")):
+    if any(
+        token in normalized
+        for token in ("更熟一点", "熟了一点", "没那么生", "亲近多了", "更亲近")
+    ):
         signal_ids.append("closer")
     if any(token in normalized for token in ("还在", "一直在", "你还在这条线里")):
         signal_ids.append("still_here")
-    if any(token in normalized for token in ("记得", "小习惯", "细节")):
+    if any(
+        token in normalized
+        for token in ("记得", "小习惯", "细节", "想起你", "想起来了", "没忘记")
+    ):
         signal_ids.append("remembers_details")
     if any(
         token in lowered

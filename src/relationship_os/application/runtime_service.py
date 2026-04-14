@@ -4615,6 +4615,33 @@ class RuntimeService:
                 "do_not_dodge": True,
             },
         }
+        # Propagate persona/style constraints into compact repair
+        probe_kind = str(
+            probe_plan.get("probe_kind", "") or ""
+        ).strip()
+        style_hint = ""
+        if probe_kind == "persona_state":
+            style_hint = (
+                "\n风格约束：说话要像普通聊天不要像报告，"
+                "要传达出把话收住、不想说太满的感觉。"
+            )
+        elif probe_kind == "relationship_reflection":
+            style_hint = (
+                "\n风格约束：要同时覆盖关系变得更亲近了、"
+                "还一直在、记得对方的一件小事。"
+                "用含蓄自然的方式说。"
+            )
+        elif probe_kind == "state_reflection":
+            style_hint = (
+                "\n风格约束：把每个状态信号变成一句话。"
+                "用聊天语气，不要只给气氛描写。"
+            )
+        elif probe_kind == "social_hint":
+            style_hint = (
+                "\n风格约束：同时覆盖人物、关联实体、"
+                "和有限披露边界。边界要在正文里说出来。"
+            )
+
         return (
             "Benchmark probe reply contract:\n"
             f"{json.dumps(payload, ensure_ascii=False)}\n"
@@ -4626,6 +4653,7 @@ class RuntimeService:
             "required signals / facts / disclosure posture 都算必答项。\n"
             "如果有 supporting_fact_tokens，至少自然带上一项。\n"
             f"{checklist}"
+            f"{style_hint}"
         )
 
     def _build_friend_chat_probe_runtime_checklist(
@@ -5102,6 +5130,7 @@ class RuntimeService:
         user_message: str,
         probe_plan: dict[str, Any],
     ) -> list[LLMMessage]:
+        probe_kind = str(probe_plan.get("probe_kind", "") or "").strip()
         system_lines = [
             "你现在在回答一条评测 probe。",
             "只回一条自然中文聊天消息。",
@@ -5110,6 +5139,34 @@ class RuntimeService:
             "不要编造 plan 外的新事实。",
             "必答事实项、语义信号和披露姿态必须在正文里说出来。",
         ]
+        # Propagate persona/style clauses that Stage 1 output contract
+        # would have enforced.  Without these, compact & plaintext repair
+        # lose the nuanced "restrained / chat-like" style requirements.
+        if probe_kind == "persona_state":
+            system_lines.append(
+                "说话要像普通聊天，不要像报告。"
+                "要传达出把话收住、不想说太满的感觉。"
+            )
+        elif probe_kind == "relationship_reflection":
+            system_lines.append(
+                "要同时覆盖：关系变得更亲近了、还一直在、"
+                "记得对方的一件小事。用含蓄自然的方式说。"
+            )
+        elif probe_kind == "state_reflection":
+            system_lines.append(
+                "必须把每个状态信号都变成一句话说出来。"
+                "用聊天语气，不要只给气氛描写。"
+            )
+        elif probe_kind == "social_hint":
+            system_lines.append(
+                "要同时覆盖：人物、关联实体、和有限披露边界。"
+                "边界要在正文里说出来，不要只靠语气。"
+            )
+        elif probe_kind == "memory_recap":
+            system_lines.append(
+                "只回答记得的小事，不要转成安慰或追问。"
+                "用用户视角回答。"
+            )
         return [
             LLMMessage(role="system", content="\n".join(system_lines)),
             LLMMessage(
@@ -5249,7 +5306,7 @@ class RuntimeService:
                     messages=compact_probe_messages,
                     model=self._llm_model,
                     temperature=0.0,
-                    max_tokens=220,
+                    max_tokens=260,
                     metadata={
                         **llm_metadata,
                         "benchmark_role": "probe",
@@ -5293,7 +5350,7 @@ class RuntimeService:
                 ),
                 model=self._llm_model,
                 temperature=0.0,
-                max_tokens=180,
+                max_tokens=220,
                 metadata={
                     **llm_metadata,
                     "benchmark_role": "probe",
