@@ -537,9 +537,11 @@ def test_process_turn_uses_recalled_memory_on_follow_up_turn() -> None:
 def test_process_turn_records_memory_write_guard_for_low_signal_input() -> None:
     client = TestClient(create_app())
 
+    # Use a low-signal message that does NOT trigger Vanguard Router's
+    # FAST_PONG rules ("ok" is an exact match → short-circuit).
     response = client.post(
         "/api/v1/sessions/session-write-guard/turns",
-        json={"content": "ok"},
+        json={"content": "yeah sure I guess"},
     )
 
     assert response.status_code == 201
