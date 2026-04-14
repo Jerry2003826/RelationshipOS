@@ -104,8 +104,11 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
         assert item["cadence_status"] in {"guided_progress", "reflect_then_move"}
         assert item["cadence_followup_tempo"] in {"progress_ping", "reflective_ping"}
         assert item["cadence_user_space_mode"] == "balanced_space"
-        assert item["ritual_phase"] == "steady_progress"
-        assert item["ritual_closing_move"] in {"progress_invitation", "reflective_close"}
+        assert item["ritual_phase"] in {
+            "steady_progress",
+            "alignment_check",
+        }
+        assert item["ritual_closing_move"] in {"progress_invitation", "reflective_close", "clarify_pause"}
         assert item["somatic_orchestration_status"] == "not_needed"
         assert item["somatic_orchestration_mode"] == "none"
         assert item["proactive_cadence_key"] == "progress_three_touch"

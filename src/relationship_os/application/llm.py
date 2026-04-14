@@ -2985,11 +2985,34 @@ class LiteLLMClient(LLMClient):
                 model=request.model or self._model,
                 raw_preview=raw_text[:160],
             )
-            return cleaned, {
-                "sanitization_mode": "expose_meta_after_strip",
-            }
-        return cleaned, {"sanitization_mode": "clean"}
+            # Fall through to generic fallback instead of exposing raw meta
+            cleaned = ""
 
+        if cleaned:
+            # Check if grounded factual fallback is needed
+            if _should_force_grounded_fallback(cleaned, request):
+                grounded = _build_mode_grounded_fallback_text(request)
+                if grounded:
+                    self._logger.warning(
+                        "llm_output_grounded_fallback_applied",
+                        model=request.model or self._model,
+                        raw_preview=raw_text[:160],
+                    )
+                    return grounded, {
+                        "sanitization_mode": "grounded_fallback",
+                    }
+            return cleaned, {"sanitization_mode": "clean"}
+
+        # Fallback: cleaned is empty or was stripped as meta-reasoning
+        # Try grounded factual fallback first (for factual_recall_mode)
+        grounded = _build_mode_grounded_fallback_text(request)
+        if grounded:
+            self._logger.warning(
+                "llm_output_grounded_fallback_applied",
+                model=request.model or self._model,
+                raw_preview=raw_text[:160],
+            )
+            return grounded, {"sanitization_mode": "grounded_fallback"}
         last_user_message = next(
             (
                 _extract_user_text(message)
@@ -3006,17 +3029,37 @@ class LiteLLMClient(LLMClient):
         return (
             build_sanitized_relational_fallback_text(
                 last_user_message,
-                rendering_mode=str(request.metadata.get("rendering_mode", "supportive_progress")),
+                rendering_mode=str(
+                    request.metadata.get(
+                        "rendering_mode", "supportive_progress"
+                    )
+                ),
                 include_boundary_statement=bool(
-                    request.metadata.get("rendering_include_boundary_statement", False)
+                    request.metadata.get(
+                        "rendering_include_boundary_statement", False
+                    )
                 ),
                 include_uncertainty_statement=bool(
-                    request.metadata.get("rendering_include_uncertainty_statement", False)
+                    request.metadata.get(
+                        "rendering_include_uncertainty_statement", False
+                    )
                 ),
-                question_count_limit=int(request.metadata.get("rendering_question_count_limit", 0)),
-                entity_name=str(request.metadata.get("entity_name", "RelationshipOS")),
-                archetype=str(request.metadata.get("entity_persona_archetype", "default")),
-                runtime_profile=str(request.metadata.get("policy_profile", "default")),
+                question_count_limit=int(
+                    request.metadata.get(
+                        "rendering_question_count_limit", 0
+                    )
+                ),
+                entity_name=str(
+                    request.metadata.get("entity_name", "RelationshipOS")
+                ),
+                archetype=str(
+                    request.metadata.get(
+                        "entity_persona_archetype", "default"
+                    )
+                ),
+                runtime_profile=str(
+                    request.metadata.get("policy_profile", "default")
+                ),
             ),
             {"sanitization_mode": "generic_fallback"},
         )

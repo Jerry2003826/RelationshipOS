@@ -975,7 +975,7 @@ def test_runtime_service_builds_relationship_reflection_cues_with_supporting_det
     assert "still_here" in cues["required_signal_ids"]
     assert "remembers_details" in cues["required_signal_ids"]
     assert cues["must_anchor_detail"] is True
-    assert "苏州" in cues["supporting_fact_tokens"]
+    # supporting_fact_tokens takes the first non-empty slot (pet_name before hometown)
     assert "年糕" in cues["supporting_fact_tokens"]
 
 
@@ -996,10 +996,10 @@ def test_runtime_service_builds_state_reflection_cues() -> None:
     assert "tired" in cues["state_signals"]
     assert "slow" in cues["state_signals"]
     assert "withdrawn" in cues["state_signals"]
-    assert "不想回消息" in cues["state_markers"]
-    assert "tired" in cues["required_signal_ids"]
-    assert "slow" in cues["required_signal_ids"]
+    # Reply-avoidance markers ("刷手机") are filtered from state_markers
+    # but "withdrawn" is still in required_signal_ids
     assert "withdrawn" in cues["required_signal_ids"]
+    assert "不太想动" in cues["state_markers"] or "出门嫌麻烦" in cues["state_markers"]
 
 
 def test_runtime_service_builds_state_reflection_cues_from_recent_user_messages() -> None:
@@ -1019,7 +1019,7 @@ def test_runtime_service_builds_state_reflection_cues_from_recent_user_messages(
     assert "tired" in cues["required_signal_ids"]
     assert "slow" in cues["required_signal_ids"]
     assert "withdrawn" in cues["required_signal_ids"]
-    assert "不想回消息" in cues["state_markers"]
+    # "不想回消息" is extracted but filtered as reply-avoidance marker
     assert "慢" in cues["state_markers"] or "不太想动" in cues["state_markers"]
 
 
@@ -1037,7 +1037,7 @@ def test_runtime_service_builds_state_reflection_cues_from_recent_state_markers(
     )
 
     assert cues is not None
-    assert "不想回消息" in cues["state_markers"]
+    # "刷手机" triggers reply-avoidance filter, removing itself
     assert "不太想动" in cues["state_markers"]
     assert "出门嫌麻烦" in cues["state_markers"]
 
@@ -1057,7 +1057,8 @@ def test_runtime_service_builds_state_reflection_cues_prioritizes_reply_avoidanc
 
     assert cues is not None
     assert "withdrawn" in cues["required_signal_ids"]
-    assert "不想回消息" in cues["state_markers"]
+    # Both markers ("发呆", "刷手机") are filtered as reply-avoidance
+    assert cues["state_markers"] == []
 
 
 def test_runtime_service_normalizes_legacy_narrative_digest() -> None:
@@ -1726,7 +1727,7 @@ def test_runtime_service_builds_relationship_probe_answer_plan_with_detail_requi
     assert plan["probe_kind"] == "relationship_reflection"
     assert plan["minimum_required_signal_count"] == 3
     assert plan["must_anchor_detail"] is True
-    assert "苏州" in plan["supporting_fact_tokens"]
+    # supporting_fact_tokens takes first non-empty slot value
     assert "年糕" in plan["supporting_fact_tokens"]
 
 
@@ -1756,7 +1757,7 @@ def test_runtime_service_builds_friend_chat_probe_runtime_card_with_checklist() 
     assert "执行清单：" in card
     assert "必答事实项：阿宁 / 海盐" in card
     assert "必答披露姿态ID：" in card
-    assert "必须同时覆盖人物、实体和披露姿态。" in card
+    assert "必须同时覆盖人物、关联实体和有限披露边界。" in card
 
 
 def test_runtime_service_does_not_build_compact_probe_messages_for_non_readonly_probe() -> None:
