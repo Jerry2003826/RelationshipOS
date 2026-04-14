@@ -548,7 +548,13 @@ def test_process_turn_records_memory_write_guard_for_low_signal_input() -> None:
     # but contain no specific facts for the write guard to block.
     response = client.post(
         "/api/v1/sessions/session-write-guard/turns",
-        json={"content": "I feel like I've been going in circles with this whole thing, but honestly I can't even tell you what this is about, it's just a vague feeling"},
+        json={
+            "content": (
+                "I feel like I've been going in circles with this whole thing, "
+                "but honestly I can't even tell you what this is about, "
+                "it's just a vague feeling"
+            )
+        },
     )
 
     assert response.status_code == 201
@@ -867,7 +873,9 @@ def test_process_turn_builds_runtime_coordination_for_high_load_and_proactive_fo
         "steady_progress",
         "alignment_check",
     }
-    assert second_ritual["closing_move"] in {"progress_invitation", "reflective_close", "clarify_pause"}
+    assert second_ritual["closing_move"] in {
+        "progress_invitation", "reflective_close", "clarify_pause"
+    }
     second_somatic_plan = second_body["projection"]["state"]["somatic_orchestration_plan"]
     assert second_somatic_plan["status"] == "not_needed"
     assert second_body["projection"]["state"]["proactive_followup_directive_count"] == 2
