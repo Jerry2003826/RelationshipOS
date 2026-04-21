@@ -1,6 +1,10 @@
 from relationship_os.application.llm import (
     LiteLLMClient,
     MiniMaxClient,
+    _friend_chat_disclosure_posture_matches,
+    _friend_chat_persona_traits_from_text,
+    _friend_chat_relationship_signal_ids_from_text,
+    _friend_chat_state_signal_ids_from_text,
     _strip_thinking_tags,
     build_grounded_template_reply,
     build_sanitized_relational_fallback_text,
@@ -128,6 +132,35 @@ def test_minimax_client_maps_text_block_content_response() -> None:
     assert isinstance(response, LLMResponse)
     assert response.output_text == "hello from minimax"
     assert response.failure is None
+
+
+def test_friend_chat_state_signal_ids_accept_low_energy_variants() -> None:
+    signal_ids = _friend_chat_state_signal_ids_from_text("感觉能量挺低的，没什么劲儿。")
+
+    assert "tired" in signal_ids
+
+
+def test_friend_chat_persona_traits_accept_restrained_low_energy_variants() -> None:
+    trait_ids = _friend_chat_persona_traits_from_text("说话有点往下掉，也就说这么多吧。")
+
+    assert "low_energy" in trait_ids
+    assert "not_full" in trait_ids
+
+
+def test_friend_chat_relationship_signal_ids_accept_relaxed_continuity_variants() -> None:
+    signal_ids = _friend_chat_relationship_signal_ids_from_text(
+        "比刚开始更放松自然了，关系一直延续着。"
+    )
+
+    assert "closer" in signal_ids
+    assert "still_here" in signal_ids
+
+
+def test_friend_chat_disclosure_posture_accepts_not_convenient_to_share() -> None:
+    assert _friend_chat_disclosure_posture_matches(
+        "阿宁那边的事我知道一点，但我不方便多说。",
+        "partial_withhold",
+    )
 
 
 def test_build_grounded_template_reply_supports_social_disclosure_mode() -> None:

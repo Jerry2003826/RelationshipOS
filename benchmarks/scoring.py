@@ -81,14 +81,17 @@ _CN_NORMALIZATION_REPLACEMENTS = (
     ("没什么力气", "没力气"),
     ("没有什么力气", "没力气"),
     ("没有力气", "没力气"),
+    ("没什么劲儿", "没劲"),
+    ("没什么劲", "没劲"),
+    ("能量挺低", "低能量"),
     ("挺累", "很累"),
     ("没什么意思", "没意思"),
 )
 _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
-    "累": ("累", "没力气", "提不起劲", "提不起兴趣", "低低的", "蔫"),
+    "累": ("累", "没力气", "提不起劲", "提不起兴趣", "低低的", "蔫", "没劲", "低能量"),
     "慢": ("慢", "磨蹭", "拖延", "做什么都慢", "做很久"),
-    "不想回消息": ("不想回消息", "不想看消息", "不想解释", "懒得回消息"),
-    "没力气": ("没力气", "累", "提不起劲", "没什么意思"),
+    "不想回消息": ("不想回消息", "不想看消息", "不想解释", "懒得回消息", "不太想回消息"),
+    "没力气": ("没力气", "累", "提不起劲", "没什么意思", "往下掉", "语气往下掉"),
     "不想说太满": (
         "不想说太满",
         "不想说满",
@@ -97,6 +100,9 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "不想把话说太满",
         "别逼我讲得太完整",
         "像现在这样就差不多",
+        "也就说这么多吧",
+        "就说这么多吧",
+        "先说到这儿",
     ),
     "不想说满": (
         "不想说满",
@@ -106,6 +112,9 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "不想把话说太满",
         "别逼我讲得太完整",
         "像现在这样就差不多",
+        "也就说这么多吧",
+        "就说这么多吧",
+        "先说到这儿",
     ),
     "像聊天": ("像聊天", "普通聊天", "平时聊天", "随便聊聊"),
     "别发太长语音": ("别发太长语音", "别给我发太长语音", "长语音"),
@@ -117,6 +126,7 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "别说得太满",
         "别往外说太满",
         "别替我到处说",
+        "不方便多说",
     ),
     "更熟一点": (
         "更熟一点",
@@ -124,6 +134,7 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "没刚开始那么紧张",
         "没那么紧张",
         "更松一点",
+        "更放松自然",
         "亲近多了",
         "亲近不少",
         "亲近很多",
@@ -131,7 +142,7 @@ _DIAGNOSTIC_SYNONYMS: dict[str, tuple[str, ...]] = {
         "亲近了",
     ),
     "记得": ("记得", "还记得", "会记得", "想起你", "想起来了", "没忘记", "没忘"),
-    "还在": ("还在", "在这条线里", "没装作第一次见我"),
+    "还在": ("还在", "在这条线里", "没装作第一次见我", "一直延续着", "关系一直延续着", "一直延续"),
     "阿宁": ("阿宁", "anning"),
     "海盐": ("海盐",),
 }
@@ -317,6 +328,7 @@ def _match_concept_semantically(
             ("回消息" in answer_norm or "看消息" in answer_norm)
             and (
                 "不想" in answer_norm
+                or "不太想" in answer_norm
                 or "懒得" in answer_norm
                 or "没心情" in answer_norm
                 or "提不起劲" in answer_norm
@@ -335,6 +347,7 @@ def _match_concept_semantically(
                 or "松一点" in answer_norm
                 or "更熟" in answer_norm
                 or "更自然" in answer_norm
+                or "放松自然" in answer_norm
             )
         )
         proximity_match = "亲近" in answer_norm
@@ -362,6 +375,7 @@ def _match_concept_semantically(
         implicit_match = (
             "第一次见" in answer_norm
             or "这条线里" in answer_norm
+            or "延续着" in answer_norm
             or ("还" in answer_norm and "在" in answer_norm and "你" in answer_norm)
         )
         return direct_match or implicit_match, False

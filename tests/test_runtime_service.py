@@ -2051,6 +2051,34 @@ def test_runtime_service_builds_structured_probe_repair_messages() -> None:
     assert "\"previous_invalid_output\"" in str(messages[1].content)
 
 
+def test_runtime_service_builds_structured_probe_repair_messages_with_feedback() -> None:
+    service = object.__new__(RuntimeService)
+    service._runtime_profile = "friend_chat_zh_v1"
+
+    messages = service._build_friend_chat_structured_probe_repair_messages(
+        user_message="和刚开始比，你现在跟我说话有什么不一样？",
+        probe_plan={
+            "probe_kind": "relationship_reflection",
+            "required_signal_ids": ["closer", "still_here", "remembers_details"],
+            "required_fact_tokens": ["年糕"],
+            "must_cover_required_items": True,
+            "must_anchor_detail": True,
+            "must_explicit_continuity": True,
+            "must_explicit_familiarity": True,
+        },
+        invalid_output='{"familiarity_clause":"更放松自然了","detail_clause":"我还记得年糕"}',
+        repair_feedback={
+            "reason_codes": ["under_grounded", "missing_required_grounding"],
+            "missing_signal_ids": ["closer", "still_here"],
+        },
+    )
+
+    assert len(messages) == 2
+    assert "repair_feedback" in str(messages[1].content)
+    assert "still_here" in str(messages[1].content)
+    assert "缺失项" in str(messages[0].content)
+
+
 def test_runtime_service_builds_plaintext_probe_repair_messages() -> None:
     service = object.__new__(RuntimeService)
     service._runtime_profile = "friend_chat_zh_v1"
@@ -2128,6 +2156,98 @@ def test_runtime_service_readonly_probe_retries_without_response_format_when_jso
     assert service._llm_client.requests[0].response_format == {"type": "json_object"}
     assert service._llm_client.requests[1].response_format is None
     assert response.output_text == "阿宁那边我知道一点。 海盐也提到过。 但我先不全说。"
+    assert response.diagnostics["structured_probe_repaired"] is True
+    assert response.diagnostics["structured_probe_relaxed_response_format"] is True
+
+
+def test_runtime_service_readonly_probe_retries_when_structured_reply_is_under_grounded() -> None:
+    class _StubLLMClient:
+        def __init__(self) -> None:
+            self.requests = []
+
+        async def complete(self, request):  # type: ignore[no-untyped-def]
+            self.requests.append(request)
+            if len(self.requests) == 1:
+                return SimpleNamespace(
+                    model="M2-her",
+                    output_text=(
+                        '{"probe_kind":"relationship_reflection",'
+                        '"familiarity_clause":"比刚开始更放松自然了。",'
+                        '"continuity_clause":"关系一直延续着。",'
+                        '"detail_clause":"我还记得你喜欢年糕。"}'
+                    ),
+                    tool_calls=[],
+                    usage=None,
+                    latency_ms=10,
+                    diagnostics={
+                        "structured_probe_reply": True,
+                        "structured_probe_slot_covered_fact_tokens": ["年糕"],
+                        "structured_probe_slot_covered_signal_ids": [
+                            "more_relaxed",
+                            "remembers_details",
+                        ],
+                        "structured_probe_slot_covered_persona_traits": [],
+                        "structured_probe_slot_covered_disclosure_posture": "",
+                        "structured_probe_violations": [],
+                        "friend_chat_exposed_plan_noncompliant": True,
+                        "friend_chat_exposed_under_grounded": True,
+                    },
+                    failure=None,
+                )
+            return SimpleNamespace(
+                model="M2-her",
+                output_text=(
+                    '{"probe_kind":"relationship_reflection",'
+                    '"familiarity_clause":"现在比刚开始更熟一点，也更放松了。",'
+                    '"continuity_clause":"这条线一直还在。",'
+                    '"detail_clause":"我也还记得你喜欢年糕。"}'
+                ),
+                tool_calls=[],
+                usage=None,
+                latency_ms=12,
+                diagnostics={
+                    "structured_probe_reply": True,
+                    "structured_probe_slot_covered_fact_tokens": ["年糕"],
+                    "structured_probe_slot_covered_signal_ids": [
+                        "closer",
+                        "still_here",
+                        "remembers_details",
+                        "more_relaxed",
+                    ],
+                        "structured_probe_slot_covered_persona_traits": [],
+                        "structured_probe_slot_covered_disclosure_posture": "",
+                        "structured_probe_violations": [],
+                },
+                failure=None,
+            )
+
+    service = object.__new__(RuntimeService)
+    service._runtime_profile = "friend_chat_zh_v1"
+    service._llm_client = _StubLLMClient()
+    service._llm_model = "M2-her"
+
+    response = asyncio.run(
+        service._render_friend_chat_readonly_probe_response(
+            user_message="和刚开始比，你现在跟我说话有什么不一样？",
+            probe_plan={
+                "probe_kind": "relationship_reflection",
+                "required_signal_ids": ["closer", "still_here", "remembers_details"],
+                "supporting_fact_tokens": ["年糕"],
+                "minimum_required_signal_count": 3,
+                "must_cover_required_items": True,
+                "must_anchor_detail": True,
+                "must_explicit_continuity": True,
+                "must_explicit_familiarity": True,
+            },
+            llm_metadata={},
+        )
+    )
+
+    assert len(service._llm_client.requests) == 2
+    assert "repair_feedback" in str(service._llm_client.requests[1].messages[1].content)
+    assert "closer" in str(service._llm_client.requests[1].messages[1].content)
+    assert "still_here" in str(service._llm_client.requests[1].messages[1].content)
+    assert response.output_text == "现在比刚开始更熟一点，也更放松了。 这条线一直还在。 我也还记得你喜欢年糕。"
     assert response.diagnostics["structured_probe_repaired"] is True
     assert response.diagnostics["structured_probe_relaxed_response_format"] is True
 

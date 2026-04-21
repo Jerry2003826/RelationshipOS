@@ -4603,6 +4603,18 @@ class RuntimeService:
             return None
         checklist = self._build_friend_chat_probe_runtime_checklist(probe_plan)
         render_payload = self._build_friend_chat_structured_probe_payload(probe_plan)
+        repair_feedback = metadata.get("friend_chat_probe_repair_feedback")
+        repair_feedback_payload = (
+            dict(repair_feedback)
+            if isinstance(repair_feedback, dict) and repair_feedback
+            else None
+        )
+        if repair_feedback_payload:
+            feedback_lines = self._render_friend_chat_probe_repair_feedback_lines(
+                repair_feedback_payload
+            )
+            if feedback_lines:
+                checklist = "\n".join([checklist, *feedback_lines])
         payload = {
             "probe_answer_plan": render_payload,
             "rules": {
@@ -4616,6 +4628,8 @@ class RuntimeService:
                 "do_not_dodge": True,
             },
         }
+        if repair_feedback_payload:
+            payload["repair_feedback"] = repair_feedback_payload
         # Propagate persona/style constraints into compact repair
         probe_kind = str(
             probe_plan.get("probe_kind", "") or ""
@@ -5049,6 +5063,7 @@ class RuntimeService:
         user_message: str,
         probe_plan: dict[str, Any],
         invalid_output: str,
+        repair_feedback: dict[str, Any] | None = None,
     ) -> list[LLMMessage]:
         payload = {
             "question": user_message,
@@ -5056,13 +5071,20 @@ class RuntimeService:
                 probe_plan
             ),
             "previous_invalid_output": invalid_output,
-            "repair_instruction": (
-                "上一个输出没有满足 JSON 合同。请重做，并且只输出一个合法 JSON 对象。"
-            ),
             "output_contract": self._build_friend_chat_structured_probe_output_contract(
                 probe_plan
             ),
         }
+        if repair_feedback:
+            payload["repair_instruction"] = (
+                "上一个输出虽然可解析，但 reply 正文没有把必答项落到字面上。"
+                "请根据 repair_feedback 重做，并且只输出一个合法 JSON 对象。"
+            )
+            payload["repair_feedback"] = repair_feedback
+        else:
+            payload["repair_instruction"] = (
+                "上一个输出没有满足 JSON 合同。请重做，并且只输出一个合法 JSON 对象。"
+            )
         system_lines = [
             "你上一条输出不合格。",
             "现在重做，并且只输出一个合法 JSON 对象。",
@@ -5076,6 +5098,13 @@ class RuntimeService:
             "所有句子都用陈述句，系统会按语义槽位顺序拼成最终 reply。",
             "系统会根据 reply 正文重算 covered_*；正文没说出来，就算没覆盖。",
         ]
+        if repair_feedback:
+            system_lines.extend(
+                [
+                    "repair_feedback 里列出的缺失项，必须在新的 reply 正文里逐个补齐。",
+                    "不要只在 covered_* 里勾选；没有在正文说出来的，仍然算没覆盖。",
+                ]
+            )
         return [
             LLMMessage(role="system", content="\n".join(system_lines)),
             LLMMessage(role="user", content=json.dumps(payload, ensure_ascii=False)),
@@ -5130,6 +5159,7 @@ class RuntimeService:
         *,
         user_message: str,
         probe_plan: dict[str, Any],
+        repair_feedback: dict[str, Any] | None = None,
     ) -> list[LLMMessage]:
         probe_kind = str(probe_plan.get("probe_kind", "") or "").strip()
         system_lines = [
@@ -5140,6 +5170,13 @@ class RuntimeService:
             "不要编造 plan 外的新事实。",
             "必答事实项、语义信号和披露姿态必须在正文里说出来。",
         ]
+        if repair_feedback:
+            system_lines.extend(
+                [
+                    "上一版回复没有把缺失项落到字面上。",
+                    "这次必须把 repair_feedback 里的缺失项逐个补齐，用你自己的自然中文说出来。",
+                ]
+            )
         # Propagate persona/style clauses that Stage 1 output contract
         # would have enforced.  Without these, compact & plaintext repair
         # lose the nuanced "restrained / chat-like" style requirements.
@@ -5172,9 +5209,20 @@ class RuntimeService:
             LLMMessage(role="system", content="\n".join(system_lines)),
             LLMMessage(
                 role="user",
-                content=self._build_friend_chat_probe_user_prompt(
-                    user_message=user_message,
-                    probe_plan=probe_plan,
+                content="\n".join(
+                    part
+                    for part in (
+                        self._build_friend_chat_probe_user_prompt(
+                            user_message=user_message,
+                            probe_plan=probe_plan,
+                        ),
+                        "\n".join(
+                            self._render_friend_chat_probe_repair_feedback_lines(
+                                repair_feedback or {}
+                            )
+                        ),
+                    )
+                    if part
                 ),
             ),
         ]
@@ -5238,13 +5286,28 @@ class RuntimeService:
             primary_response,
             probe_kind=str(probe_plan.get("probe_kind", "") or "").strip(),
         )
+        primary_repair_feedback = (
+            self._build_friend_chat_probe_repair_feedback(
+                dict(normalized_primary.diagnostics or {}),
+                probe_plan,
+            )
+            if normalized_primary is not None
+            else None
+        )
         if normalized_primary is not None:
+            if primary_repair_feedback is None:
+                logger.info(
+                    "friend_chat_structured_probe_render_succeeded probe_kind=%s stage=%s",
+                    str(probe_plan.get("probe_kind", "") or ""),
+                    "json_object",
+                )
+                return normalized_primary
             logger.info(
-                "friend_chat_structured_probe_render_succeeded probe_kind=%s stage=%s",
+                "friend_chat_structured_probe_regrounding_attempted probe_kind=%s stage=%s reasons=%s",
                 str(probe_plan.get("probe_kind", "") or ""),
                 "json_object",
+                ",".join(primary_repair_feedback.get("reason_codes") or []),
             )
-            return normalized_primary
 
         logger.info(
             "friend_chat_structured_probe_relaxed_repair_attempted probe_kind=%s",
@@ -5256,6 +5319,7 @@ class RuntimeService:
                     user_message=user_message,
                     probe_plan=probe_plan,
                     invalid_output=primary_response.output_text,
+                    repair_feedback=primary_repair_feedback,
                 ),
                 model=self._llm_model,
                 temperature=0.0,
@@ -5273,26 +5337,41 @@ class RuntimeService:
             repair_response,
             probe_kind=str(probe_plan.get("probe_kind", "") or "").strip(),
         )
+        repair_repair_feedback = (
+            self._build_friend_chat_probe_repair_feedback(
+                dict(normalized_repair.diagnostics or {}),
+                probe_plan,
+            )
+            if normalized_repair is not None
+            else primary_repair_feedback
+        )
         if normalized_repair is not None:
+            if repair_repair_feedback is None:
+                logger.info(
+                    "friend_chat_structured_probe_render_succeeded probe_kind=%s stage=%s",
+                    str(probe_plan.get("probe_kind", "") or ""),
+                    "relaxed_json",
+                )
+                return LLMResponse(
+                    model=normalized_repair.model,
+                    output_text=normalized_repair.output_text,
+                    tool_calls=normalized_repair.tool_calls,
+                    usage=normalized_repair.usage,
+                    latency_ms=(
+                        int(primary_response.latency_ms or 0)
+                        + int(normalized_repair.latency_ms or 0)
+                    ),
+                    diagnostics={
+                        **dict(normalized_repair.diagnostics or {}),
+                        "structured_probe_repaired": True,
+                        "structured_probe_relaxed_response_format": True,
+                    },
+                )
             logger.info(
-                "friend_chat_structured_probe_render_succeeded probe_kind=%s stage=%s",
+                "friend_chat_structured_probe_regrounding_attempted probe_kind=%s stage=%s reasons=%s",
                 str(probe_plan.get("probe_kind", "") or ""),
                 "relaxed_json",
-            )
-            return LLMResponse(
-                model=normalized_repair.model,
-                output_text=normalized_repair.output_text,
-                tool_calls=normalized_repair.tool_calls,
-                usage=normalized_repair.usage,
-                latency_ms=(
-                    int(primary_response.latency_ms or 0)
-                    + int(normalized_repair.latency_ms or 0)
-                ),
-                diagnostics={
-                    **dict(normalized_repair.diagnostics or {}),
-                    "structured_probe_repaired": True,
-                    "structured_probe_relaxed_response_format": True,
-                },
+                ",".join(repair_repair_feedback.get("reason_codes") or []),
             )
 
         compact_probe_messages = self._build_friend_chat_compact_probe_messages(
@@ -5302,6 +5381,8 @@ class RuntimeService:
                 **llm_metadata,
                 "benchmark_role": "probe",
                 "friend_chat_probe_answer_plan": probe_plan,
+                "friend_chat_probe_repair_feedback": repair_repair_feedback
+                or primary_repair_feedback,
             },
         )
         if compact_probe_messages is not None:
@@ -5355,6 +5436,7 @@ class RuntimeService:
                 messages=self._build_friend_chat_plaintext_probe_repair_messages(
                     user_message=user_message,
                     probe_plan=probe_plan,
+                    repair_feedback=repair_repair_feedback or primary_repair_feedback,
                 ),
                 model=self._llm_model,
                 temperature=0.0,
@@ -5479,6 +5561,189 @@ class RuntimeService:
         if normalized == "partial_withhold":
             return "知道一点，但只轻轻带一下，不把事情说满。"
         return ""
+
+    def _render_friend_chat_probe_repair_feedback_lines(
+        self,
+        repair_feedback: dict[str, Any],
+    ) -> list[str]:
+        if not repair_feedback:
+            return []
+        lines = ["补救重点："]
+        reason_codes = [
+            str(value).strip()
+            for value in list(repair_feedback.get("reason_codes") or [])
+            if str(value).strip()
+        ]
+        missing_signal_ids = [
+            str(value).strip()
+            for value in list(repair_feedback.get("missing_signal_ids") or [])
+            if str(value).strip()
+        ]
+        missing_persona_traits = [
+            str(value).strip()
+            for value in list(repair_feedback.get("missing_persona_traits") or [])
+            if str(value).strip()
+        ]
+        missing_fact_tokens = [
+            str(value).strip()
+            for value in list(repair_feedback.get("missing_fact_tokens") or [])
+            if str(value).strip()
+        ]
+        missing_posture = str(
+            repair_feedback.get("missing_disclosure_posture", "") or ""
+        ).strip()
+        if reason_codes:
+            lines.append("- 上一版问题：" + " / ".join(reason_codes))
+        if missing_signal_ids:
+            lines.append("- 还没在正文里说清的语义信号：" + " / ".join(missing_signal_ids))
+        if missing_persona_traits:
+            lines.append(
+                "- 还没在正文里落地的说话感觉：" + " / ".join(missing_persona_traits)
+            )
+        if missing_fact_tokens:
+            lines.append("- 还没在正文里说出的事实项：" + " / ".join(missing_fact_tokens))
+        if missing_posture:
+            lines.append("- 还没在正文里说出的披露姿态：" + missing_posture)
+        signal_semantics = {
+            str(key).strip(): str(value).strip()
+            for key, value in dict(
+                repair_feedback.get("missing_signal_semantics") or {}
+            ).items()
+            if str(key).strip() and str(value).strip()
+        }
+        for signal_id, semantics in signal_semantics.items():
+            lines.append(f"- {signal_id} 要表达成：{semantics}")
+        persona_semantics = {
+            str(key).strip(): str(value).strip()
+            for key, value in dict(
+                repair_feedback.get("missing_persona_trait_semantics") or {}
+            ).items()
+            if str(key).strip() and str(value).strip()
+        }
+        for trait, semantics in persona_semantics.items():
+            lines.append(f"- {trait} 要表达成：{semantics}")
+        posture_semantics = str(
+            repair_feedback.get("missing_disclosure_posture_semantics", "") or ""
+        ).strip()
+        if posture_semantics:
+            lines.append("- 披露姿态要表达成：" + posture_semantics)
+        return lines
+
+    def _build_friend_chat_probe_repair_feedback(
+        self,
+        diagnostics: dict[str, Any],
+        probe_plan: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        if not diagnostics or not probe_plan:
+            return None
+
+        def _normalize_list(value: Any) -> list[str]:
+            return [
+                str(item).strip()
+                for item in list(value or [])
+                if str(item).strip()
+            ]
+
+        required_fact_tokens = _normalize_list(probe_plan.get("required_fact_tokens"))
+        required_signal_ids = _normalize_list(probe_plan.get("required_signal_ids"))
+        required_persona_traits = _normalize_list(
+            probe_plan.get("required_persona_traits")
+        )
+        covered_fact_tokens = _normalize_list(
+            diagnostics.get("structured_probe_slot_covered_fact_tokens")
+            or diagnostics.get("structured_probe_covered_fact_tokens")
+        )
+        covered_signal_ids = _normalize_list(
+            diagnostics.get("structured_probe_slot_covered_signal_ids")
+            or diagnostics.get("structured_probe_covered_signal_ids")
+        )
+        covered_persona_traits = _normalize_list(
+            diagnostics.get("structured_probe_slot_covered_persona_traits")
+            or diagnostics.get("structured_probe_covered_persona_traits")
+        )
+        required_posture = str(
+            probe_plan.get("required_disclosure_posture", "") or ""
+        ).strip()
+        covered_posture = str(
+            diagnostics.get("structured_probe_slot_covered_disclosure_posture")
+            or diagnostics.get("structured_probe_covered_disclosure_posture")
+            or ""
+        ).strip()
+        missing_fact_tokens = [
+            token for token in required_fact_tokens if token not in covered_fact_tokens
+        ]
+        missing_signal_ids = [
+            signal for signal in required_signal_ids if signal not in covered_signal_ids
+        ]
+        missing_persona_traits = [
+            trait
+            for trait in required_persona_traits
+            if trait not in covered_persona_traits
+        ]
+        missing_posture = (
+            required_posture if required_posture and covered_posture != required_posture else ""
+        )
+        violations = _normalize_list(diagnostics.get("structured_probe_violations"))
+        reason_codes: list[str] = []
+        if bool(diagnostics.get("friend_chat_exposed_plan_noncompliant")):
+            reason_codes.append("plan_noncompliant")
+        if bool(diagnostics.get("friend_chat_exposed_under_grounded")):
+            reason_codes.append("under_grounded")
+        if violations:
+            reason_codes.append("violations")
+
+        must_cover_required_items = bool(probe_plan.get("must_cover_required_items"))
+        if must_cover_required_items and (
+            missing_fact_tokens
+            or missing_signal_ids
+            or missing_persona_traits
+            or missing_posture
+        ):
+            reason_codes.append("missing_required_grounding")
+
+        minimum_required_fact_count = int(
+            probe_plan.get("minimum_required_fact_token_count") or 0
+        )
+        minimum_required_signal_count = int(
+            probe_plan.get("minimum_required_signal_count") or 0
+        )
+        minimum_required_persona_trait_count = int(
+            probe_plan.get("minimum_required_persona_trait_count") or 0
+        )
+        if minimum_required_fact_count and len(covered_fact_tokens) < minimum_required_fact_count:
+            reason_codes.append("fact_count_shortfall")
+        if minimum_required_signal_count and len(covered_signal_ids) < minimum_required_signal_count:
+            reason_codes.append("signal_count_shortfall")
+        if minimum_required_persona_trait_count and len(covered_persona_traits) < minimum_required_persona_trait_count:
+            reason_codes.append("persona_trait_shortfall")
+
+        reason_codes = list(dict.fromkeys(reason_codes))
+        if not reason_codes:
+            return None
+
+        missing_signal_semantics = {
+            signal_id: self._friend_chat_probe_signal_semantics(signal_id)
+            for signal_id in missing_signal_ids
+            if self._friend_chat_probe_signal_semantics(signal_id)
+        }
+        missing_persona_trait_semantics = {
+            trait: self._friend_chat_probe_persona_trait_semantics(trait)
+            for trait in missing_persona_traits
+            if self._friend_chat_probe_persona_trait_semantics(trait)
+        }
+        return {
+            "reason_codes": reason_codes,
+            "missing_fact_tokens": missing_fact_tokens,
+            "missing_signal_ids": missing_signal_ids,
+            "missing_signal_semantics": missing_signal_semantics,
+            "missing_persona_traits": missing_persona_traits,
+            "missing_persona_trait_semantics": missing_persona_trait_semantics,
+            "missing_disclosure_posture": missing_posture,
+            "missing_disclosure_posture_semantics": self._friend_chat_probe_posture_semantics(
+                missing_posture
+            ),
+            "violations": violations,
+        }
 
     def _parse_friend_chat_structured_probe_reply(
         self,

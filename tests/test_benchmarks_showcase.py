@@ -158,6 +158,39 @@ def test_score_expected_answer_for_long_chat_continuity_accepts_semantic_reply_p
     assert "不想回消息" in scored.matched
 
 
+def test_score_expected_answer_for_long_chat_accepts_low_energy_variants() -> None:
+    scored = score_expected_answer_for_category(
+        answer="感觉能量挺低的，没什么劲儿，回话节奏也慢，不太想回消息。",
+        expected="累 慢 不想回消息",
+        category="long_chat_continuity_zh",
+    )
+
+    assert scored.score == 10.0
+    assert scored.missed == []
+
+
+def test_score_expected_answer_for_persona_accepts_restrained_variants() -> None:
+    scored = score_expected_answer_for_category(
+        answer="说话有点往下掉，也就说这么多吧，就当普通聊天。",
+        expected="没力气 不想说太满 像聊天",
+        category="persona_stability_zh",
+    )
+
+    assert scored.score == 10.0
+    assert scored.missed == []
+
+
+def test_score_expected_answer_for_cross_session_accepts_relaxed_continuity_variants() -> None:
+    scored = score_expected_answer_for_category(
+        answer="比刚开始更放松自然了，关系一直延续着，我还记得你喜欢年糕。",
+        expected="更熟一点 记得 还在",
+        category="cross_session_friend_feel",
+    )
+
+    assert scored.score == 10.0
+    assert scored.missed == []
+
+
 def test_score_expected_answer_diagnostic_uses_category_aware_concepts() -> None:
     scored = score_expected_answer_diagnostic(
         answer=(

@@ -1178,11 +1178,16 @@ def _normalize_friend_chat_probe_text(text: str) -> str:
     for old, new in (
         ("没什么力气", "没力气"),
         ("没有什么力气", "没力气"),
+        ("没什么劲儿", "没劲"),
+        ("没什么劲", "没劲"),
+        ("能量挺低", "低能量"),
         ("声音会压低一点", "声音压低一点"),
         ("声音会低一点", "声音低一点"),
         ("句子会收在边上", "收在边上"),
         ("不想把话说太满", "不想说太满"),
         ("不太想把话说太满", "不想说太满"),
+        ("也就说这么多吧", "就说这么多吧"),
+        ("就先说这么多吧", "就说这么多吧"),
         ("不太想回消息", "不想回消息"),
         ("懒得回消息", "不想回消息"),
         ("普通聊天", "像聊天"),
@@ -1192,14 +1197,18 @@ def _normalize_friend_chat_probe_text(text: str) -> str:
         ("先不全说", "不全说"),
         ("别说得太满", "不全说"),
         ("别替我到处说", "不全说"),
+        ("不方便多说", "不全说"),
         ("别老发太长语音", "别发太长语音"),
         ("榛果拿铁", "榛子拿铁"),
         ("没刚开始那么紧张", "更熟一点"),
         ("没刚开始那么生", "更熟一点"),
         ("更松一点", "更熟一点"),
+        ("更放松自然", "更熟一点"),
         ("亲近多了", "更熟一点"),
         ("更亲近了", "更熟一点"),
         ("亲近了不少", "更熟一点"),
+        ("一直延续着", "延续到现在"),
+        ("关系一直延续着", "延续到现在"),
         ("想起你", "记得"),
         ("想起来了", "记得"),
     ):
@@ -1497,10 +1506,12 @@ def _friend_chat_state_signal_ids_from_text(text: str) -> list[str]:
             "累",
             "没力气",
             "提不起劲",
+            "低能量",
             "不太想动",
             "懒得动",
             "蔫",
             "没什么意思",
+            "没劲",
             "沉",
             "声音压低一点",
             "声音压低",
@@ -1543,9 +1554,11 @@ def _friend_chat_persona_traits_from_text(text: str) -> list[str]:
             "没力气",
             "提不起劲",
             "累",
+            "没劲",
             "说什么都觉得累",
             "说话都累",
             "语气往下掉",
+            "往下掉",
             "声音压低一点",
             "声音压低",
             "声音低一点",
@@ -1565,6 +1578,8 @@ def _friend_chat_persona_traits_from_text(text: str) -> list[str]:
             "不太想展开",
             "懒得展开",
             "不想说太多",
+            "就说这么多吧",
+            "先说到这儿",
             "收在边上",
             "收住一点",
             "留一点不说",
@@ -1601,6 +1616,7 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
             "更熟一点",
             "熟了一点",
             "没那么生",
+            "更自然",
             "亲近多了",
             "更亲近",
             "熟络",
@@ -1610,7 +1626,14 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
         signal_ids.append("closer")
     if any(
         token in normalized
-        for token in ("还在", "一直在", "你还在这条线里", "延续到现在", "延续下来")
+        for token in (
+            "还在",
+            "一直在",
+            "你还在这条线里",
+            "延续到现在",
+            "延续下来",
+            "一直延续",
+        )
     ):
         signal_ids.append("still_here")
     if any(
@@ -2029,7 +2052,11 @@ def _friend_chat_disclosure_posture_matches(text: str, posture: str) -> bool:
     if not normalized or not normalized_posture:
         return False
     if normalized_posture == "partial_withhold":
-        return "不全说" in normalized or "少说一点" in normalized
+        return (
+            "不全说" in normalized
+            or "少说一点" in normalized
+            or "不方便多说" in normalized
+        )
     return False
 
 
