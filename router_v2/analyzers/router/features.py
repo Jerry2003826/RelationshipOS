@@ -64,6 +64,11 @@ class RouterFeatures:
     factual_query_score: float = 0.0
     entity_score: float = 0.0
 
+    # v2.1 (2026-04-22): added to disambiguate LIGHT_RECALL vs DEEP_THINK.
+    # LIGHT_RECALL under-recalled at 0.39 on test; DEEP_THINK over-fired.
+    advice_seeking_score: float = 0.0
+    continuity_score: float = 0.0
+
     contains_crisis_term: float = 0.0  # 1.0 if any suicidality term fired
     contains_chinese: float = 0.0
     contains_latin: float = 0.0
@@ -89,6 +94,8 @@ class RouterFeatures:
             self.self_disclosure_score,
             self.factual_query_score,
             self.entity_score,
+            self.advice_seeking_score,
+            self.continuity_score,
             self.contains_crisis_term,
             self.contains_chinese,
             self.contains_latin,
@@ -112,6 +119,8 @@ class RouterFeatures:
             "self_disclosure",
             "factual_query",
             "entity_score",
+            "advice_seeking",
+            "continuity",
             "contains_crisis",
             "contains_chinese",
             "contains_latin",
@@ -129,7 +138,10 @@ class Lexicons:
     disclosure: list[tuple[str, float]]
     factual: list[tuple[str, float]]
     entities: list[tuple[str, float]]
-    negation: list[str]
+    # v2.1 lexicons (2026-04-22): disambiguate LIGHT_RECALL vs DEEP_THINK
+    advice_seeking: list[tuple[str, float]] = field(default_factory=list)
+    continuity: list[tuple[str, float]] = field(default_factory=list)
+    negation: list[str] = field(default_factory=list)
     negation_window: int = 3
     negation_multiplier: float = -0.6
     crisis_terms: frozenset[str] = field(default_factory=frozenset)
@@ -166,6 +178,8 @@ def load_lexicons(base_dir: Path | str | None = None) -> Lexicons:
     factual = _weighted_entries(_load_yaml(base / "factual_query_zh.yaml"))
     entities_raw = _load_yaml(base / "entities_zh.yaml")
     entities = _weighted_entries(entities_raw)
+    advice_seeking = _weighted_entries(_load_yaml(base / "advice_seeking_zh.yaml"))
+    continuity = _weighted_entries(_load_yaml(base / "continuity_zh.yaml"))
 
     neg_raw = _load_yaml(base / "negation_zh.yaml")
     negation = [str(x).lower() for x in (neg_raw.get("entries") or [])]
@@ -183,6 +197,8 @@ def load_lexicons(base_dir: Path | str | None = None) -> Lexicons:
         disclosure=disclosure,
         factual=factual,
         entities=entities,
+        advice_seeking=advice_seeking,
+        continuity=continuity,
         negation=negation,
         negation_window=negation_window,
         negation_multiplier=negation_multiplier,
@@ -296,6 +312,8 @@ def extract_features(text: str, lex: Lexicons) -> RouterFeatures:
     dis_s, dis_fired, _ = _score_forms(norm, lex.disclosure)
     fac_s, fac_fired, _ = _score_forms(norm, lex.factual)
     ent_s, ent_fired, _ = _score_forms(norm, lex.entities)
+    adv_s, adv_fired, _ = _score_forms(norm, lex.advice_seeking)
+    con_s, con_fired, _ = _score_forms(norm, lex.continuity)
 
     emotion_signed = _apply_negation(
         norm,
@@ -307,7 +325,16 @@ def extract_features(text: str, lex: Lexicons) -> RouterFeatures:
 
     crisis = 1.0 if any(t in norm for t in lex.crisis_terms) else 0.0
 
-    fired = tuple(mem_fired + per_fired + emo_fired + dis_fired + fac_fired + ent_fired)
+    fired = tuple(
+        mem_fired
+        + per_fired
+        + emo_fired
+        + dis_fired
+        + fac_fired
+        + ent_fired
+        + adv_fired
+        + con_fired
+    )
 
     return RouterFeatures(
         length_norm=length_norm,
@@ -325,6 +352,8 @@ def extract_features(text: str, lex: Lexicons) -> RouterFeatures:
         self_disclosure_score=dis_s,
         factual_query_score=fac_s,
         entity_score=ent_s,
+        advice_seeking_score=adv_s,
+        continuity_score=con_s,
         contains_crisis_term=crisis,
         contains_chinese=has_zh,
         contains_latin=has_en,
