@@ -1,0 +1,53 @@
+# Factual-query lexicon (zh).
+# Surface forms that signal the user wants a concrete, out-of-chat fact
+# (encyclopedic / task / how-to). These skew *away* from LIGHT_RECALL
+# and toward DEEP_THINK only when combined with multi-step / planning
+# markers; otherwise many of them are still FAST_PONG-eligible for a
+# friend-chat persona that replies playfully.
+#
+# Weight is intentionally modest — features.py uses this lexicon as a
+# negative signal against LIGHT_RECALL, not a direct vote for DEEP_THINK.
+
+version: 1
+language: zh
+entries:
+  # interrogatives
+  - {form: "是什么",     weight: 0.60}
+  - {form: "是啥",       weight: 0.55}
+  - {form: "什么是",     weight: 0.65}
+  - {form: "为什么",     weight: 0.70}
+  - {form: "为啥",       weight: 0.65}
+  - {form: "怎么做",     weight: 0.70}
+  - {form: "怎么办",     weight: 0.55}   # can be emotional ("怎么办啊我")
+  - {form: "如何",       weight: 0.55}
+  - {form: "哪里",       weight: 0.45}
+  - {form: "哪儿",       weight: 0.45}
+  - {form: "什么时候",   weight: 0.50}
+  - {form: "多少",       weight: 0.45}
+  - {form: "几点",       weight: 0.55}
+
+  # task / planning markers
+  - {form: "帮我",       weight: 0.70}
+  - {form: "帮忙",       weight: 0.60}
+  - {form: "帮我写",     weight: 0.85}
+  - {form: "帮我查",     weight: 0.85}
+  - {form: "帮我算",     weight: 0.80}
+  - {form: "帮我做",     weight: 0.75}
+  - {form: "给我推荐",   weight: 0.80}
+  - {form: "推荐一下",   weight: 0.75}
+  - {form: "对比",       weight: 0.70}
+  - {form: "区别",       weight: 0.60}
+  - {form: "优缺点",     weight: 0.75}
+  - {form: "分析",       weight: 0.65}
+  - {form: "总结",       weight: 0.65}
+  - {form: "翻译",       weight: 0.85}
+  - {form: "改写",       weight: 0.75}
+  - {form: "代码",       weight: 0.70}
+  - {form: "报错",       weight: 0.70}
+  - {form: "bug",        weight: 0.75}
+
+  # definition / clarification
+  - {form: "定义",       weight: 0.70}
+  - {form: "解释",       weight: 0.60}
+  - {form: "讲讲",       weight: 0.45}
+  - {form: "说说",       weight: 0.35}   # ambiguous; could be emotional

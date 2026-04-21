@@ -1,0 +1,96 @@
+name: retrain-router
+
+# Weekly retrain + eval of Tier 2 classifier from accumulated shadow logs.
+# Produces a PR with the new model.joblib if metrics improve.
+
+on:
+  schedule:
+    - cron: "0 19 * * 0"   # Sun 19:00 UTC = Mon 03:00 UTC+8 / 05:00 AEST
+  workflow_dispatch:
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install scikit-learn numpy pyyaml pytest
+
+      - name: Download last week's shadow logs
+        # In production this fetches from S3/GCS. For now we expect an
+        # artifact upload from the runtime service.
+        uses: actions/download-artifact@v4
+        with:
+          name: router-shadow-logs
+          path: router_v2/training/data/
+        continue-on-error: true
+
+      - name: Build labelled set
+        run: |
+          python router_v2/training/build_labelled_set.py \
+              --logs 'router_v2/training/data/*.jsonl' \
+              --seeds router_v2/training/seeds_zh.jsonl \
+              --out   router_v2/training/data/merged.jsonl
+
+      - name: Train
+        run: |
+          python router_v2/training/train_tier2.py \
+              --data router_v2/training/data/merged.jsonl \
+              --out  router_v2/policies/router/model.joblib.candidate
+
+      - name: Evaluate candidate
+        id: eval
+        run: |
+          python router_v2/training/router_eval.py \
+              --data router_v2/training/data/merged.jsonl \
+              --dump-csv router_v2/training/data/eval_candidate.csv \
+              | tee /tmp/eval.txt
+          python - <<'PY'
+          import re, json, sys
+          out = open('/tmp/eval.txt').read()
+          m = re.search(r'Macro F1\s*:\s*([0-9.]+)', out)
+          f1 = float(m.group(1)) if m else 0.0
+          json.dump({'macro_f1': f1}, open('/tmp/metrics.json', 'w'))
+          print(f'::set-output name=macro_f1::{f1}')
+          PY
+
+      - name: Gate on F1 >= 0.85
+        run: |
+          python - <<'PY'
+          import json, sys
+          m = json.load(open('/tmp/metrics.json'))
+          if m['macro_f1'] < 0.85:
+              print(f"F1={m['macro_f1']:.3f} < 0.85, refusing to promote")
+              sys.exit(1)
+          PY
+
+      - name: Promote candidate
+        run: |
+          mv router_v2/policies/router/model.joblib.candidate \
+             router_v2/policies/router/model.joblib
+
+      - name: Open PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: router/weekly-retrain
+          title: "chore(router): weekly retrain ($(date -u +%Y-%m-%d))"
+          commit-message: "chore(router): weekly retrain"
+          body: |
+            Automated weekly retrain of Vanguard Router v2 Tier 2 classifier.
+
+            * Training data: last-7-day shadow logs + static seeds
+            * Metrics: see workflow logs
+          labels: |
+            router
+            automation
