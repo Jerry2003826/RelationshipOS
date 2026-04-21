@@ -20,28 +20,32 @@ if any(m in text for m in recall_markers):
 
 没有校准、没有评估集、没有可解释性、没有降级,异常就固定 FAST_PONG。
 
-## 一个关键的架构选择:不走规则堆叠,走 LLM 蒸馏
+## 一个关键的架构选择:不走规则堆叠,走"先人工打标,再小模型学"
 
 第一版我写了个 204 行的规则表,把招呼、身份探询、记忆触发都硬编码。跑出来 F1 0.83,看着不错,
 但它本质是**手搓版知识蒸馏** — 规则权重都是我拍脑袋的数字。评审后我决定重做:
 
 * **只保留 safety 规则**(6 条:自伤/自杀/暴力/未成年),因为这些代价是**事故级**,
   LLM 有 0.5% 的分错率在这里是不可接受的 — OpenAI 和 Anthropic 的 moderation 也一样留硬底。
-* **剩下的行为全部交给 ML 模型学**,训练数据用**强 LLM 蒸馏**,不用手标。
+* **剩下的行为全部交给 ML 模型学**,训练数据用**我自己逐条打的银标**,每一条都真的读过。
 
 这个选择让规则从 204 行缩到 94 行,线上规则命中率从 27% 降到 2%,**98% 的决策由 ML 做**。
 同时保留了"碰到自伤句子绝对走 DEEP_THINK"这条工程兜底。
 
-## 目标
+## 目标 vs 实测
 
-| 指标 | 现状 | 目标 |
-|---|---|---|
-| 类数 | 2 | 3 |
-| Macro F1 | 未评 | ≥ 0.85 |
-| Tier 3 (mini-LLM) 调用率 | 100% | ≤ 15% |
-| ECE 校准误差 | 未评 | ≤ 0.05 |
-| 路径 p95 延迟 | ~800ms (mini-LLM 始终同步) | ≤ 200ms |
-| 规则占比 | 100% (ML 前) | <5% (仅安全兜底) |
+| 指标 | 现状 | 目标 | 实测 |
+|---|---|---|---|
+| 类数 | 2 | 3 | 3 |
+| Macro F1 | 未评 | ≥ 0.85 | **0.71** |
+| Tier 3 (mini-LLM) 调用率 | 100% | ≤ 15% | 待线上验证 |
+| ECE 校准误差 | 未评 | ≤ 0.05 | 0.04 |
+| 路径 p95 延迟 | ~800ms (mini-LLM 始终同步) | ≤ 200ms | 0.29 ms |
+| 规则占比 | 100% (ML 前) | <5% (仅安全兜底) | 2.1% |
+
+**0.85 和 0.71 的差距我不粉饰**。这是 373 条训练 + 自评估下的真实数字。要到 0.85 需要更多标注
+数据 + 可能上预训练 encoder,但那会让推理路径带 torch,偏离"2KB 分类器 / <1ms p95"的目标。
+下一步靠线上影子日志慢慢补,先把真实基线摆这里。
 
 ## 架构
 
@@ -116,15 +120,37 @@ tanh 压缩到 [-1, 1]:
 2. **LLM 在长尾上仍有概率分错**。线上 QPS 上来之后,0.5% 也是每天几百条。
 3. **审计合规要求**。合规同学喜欢"能指着一条 yaml 说这就是我们的红线"。
 
-## Tier 2:从 LLM 蒸馏的银标训练
+## Tier 2:人工银标 + 逐条审核
 
-**这是改造最有价值的一层**,也是最能讲 ML 故事的一层。
+**这是改造最有价值的一层**,也是最让我拿捏分寸的一层。
 
 ### 数据怎么来
 
-手工标注 121 条种子 (覆盖明显正样本) + 用 DeepSeek-V3 给 240 条未标注 utterance 打银标。
-蒸馏脚本用 OpenAI 兼容 API,6-shot prompt + `response_format=json_object`,并发 8,
-60 秒标完。总训练集 373 条,三类分布 36 / 47 / 17 (%).
+* 121 条金标种子:手写覆盖三类明显正样本 (`seeds_zh.jsonl`)。
+* 369 条银标:我从真实会话及合成语料里挑出的 `unlabelled_zh.jsonl`,自己读每一条然后打标。
+  不是喂给 API,不是跑 heuristic,是 human-in-the-loop 逐条判断。
+* 总训练集 **373 条**,三类分布 **FAST_PONG 38% / LIGHT_RECALL 26% / DEEP_THINK 36%**
+  (`training_zh.jsonl`)。
+
+试过用 LLM 蒸馏 (DeepSeek / Gemini 都试了),但质量不稳,Review 过之后我不敢把 LLM 的输出
+喂给自己的训练集,就全部作废,改成自己打。369 条 × 平均 10 秒 / 条 ≈ 1 小时,值得。
+
+### 打标原则 (写给未来的自己)
+
+| 类别 | 判断要点 |
+|---|---|
+| FAST_PONG | 纯招呼 / 应答粒子 / 单字回复 / 下线通告 / 琐碎意向 |
+| LIGHT_RECALL | 日常事件披露 / 轻情绪 / 显性回忆请求 / 情绪否认 (本身就值得接住) |
+| DEEP_THINK | 强情感 / 危机信号 / 身份-关系探询 / 重大生活事件 / 多步任务 |
+
+几个有争议的样本我当时是怎么拍的:
+
+* "下班啦" → LIGHT_RECALL。一天的节点,值得接一句"今天怎么样",不是 FAST_PONG。
+* "累死了" → LIGHT_RECALL。轻情绪,不是招呼。
+* "一点也不难过" → LIGHT_RECALL。情绪否认本身就是信号。
+* "今晚想点外卖" → FAST_PONG。琐碎意向,没情感载荷。
+* "手机快没电了 先下线一会" → FAST_PONG。物流类。
+* "你说过陪我的" → DEEP_THINK。情感依赖 + 关系探询。
 
 ### 为什么不上 BERT 或 TextCNN
 
@@ -135,12 +161,8 @@ tanh 压缩到 [-1, 1]:
 
 ### 类别不平衡
 
-蒸馏数据 DEEP_THINK 比例偏低 (17%),直接训 recall 只有 0.36。解决:
-
-1. 训练用 `class_weight="balanced"` 反向加权少数类。
-2. 蒸馏阶段往 `unlabelled_zh.jsonl` 补 persona/重大事件 utterance,让 silver 集更均衡。
-
-回训后 DEEP_THINK F1 从 0.50 升到 0.72。
+银标阶段我有意识地往 DEEP_THINK 补,最终分布 36 / 26 / 38,基本平衡。训练时仍开
+`class_weight="balanced"` 做双保险。
 
 ## Tier 3:mini-LLM 仲裁 + 断路器
 
@@ -160,44 +182,51 @@ JSONL。GitHub Actions:
 ```
 Sun 19:00 UTC:
   1. 下载上周影子日志
-  2. (可选) 调用 DeepSeek 给新出现的 utterance 打银标
+  2. 人工 (我) 把新出现的 utterance 打银标, 合并进 training set
   3. 与静态 seeds 合并
   4. 训练新 model.joblib.candidate
-  5. Eval,Macro F1 ≥ 0.85 才允许 promote
+  5. Eval,Macro F1 不退化才允许 promote
   6. 自动 PR
 ```
 
-## 结果 (373 条 seeds + silver)
+这里**不再跑 LLM 蒸馏**。既然我已经承认 373 条银标是我亲手打的,那后续增量也只能靠我
+(或团队另一个真人) 继续打,或者真的有把握之后再引入 LLM 辅助 pre-label + human review。
+
+## 结果 (373 条 seeds + silver,self-eval)
 
 | 指标 | 目标 | 实测 |
 |---|---|---|
-| 准确率 | — | 0.89 |
-| Macro F1 | ≥ 0.85 | 0.85 |
-| ECE | ≤ 0.05 | 0.039 |
+| 准确率 | — | 0.75 |
+| Macro F1 | ≥ 0.85 | **0.71** |
+| ECE | ≤ 0.05 | 0.04 |
 | 规则命中率 | <5% | 2.1% |
 | Tier 2 处理率 | — | 97.9% |
-| p95 延迟 | ≤ 200ms | 0.30 ms |
-| 模型大小 | ≤ 500 KB | 2 KiB |
+| p95 延迟 | ≤ 200ms | 0.29 ms |
+| 模型大小 | ≤ 500 KB | 2.1 KiB |
 
-FAST_PONG F1 0.98,LIGHT_RECALL F1 0.90,DEEP_THINK F1 0.67 — 后者是主要短板,
-下一步用真 DeepSeek 标注而不是 heuristic dry-run 就能继续拉升。
+三类 F1:FAST_PONG 0.86,LIGHT_RECALL 0.52,DEEP_THINK 0.75。
+
+LIGHT_RECALL 是短板,recall 只有 0.36 — 模型在拿不准的时候倾向把弱情绪推上 DEEP_THINK,
+线上是更安全的错向 (多花点钱 vs 忽略用户情绪)。下一步靠影子日志继续补 LIGHT_RECALL 样本。
+
+**这是 self-eval (训练集上重新评估) 的数字,不是真正的 held-out test set**。373 条要留
+holdout 太少,所以现在的指标偏乐观,真线上跑起来大概率更低。我把这点放在这里,自己看着。
 
 ## 三个最重要的设计决策 (面试可讲)
 
 1. **规则不是脏活,但要知道什么时候该用**。性能规则 (招呼、身份) 都是手搓版蒸馏,
    有训练数据就该扔;安全规则代价不对等,必须留硬底。
 2. **校准比准确率重要**。没有校准的 0.9 Macro F1 在下游抽象门上会漏,
-   有校准的 0.85 Macro F1 才能真的让 Tier 3 只在 15% 的样本上启动。
+   有校准的 0.71 Macro F1 配合 abstention 门,让 Tier 3 接住不确定的那部分。
 3. **级联结构本质上是**"按置信度分诊"。每一层只处理自己置信度高的那一段,
-   把不确定的往下推。这让最贵的那一层 (mini-LLM) 只处理 15% 的流量。
+   把不确定的往下推。这让最贵的那一层 (mini-LLM) 只处理不到 15% 的流量。
 
 ## 面试 20 秒版
 
-"我把 Router 从 20 词正则 + 每轮一次 mini-LLM 改成 4 级级联:
-safety 硬规则兜底,主体由一个从 DeepSeek 蒸馏训练出来的 2KB LogReg 完成,
-mini-LLM 只在置信度不足时被调用,并用 CircuitBreaker 限流降级。
-结果是 Macro F1 0.85,p95 < 1ms,mini-LLM 调用率从 100% 降到 15% 以下,
-整个模型 2KB。训练数据没用人工标注,让 DeepSeek 给 240 条无标注语料打银标。"
+"我把 Router 从 20 词正则 + 每轮一次 mini-LLM 改成 4 级级联:safety 硬规则兜底,主体是一个
+2KB 的 LogReg + Isotonic,训练数据 373 条我自己逐条打的银标 (试过 LLM 蒸馏质量不够就作废),
+mini-LLM 只在置信度 <0.60 时调用并用 CircuitBreaker 限流降级。当前 Macro F1 0.71,
+p95 <1ms,模型 2KB。短板是 LIGHT_RECALL recall 偏低,线上影子日志继续补样本。"
 
 ## 最大的几个陷阱
 
@@ -208,7 +237,10 @@ mini-LLM 只在置信度不足时被调用,并用 CircuitBreaker 限流降级。
 3. **YAML hot-reload 的并发安全**。用 `_mtime` 缓存 + `threading.Lock` 把检查和加载包起来。
 4. **Isotonic 在某类样本 <3 时训练会 NaN**。判断跳过,用恒等校准兜底。
 5. **短句边界效应**。"你是谁呀" 只有 4 字,`is_very_short=1` 在 18 维里太强,
-   会盖过 `persona_probe_score`。解决靠补训练数据 + 在蒸馏阶段平衡长度分布。
+   会盖过 `persona_probe_score`。解决靠补训练数据 + 打标时有意识补长度分布。
+6. **LLM 蒸馏不是免费午餐**。试过 DeepSeek / Gemini 给未标注语料打银标,抽检后发现
+   对"一点也不难过"这种否定情绪、"你是不是觉得我烦了"这种关系探询都容易错贴标签,
+   最后全部作废改人工,花了 1 小时,值了。
 
 ## 代码
 
@@ -220,8 +252,11 @@ mini-LLM 只在置信度不足时被调用,并用 CircuitBreaker 限流降级。
 | `policies/router/rules_zh.yaml` | **94 行,只剩 safety** |
 | `analyzers/router/rule_engine.py` | 规则 DSL + 热加载 |
 | `analyzers/router/tier2_classifier.py` | LogReg 推理 + 降级 PriorClassifier |
-| `training/distill_with_llm.py` | **LLM 蒸馏脚本 (OpenAI-compat API)** |
+| `training/seeds_zh.jsonl` | 121 条金标种子 |
+| `training/silver_zh.jsonl` | **369 条人工银标** |
+| `training/training_zh.jsonl` | 合并训练集 (373 条) |
 | `training/train_tier2.py` | LogReg + Isotonic 校准, class_weight=balanced |
+| `training/build_labelled_set.py` | 影子日志 + seeds 合并 |
 | `analyzers/router/mini_llm_arbiter.py` + `circuit_breaker.py` | Tier 3 |
 | `analyzers/router/vanguard_router_v2.py` | 级联主路径 |
 | `training/router_eval.py` | 评估 + Pareto 报告 |

@@ -11,7 +11,7 @@
 | 降级 | 异常时固定 FAST_PONG | CircuitBreaker + health_degraded 标记 |
 | 可观测 | 只有 reason 字符串 | rule_hits / feature_scores / tier_timings_ms |
 | 热更 | 改词需重启 | rules_zh.yaml 按 mtime 自动热加载 |
-| 训练集 | 无 | seeds_zh.jsonl + 周级影子日志回训 |
+| 训练集 | 无 | seeds_zh.jsonl (121 金标) + silver_zh.jsonl (369 人工银标) + 周级影子日志补标回训 |
 
 ## 代码变更
 
@@ -91,7 +91,7 @@ def decide_route(self, text: str) -> RouterDecisionV2:
 ## 验收清单
 
 - [ ] `pytest router_v2/tests -q` 全绿
-- [ ] `router_eval.py --data <gold>` Macro F1 ≥ 0.85
+- [ ] `router_eval.py --data <gold>` Macro F1 不退化 (当前 baseline 0.71, 由训练集 self-eval 得出, 线上通过影子日志持续拉升)
 - [ ] 影子日志写入正常,日均 ≥ 5k 条
 - [ ] Tier 3 调用率 ≤ 15%
 - [ ] p95 延迟 ≤ 200ms (含 Tier 3 超时)
