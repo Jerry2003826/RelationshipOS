@@ -1,0 +1,29 @@
+# Negation lexicon (zh).
+# Used by features.py to flip emotion-word weights. A negation that
+# appears within N=3 characters *before* an emotion term multiplies that
+# term's weight by a negative scalar (default -0.6).
+#
+# This is deliberately short: Chinese negation is mostly handled by these
+# few particles. False positives are rare because most applications do
+# a character-window check, not a full dependency parse.
+
+version: 1
+language: zh
+window_chars: 3            # max distance from negator to target emotion word
+polarity_multiplier: -0.6  # weight is multiplied by this when negated
+
+entries:
+  - "不"
+  - "没"
+  - "没有"
+  - "未"
+  - "别"
+  - "不再"
+  - "不会"
+  - "不想"
+  - "不觉得"
+  - "并不"
+  - "并没有"
+  - "一点也不"
+  - "从来不"
+  - "从不"

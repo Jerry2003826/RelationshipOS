@@ -1,0 +1,47 @@
+# Memory trigger lexicon (zh).
+# Each entry is a surface form + a weight in [0, 1]. Higher weight means
+# stronger evidence that the user is explicitly asking the AI to recall
+# something from prior turns or sessions.
+#
+# Matching is substring (after whitespace trim), case-insensitive for any
+# Latin characters. Do NOT add single characters here — those are handled
+# by the short-form rules in rules_zh.yaml to avoid false positives.
+
+version: 1
+language: zh
+entries:
+  # explicit recall requests
+  - {form: "还记得",       weight: 1.00}
+  - {form: "记不记得",     weight: 1.00}
+  - {form: "你记得",       weight: 0.95}
+  - {form: "记得我",       weight: 0.95}
+  - {form: "记得吗",       weight: 0.95}
+  - {form: "忘了吗",       weight: 0.85}
+  - {form: "忘记了吗",     weight: 0.85}
+
+  # temporal anchors to past turns
+  - {form: "上次",         weight: 0.75}
+  - {form: "上回",         weight: 0.75}
+  - {form: "之前",         weight: 0.55}
+  - {form: "以前",         weight: 0.50}
+  - {form: "昨天",         weight: 0.55}
+  - {form: "前天",         weight: 0.60}
+  - {form: "那天",         weight: 0.55}
+  - {form: "刚才",         weight: 0.35}   # usually same-session
+
+  # meta-references to prior conversation
+  - {form: "你说过",       weight: 0.90}
+  - {form: "我跟你说过",   weight: 0.95}
+  - {form: "我告诉过你",   weight: 0.95}
+  - {form: "我们聊过",     weight: 0.85}
+  - {form: "我们讨论过",   weight: 0.80}
+  - {form: "上次聊的",     weight: 0.90}
+  - {form: "那件事",       weight: 0.75}
+  - {form: "那个事",       weight: 0.70}
+  - {form: "那事",         weight: 0.65}
+  - {form: "这件事",       weight: 0.55}
+
+  # follow-up markers
+  - {form: "后来呢",       weight: 0.70}
+  - {form: "然后呢",       weight: 0.55}   # can also be a conversational filler
+  - {form: "接着",         weight: 0.40}

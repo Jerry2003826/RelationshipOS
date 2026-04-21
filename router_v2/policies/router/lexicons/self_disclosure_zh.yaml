@@ -1,0 +1,54 @@
+# Self-disclosure lexicon (zh).
+# Markers that the user is disclosing a personal experience, state, or
+# opinion. Strong positive signal for LIGHT_RECALL at minimum (the
+# pipeline should remember what was said) and for DEEP_THINK when
+# combined with emotional words.
+
+version: 1
+language: zh
+entries:
+  # first-person anchors
+  - {form: "我今天",     weight: 0.70}
+  - {form: "我昨天",     weight: 0.75}
+  - {form: "我刚",       weight: 0.65}
+  - {form: "我最近",     weight: 0.75}
+  - {form: "我一直",     weight: 0.75}
+  - {form: "我总是",     weight: 0.70}
+  - {form: "我从小",     weight: 0.85}
+  - {form: "我爸",       weight: 0.80}
+  - {form: "我妈",       weight: 0.80}
+  - {form: "我家",       weight: 0.70}
+  - {form: "我朋友",     weight: 0.65}
+  - {form: "我男朋友",   weight: 0.85}
+  - {form: "我女朋友",   weight: 0.85}
+  - {form: "我对象",     weight: 0.80}
+  - {form: "我前任",     weight: 0.85}
+  - {form: "我老板",     weight: 0.75}
+  - {form: "我同事",     weight: 0.70}
+  - {form: "我导师",     weight: 0.75}
+
+  # state disclosure
+  - {form: "我觉得",     weight: 0.50}   # very common
+  - {form: "我感觉",     weight: 0.65}
+  - {form: "我怕",       weight: 0.75}
+  - {form: "我担心",     weight: 0.75}
+  - {form: "我后悔",     weight: 0.85}
+  - {form: "我希望",     weight: 0.60}
+  - {form: "我想",       weight: 0.40}   # weak; too common
+  - {form: "我喜欢",     weight: 0.60}
+  - {form: "我讨厌",     weight: 0.70}
+  - {form: "我恨",       weight: 0.75}
+  - {form: "我爱",       weight: 0.65}
+
+  # event disclosure
+  - {form: "发生了",     weight: 0.65}
+  - {form: "遇到",       weight: 0.55}
+  - {form: "分手",       weight: 0.90}
+  - {form: "吵架",       weight: 0.80}
+  - {form: "被骂",       weight: 0.80}
+  - {form: "加班",       weight: 0.65}
+  - {form: "挂了",       weight: 0.65}   # "科目三挂了"
+  - {form: "辞职",       weight: 0.85}
+  - {form: "裸辞",       weight: 0.85}
+  - {form: "面试",       weight: 0.60}
+  - {form: "考研",       weight: 0.60}

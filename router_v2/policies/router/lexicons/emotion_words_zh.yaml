@@ -1,0 +1,59 @@
+# Emotion-intensity lexicon (zh).
+# Weight reflects the magnitude of emotional load, not valence.
+# A negation ("不累") multiplies the matched weight by -0.6 downstream.
+#
+# Seeds: DLUT 情感词汇本体 + HowNet sentiment + hand-curated for
+# friend-chat register. Do NOT include bland words like "好" here.
+
+version: 1
+language: zh
+entries:
+  # --- high-intensity distress / crisis ---------------------------------
+  - {form: "崩溃",       weight: 0.95}
+  - {form: "绝望",       weight: 0.95}
+  - {form: "撑不住",     weight: 0.90}
+  - {form: "活不下去",   weight: 1.00}
+  - {form: "想死",       weight: 1.00}
+  - {form: "想消失",     weight: 0.95}
+  - {form: "没意思",     weight: 0.70}   # ambiguous; downweight
+  - {form: "不想活",     weight: 1.00}
+
+  # --- moderate negative -------------------------------------------------
+  - {form: "难过",       weight: 0.70}
+  - {form: "伤心",       weight: 0.75}
+  - {form: "委屈",       weight: 0.70}
+  - {form: "心累",       weight: 0.75}
+  - {form: "焦虑",       weight: 0.70}
+  - {form: "压力大",     weight: 0.70}
+  - {form: "失眠",       weight: 0.55}
+  - {form: "emo",        weight: 0.60}
+  - {form: "抑郁",       weight: 0.85}
+
+  # --- light negative ---------------------------------------------------
+  - {form: "累",         weight: 0.40}
+  - {form: "困",         weight: 0.30}
+  - {form: "烦",         weight: 0.45}
+  - {form: "烦躁",       weight: 0.55}
+  - {form: "不爽",       weight: 0.50}
+  - {form: "无聊",       weight: 0.35}
+  - {form: "不开心",     weight: 0.60}
+  - {form: "心烦",       weight: 0.55}
+
+  # --- high-intensity positive -----------------------------------------
+  - {form: "狂喜",       weight: 0.85}
+  - {form: "超开心",     weight: 0.80}
+  - {form: "激动死了",   weight: 0.85}
+  - {form: "兴奋",       weight: 0.65}
+
+  # --- moderate positive ------------------------------------------------
+  - {form: "开心",       weight: 0.50}
+  - {form: "高兴",       weight: 0.50}
+  - {form: "舒服",       weight: 0.35}
+  - {form: "感动",       weight: 0.60}
+  - {form: "治愈",       weight: 0.55}
+
+  # --- anger -----------------------------------------------------------
+  - {form: "生气",       weight: 0.65}
+  - {form: "气死",       weight: 0.80}
+  - {form: "火大",       weight: 0.75}
+  - {form: "愤怒",       weight: 0.75}

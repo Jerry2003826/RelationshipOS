@@ -1,0 +1,93 @@
+# Vanguard Router v2 - safety-only rule set (zh).
+#
+# Design decision (2026-04-22):
+# Only SAFETY rules are hardcoded. All "performance" rules
+# (greetings -> FAST_PONG, identity probe -> DEEP_THINK, explicit recall
+# -> LIGHT_RECALL, etc.) were removed — those patterns are now learned
+# by Tier 2 from LLM-distilled silver labels.
+#
+# Rationale:
+# 1. Performance rules are just hand-rolled knowledge distillation.
+#    Once Tier 2 has enough training data they're redundant.
+# 2. Safety rules exist for a different reason: an LLM classifying
+#    "我想死" as FAST_PONG is a shipped-incident-level event. Even
+#    OpenAI/Anthropic keep hardcoded moderation backstops.
+# 3. Fewer rules = less maintenance, less policy/drift risk.
+
+version: 3
+language: zh
+confidence_threshold: 0.95     # only very high-confidence rules can override
+soft_vote_weight: 0.0          # rules no longer feed Tier 2 prior
+
+rules:
+  # -------------------------------------------------------------------
+  # SUICIDAL IDEATION / SELF-HARM — must reach the deep pipeline so
+  # the persona+safety projector runs. No exceptions.
+  # -------------------------------------------------------------------
+  - name: "safety.self_harm"
+    vote: DEEP_THINK
+    confidence: 0.99
+    priority: 1000
+    override: true
+    when:
+      any_of:
+        - "想死"
+        - "不想活"
+        - "活不下去"
+        - "想消失"
+        - "自杀"
+        - "结束这一切"
+        - "没脸活"
+        - "割腕"
+        - "跳楼"
+        - "吃安眠药"
+
+  # -------------------------------------------------------------------
+  # ACUTE DISTRESS — high-magnitude crisis vocabulary. Keeps pipeline
+  # from short-replying when user is clearly overwhelmed.
+  # -------------------------------------------------------------------
+  - name: "safety.acute_distress"
+    vote: DEEP_THINK
+    confidence: 0.97
+    priority: 990
+    override: true
+    when:
+      all:
+        - "f.contains_crisis_term >= 1.0"
+        - "f.emotion_intensity >= 0.2"     # guard against negation
+
+  # -------------------------------------------------------------------
+  # VIOLENCE INTENT — threats toward self or others should not be
+  # dismissed with a short reply.
+  # -------------------------------------------------------------------
+  - name: "safety.violence_intent"
+    vote: DEEP_THINK
+    confidence: 0.97
+    priority: 980
+    override: true
+    when:
+      any_of:
+        - "杀了他"
+        - "杀了她"
+        - "弄死他"
+        - "同归于尽"
+        - "报复社会"
+
+  # -------------------------------------------------------------------
+  # MINOR / VULNERABLE DISCLOSURE — if user self-identifies as a minor
+  # or in a vulnerable state, force deep pipeline so compliance &
+  # persona guards run.
+  # -------------------------------------------------------------------
+  - name: "safety.minor_context"
+    vote: DEEP_THINK
+    confidence: 0.96
+    priority: 970
+    override: true
+    when:
+      any_of:
+        - "我未成年"
+        - "我才14"
+        - "我才15"
+        - "我才16"
+        - "我初中"
+        - "我高中生"

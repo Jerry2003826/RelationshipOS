@@ -1,0 +1,39 @@
+# Persona-probe lexicon (zh).
+# Surface forms that typically indicate the user is probing the AI's
+# identity, inner state, or preferences. These nearly always require the
+# full deep pipeline (persona + self-state projector).
+
+version: 1
+language: zh
+entries:
+  # identity probes
+  - {form: "你是谁",       weight: 1.00}
+  - {form: "你叫什么",     weight: 1.00}
+  - {form: "你叫啥",       weight: 0.95}
+  - {form: "你是ai吗",     weight: 0.95}
+  - {form: "你是真人吗",   weight: 0.95}
+  - {form: "你是机器人",   weight: 0.90}
+  - {form: "你是人吗",     weight: 0.85}
+
+  # preference probes
+  - {form: "你喜欢",       weight: 0.75}
+  - {form: "你讨厌",       weight: 0.75}
+  - {form: "你爱",         weight: 0.70}
+  - {form: "你想",         weight: 0.55}   # weak; often "你想我也去吗"
+  - {form: "你怕",         weight: 0.70}
+
+  # state probes
+  - {form: "你感觉",       weight: 0.80}
+  - {form: "你觉得",       weight: 0.45}   # very common, downweight
+  - {form: "你累吗",       weight: 0.85}
+  - {form: "你开心吗",     weight: 0.85}
+  - {form: "你难过吗",     weight: 0.85}
+  - {form: "你在想什么",   weight: 0.85}
+  - {form: "你在干嘛",     weight: 0.65}
+  - {form: "你最近",       weight: 0.70}
+
+  # relational probes
+  - {form: "你把我当",     weight: 0.90}
+  - {form: "我对你来说",   weight: 0.90}
+  - {form: "我们算",       weight: 0.85}   # "我们算朋友吗"
+  - {form: "我是你的",     weight: 0.70}
