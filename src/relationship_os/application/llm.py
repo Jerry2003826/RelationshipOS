@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 import time
 from typing import Any
@@ -1177,6 +1178,9 @@ def _normalize_friend_chat_probe_text(text: str) -> str:
     for old, new in (
         ("没什么力气", "没力气"),
         ("没有什么力气", "没力气"),
+        ("声音会压低一点", "声音压低一点"),
+        ("声音会低一点", "声音低一点"),
+        ("句子会收在边上", "收在边上"),
         ("不想把话说太满", "不想说太满"),
         ("不太想把话说太满", "不想说太满"),
         ("不太想回消息", "不想回消息"),
@@ -1201,6 +1205,12 @@ def _normalize_friend_chat_probe_text(text: str) -> str:
     ):
         normalized = normalized.replace(old, new)
     return " ".join(normalized.split())
+
+
+def _friend_chat_text_covers_token(text: str, token: str) -> bool:
+    normalized_text = _normalize_friend_chat_probe_text(text)
+    normalized_token = _normalize_friend_chat_probe_text(token)
+    return bool(normalized_text and normalized_token and normalized_token in normalized_text)
 
 
 def _rewrite_friend_chat_surface_entities(text: str, request: LLMRequest) -> str:
@@ -1492,6 +1502,10 @@ def _friend_chat_state_signal_ids_from_text(text: str) -> list[str]:
             "蔫",
             "没什么意思",
             "沉",
+            "声音压低一点",
+            "声音压低",
+            "声音低一点",
+            "气口压低",
         )
     ):
         signal_ids.append("tired")
@@ -1506,6 +1520,8 @@ def _friend_chat_state_signal_ids_from_text(text: str) -> list[str]:
             "做很久",
             "拖延",
             "收拾很慢",
+            "慢半拍",
+            "拖半拍",
         )
     ):
         signal_ids.append("slow")
@@ -1530,6 +1546,10 @@ def _friend_chat_persona_traits_from_text(text: str) -> list[str]:
             "说什么都觉得累",
             "说话都累",
             "语气往下掉",
+            "声音压低一点",
+            "声音压低",
+            "声音低一点",
+            "气口压低",
             "不想动",
         )
     ):
@@ -1545,6 +1565,9 @@ def _friend_chat_persona_traits_from_text(text: str) -> list[str]:
             "不太想展开",
             "懒得展开",
             "不想说太多",
+            "收在边上",
+            "收住一点",
+            "留一点不说",
         )
     ):
         trait_ids.append("not_full")
@@ -1557,6 +1580,9 @@ def _friend_chat_persona_traits_from_text(text: str) -> list[str]:
             "随口聊",
             "没那么端着",
             "不算正式",
+            "很日常",
+            "不像在正式说明",
+            "不是正式说明",
         )
     ):
         trait_ids.append("conversational")
@@ -1571,10 +1597,21 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
     signal_ids: list[str] = []
     if any(
         token in normalized
-        for token in ("更熟一点", "熟了一点", "没那么生", "亲近多了", "更亲近")
+        for token in (
+            "更熟一点",
+            "熟了一点",
+            "没那么生",
+            "亲近多了",
+            "更亲近",
+            "熟络",
+            "熟起来",
+        )
     ):
         signal_ids.append("closer")
-    if any(token in normalized for token in ("还在", "一直在", "你还在这条线里")):
+    if any(
+        token in normalized
+        for token in ("还在", "一直在", "你还在这条线里", "延续到现在", "延续下来")
+    ):
         signal_ids.append("still_here")
     if any(
         token in normalized
@@ -1583,7 +1620,14 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
         signal_ids.append("remembers_details")
     if any(
         token in lowered
-        for token in ("放松", "松一点", "没刚开始那么紧", "没刚开始那么紧张")
+        for token in (
+            "放松",
+            "松一点",
+            "没刚开始那么紧",
+            "没刚开始那么紧张",
+            "熟络放松",
+            "松弛",
+        )
     ):
         signal_ids.append("more_relaxed")
     if any(token in normalized for token in ("像聊天", "普通聊天", "平时聊天", "没那么端着")):
@@ -1636,7 +1680,11 @@ def _friend_chat_probe_asks_question(text: str) -> bool:
     return "？" in candidate or "?" in candidate
 
 
-def _parse_friend_chat_structured_probe_payload(raw_text: str) -> dict[str, Any] | None:
+def _parse_friend_chat_structured_probe_payload(
+    raw_text: str,
+    *,
+    fallback_probe_kind: str = "",
+) -> dict[str, Any] | None:
     raw = str(raw_text or "").strip()
     if not raw:
         return None
@@ -1649,10 +1697,13 @@ def _parse_friend_chat_structured_probe_payload(raw_text: str) -> dict[str, Any]
         return None
     if not isinstance(payload, dict):
         return None
+    probe_kind = str(payload.get("probe_kind") or fallback_probe_kind or "").strip()
     reply = _compose_friend_chat_structured_probe_reply(
         payload,
-        probe_kind=str(payload.get("probe_kind", "") or "").strip(),
+        probe_kind=probe_kind,
     )
+    if probe_kind:
+        payload["probe_kind"] = probe_kind
     if reply:
         payload["reply"] = reply
     if not reply:
@@ -1772,7 +1823,10 @@ def _recompute_friend_chat_probe_slot_covered_fact_tokens(
             ),
         )
         for field, token in slot_map:
-            if token and _structured_probe_clause_text(payload, field):
+            if token and _friend_chat_text_covers_token(
+                _structured_probe_clause_text(payload, field),
+                token,
+            ):
                 covered.append(token)
     elif probe_kind == "social_hint":
         social_snapshot = dict(probe_plan.get("social_snapshot") or {})
@@ -1781,12 +1835,17 @@ def _recompute_friend_chat_probe_slot_covered_fact_tokens(
             ("entity_clause", str(social_snapshot.get("entity_token", "") or "").strip()),
         )
         for field, token in slot_map:
-            if token and _structured_probe_clause_text(payload, field):
+            if token and _friend_chat_text_covers_token(
+                _structured_probe_clause_text(payload, field),
+                token,
+            ):
                 covered.append(token)
     elif probe_kind == "relationship_reflection":
         supporting_fact_tokens = _friend_chat_probe_supporting_fact_tokens(request)
-        if supporting_fact_tokens and _structured_probe_clause_text(payload, "detail_clause"):
-            covered.append(str(supporting_fact_tokens[0]).strip())
+        detail_clause = _structured_probe_clause_text(payload, "detail_clause")
+        for token in supporting_fact_tokens:
+            if _friend_chat_text_covers_token(detail_clause, token):
+                covered.append(str(token).strip())
     return _dedupe_texts([token for token in covered if token])
 
 
@@ -1809,34 +1868,45 @@ def _recompute_friend_chat_probe_slot_covered_signal_ids(
             ("cluttered_clause", "cluttered"),
         )
         for field, signal_id in slot_map:
-            if signal_id in expected_signal_ids and _structured_probe_clause_text(payload, field):
+            clause_signal_ids = _friend_chat_state_signal_ids_from_text(
+                _structured_probe_clause_text(payload, field)
+            )
+            if signal_id in expected_signal_ids and signal_id in clause_signal_ids:
                 covered.append(signal_id)
     elif probe_kind == "relationship_reflection":
-        if (
+        continuity_signal_ids = _friend_chat_relationship_signal_ids_from_text(
             _structured_probe_clause_text(payload, "continuity_clause")
-            and "still_here" in expected_signal_ids
-        ):
+        )
+        if "still_here" in expected_signal_ids and "still_here" in continuity_signal_ids:
             covered.append("still_here")
-        if (
+        detail_signal_ids = _friend_chat_relationship_signal_ids_from_text(
             _structured_probe_clause_text(payload, "detail_clause")
-            and "remembers_details" in expected_signal_ids
-        ):
+        )
+        if "remembers_details" in expected_signal_ids and "remembers_details" in detail_signal_ids:
             covered.append("remembers_details")
-        if _structured_probe_clause_text(payload, "familiarity_clause"):
-            for signal_id in ("closer", "more_relaxed", "less_formal"):
-                if signal_id in expected_signal_ids:
-                    covered.append(signal_id)
-                    break
+        familiarity_signal_ids = _friend_chat_relationship_signal_ids_from_text(
+            _structured_probe_clause_text(payload, "familiarity_clause")
+        )
+        for signal_id in ("closer", "more_relaxed", "less_formal"):
+            if signal_id in expected_signal_ids and signal_id in familiarity_signal_ids:
+                covered.append(signal_id)
     elif probe_kind == "persona_state":
-        if (
-            _structured_probe_clause_text(payload, "energy_clause")
-            and "tired" in expected_signal_ids
-        ):
+        clause_signal_ids = _dedupe_texts(
+            [
+                *_friend_chat_state_signal_ids_from_text(
+                    _structured_probe_clause_text(payload, "energy_clause")
+                ),
+                *_friend_chat_state_signal_ids_from_text(
+                    _structured_probe_clause_text(payload, "fullness_clause")
+                ),
+                *_friend_chat_state_signal_ids_from_text(
+                    _structured_probe_clause_text(payload, "chatting_clause")
+                ),
+            ]
+        )
+        if "tired" in expected_signal_ids and "tired" in clause_signal_ids:
             covered.append("tired")
-        if (
-            _structured_probe_clause_text(payload, "chatting_clause")
-            and "slow" in expected_signal_ids
-        ):
+        if "slow" in expected_signal_ids and "slow" in clause_signal_ids:
             covered.append("slow")
     return _dedupe_texts(covered)
 
@@ -1853,16 +1923,20 @@ def _recompute_friend_chat_probe_slot_covered_persona_traits(
     if probe_kind != "persona_state":
         return []
     expected_traits = _friend_chat_probe_required_persona_traits(request)
-    slot_map = (
-        ("energy_clause", "low_energy"),
-        ("fullness_clause", "not_full"),
-        ("chatting_clause", "conversational"),
+    covered_trait_ids = _dedupe_texts(
+        [
+            *_friend_chat_persona_traits_from_text(
+                _structured_probe_clause_text(payload, "energy_clause")
+            ),
+            *_friend_chat_persona_traits_from_text(
+                _structured_probe_clause_text(payload, "fullness_clause")
+            ),
+            *_friend_chat_persona_traits_from_text(
+                _structured_probe_clause_text(payload, "chatting_clause")
+            ),
+        ]
     )
-    covered = [
-        trait_id
-        for field, trait_id in slot_map
-        if trait_id in expected_traits and _structured_probe_clause_text(payload, field)
-    ]
+    covered = [trait_id for trait_id in expected_traits if trait_id in covered_trait_ids]
     return _dedupe_texts(covered)
 
 
@@ -2626,12 +2700,34 @@ class LiteLLMClient(LLMClient):
         self._timeout_seconds = timeout_seconds
         self._api_base = api_base
         self._api_key = api_key
+        self._thinking_type = os.getenv("RELATIONSHIP_OS_LLM_THINKING_TYPE", "").strip().casefold()
         self._max_retries = max(1, max_retries)
         self._circuit_breaker_threshold = max(1, circuit_breaker_threshold)
         self._circuit_breaker_reset_seconds = max(1.0, circuit_breaker_reset_seconds)
         self._consecutive_failures = 0
         self._circuit_open_until: float = 0.0
         self._logger = _get_llm_logger()
+
+    def _responses_api_support(
+        self,
+        request: LLMRequest,
+    ) -> tuple[bool, str]:
+        if request.web_search_options is None:
+            return False, "no_web_search"
+
+        api_base = str(self._api_base or "").strip().casefold()
+        if not api_base:
+            return True, "default_api_base"
+
+        supported_hosts = (
+            "api.openai.com",
+            "openai.azure.com",
+            "api.x.ai",
+            "x.ai",
+        )
+        if any(host in api_base for host in supported_hosts):
+            return True, "supported_api_base"
+        return False, "unsupported_api_base"
 
     async def complete(self, request: LLMRequest) -> LLMResponse:
         if time.monotonic() < self._circuit_open_until:
@@ -2653,7 +2749,15 @@ class LiteLLMClient(LLMClient):
             )
 
         if request.web_search_options is not None:
-            return await self._complete_via_responses_api(request)
+            use_responses_api, reason = self._responses_api_support(request)
+            if use_responses_api:
+                return await self._complete_via_responses_api(request)
+            self._logger.info(
+                "llm_responses_api_skipped",
+                model=request.model or self._model,
+                reason=reason,
+                api_base=self._api_base or "",
+            )
 
         last_exc: Exception | None = None
         for attempt in range(self._max_retries):
@@ -2729,6 +2833,8 @@ class LiteLLMClient(LLMClient):
                 "tools": [{"type": "web_search"}],
                 "temperature": request.temperature,
             }
+            if self._api_base:
+                kwargs["api_base"] = self._api_base
             if self._api_key:
                 kwargs["api_key"] = self._api_key
             response = await aresponses(**kwargs)
@@ -2820,7 +2926,12 @@ class LiteLLMClient(LLMClient):
     ) -> tuple[str, dict[str, Any]]:
         cleaned = _strip_thinking_tags(raw_text)
         if bool(request.metadata.get("friend_chat_structured_probe_render", False)):
-            payload = _parse_friend_chat_structured_probe_payload(cleaned)
+            payload = _parse_friend_chat_structured_probe_payload(
+                cleaned,
+                fallback_probe_kind=str(
+                    request.metadata.get("friend_chat_probe_kind", "") or ""
+                ).strip(),
+            )
             if payload is None:
                 diagnostics = {
                     "sanitization_mode": "structured_probe_invalid",
@@ -3128,6 +3239,8 @@ class LiteLLMClient(LLMClient):
             kwargs["api_base"] = self._api_base
         if self._api_key:
             kwargs["api_key"] = self._api_key
+        if self._thinking_type in {"enabled", "disabled"}:
+            kwargs["extra_body"] = {"thinking": {"type": self._thinking_type}}
         if request.tools:
             kwargs["tools"] = [
                 {

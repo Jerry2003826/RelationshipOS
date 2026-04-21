@@ -142,7 +142,14 @@ class Mem0BenchmarkClient:
         )
         return Memory(config=config)
 
-    def create_session(self, session_id: str, *, user_id: str | None = None) -> str:
+    def create_session(
+        self,
+        session_id: str,
+        *,
+        user_id: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> str:
+        _ = metadata
         resolved_user_id = user_id or f"{self._run_tag}:{session_id}"
         state = _Mem0SessionState(
             user_id=resolved_user_id,

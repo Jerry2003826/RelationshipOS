@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import os
 import signal
+import sys
 import time
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -58,7 +59,17 @@ from relationship_os.application.memory_index import (
 
 
 def _p(message: str) -> None:
-    print(message, flush=True)
+    try:
+        print(message, flush=True)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+        buffer = getattr(sys.stdout, "buffer", None)
+        if buffer is not None:
+            buffer.write(f"{message}\n".encode(encoding, errors="replace"))
+            buffer.flush()
+            return
+        safe_message = message.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(safe_message, flush=True)
 
 
 class ChatClient(Protocol):

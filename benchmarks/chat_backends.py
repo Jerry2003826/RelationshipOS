@@ -82,6 +82,7 @@ class ChatBackendConfig:
     model: str
     api_base: str
     api_key: str
+    thinking_type: str = ""
     timeout: float = 180.0
     temperature: float = 0.7
     max_tokens: int = 512
@@ -116,6 +117,7 @@ class ChatBackendConfig:
             model=model,
             api_base=api_base,
             api_key=api_key,
+            thinking_type=os.getenv("BENCHMARK_CHAT_THINKING_TYPE", "").strip().casefold(),
             timeout=float(os.getenv("BENCHMARK_CHAT_TIMEOUT", str(timeout))),
             temperature=float(os.getenv("BENCHMARK_CHAT_TEMPERATURE", str(temperature))),
             max_tokens=int(os.getenv("BENCHMARK_CHAT_MAX_TOKENS", str(max_tokens))),
@@ -144,6 +146,8 @@ class BenchmarkChatBackend:
             kwargs["api_base"] = self._config.api_base
         if self._config.api_key:
             kwargs["api_key"] = self._config.api_key
+        if self._config.thinking_type in {"enabled", "disabled"}:
+            kwargs["extra_body"] = {"thinking": {"type": self._config.thinking_type}}
         response = litellm.completion(**kwargs)
         raw_reply = response.choices[0].message.content.strip()
         reply = strip_reasoning(raw_reply)

@@ -72,7 +72,14 @@ class BaselineLLMClient:
             )
         )
 
-    def create_session(self, session_id: str, *, user_id: str | None = None) -> str:
+    def create_session(
+        self,
+        session_id: str,
+        *,
+        user_id: str | None = None,
+        metadata: dict[str, object] | None = None,
+    ) -> str:
+        _ = user_id, metadata
         self._sessions[session_id] = [{"role": "system", "content": self.persona_prompt}]
         return session_id
 

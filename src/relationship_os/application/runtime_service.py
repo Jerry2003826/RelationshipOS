@@ -39,6 +39,7 @@ from relationship_os.application.analyzers.experts.plan_dag import execute_plan_
 from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
+    _compose_friend_chat_structured_probe_reply as compose_friend_chat_structured_probe_reply,
     build_grounded_template_reply,
 )
 from relationship_os.application.memory_index import MemoryMediaAttachment
@@ -5181,13 +5182,18 @@ class RuntimeService:
     def _coerce_friend_chat_structured_probe_response(
         self,
         response: LLMResponse,
+        *,
+        probe_kind: str = "",
     ) -> LLMResponse | None:
         if response.failure is not None:
             return None
         diagnostics = dict(response.diagnostics or {})
         if bool(diagnostics.get("structured_probe_reply", False)):
             return response
-        parsed = self._parse_friend_chat_structured_probe_reply(response.output_text)
+        parsed = self._parse_friend_chat_structured_probe_reply(
+            response.output_text,
+            fallback_probe_kind=probe_kind,
+        )
         if parsed is None:
             return None
         structured_reply_text, structured_diagnostics = parsed
@@ -5229,7 +5235,8 @@ class RuntimeService:
             )
         )
         normalized_primary = self._coerce_friend_chat_structured_probe_response(
-            primary_response
+            primary_response,
+            probe_kind=str(probe_plan.get("probe_kind", "") or "").strip(),
         )
         if normalized_primary is not None:
             logger.info(
@@ -5263,7 +5270,8 @@ class RuntimeService:
             )
         )
         normalized_repair = self._coerce_friend_chat_structured_probe_response(
-            repair_response
+            repair_response,
+            probe_kind=str(probe_plan.get("probe_kind", "") or "").strip(),
         )
         if normalized_repair is not None:
             logger.info(
@@ -5475,6 +5483,8 @@ class RuntimeService:
     def _parse_friend_chat_structured_probe_reply(
         self,
         raw_text: str,
+        *,
+        fallback_probe_kind: str = "",
     ) -> tuple[str, dict[str, Any]] | None:
         raw = str(raw_text or "").strip()
         if not raw:
@@ -5488,7 +5498,7 @@ class RuntimeService:
             return None
         if not isinstance(payload, dict):
             return None
-        probe_kind = str(payload.get("probe_kind", "") or "").strip()
+        probe_kind = str(payload.get("probe_kind") or fallback_probe_kind or "").strip()
         reply = self._compose_friend_chat_structured_probe_reply(
             payload,
             probe_kind=probe_kind,
@@ -5516,65 +5526,10 @@ class RuntimeService:
         *,
         probe_kind: str,
     ) -> str:
-        if probe_kind == "memory_recap":
-            fact_clauses = [
-                str(value).strip()
-                for value in list(payload.get("fact_clauses") or [])
-                if str(value).strip()
-            ]
-            closing_clause = str(payload.get("closing_clause", "") or "").strip()
-            composed = " ".join(
-                [*fact_clauses, *([closing_clause] if closing_clause else [])]
-            )
-            if composed:
-                return composed
-        if probe_kind == "state_reflection":
-            signal_clauses = [
-                str(value).strip()
-                for value in list(payload.get("signal_clauses") or [])
-                if str(value).strip()
-            ]
-            composed = " ".join(signal_clauses)
-            if composed:
-                return composed
-        if probe_kind == "persona_state":
-            ordered = (
-                str(payload.get("energy_clause", "") or "").strip(),
-                str(payload.get("fullness_clause", "") or "").strip(),
-                str(payload.get("chatting_clause", "") or "").strip(),
-            )
-            composed = " ".join(value for value in ordered if value)
-            if composed:
-                return composed
-        if probe_kind == "social_hint":
-            ordered = (
-                str(payload.get("subject_clause", "") or "").strip(),
-                str(payload.get("entity_clause", "") or "").strip(),
-                str(payload.get("boundary_clause", "") or "").strip(),
-            )
-            composed = " ".join(value for value in ordered if value)
-            if composed:
-                return composed
-        if probe_kind == "relationship_reflection":
-            ordered = (
-                str(payload.get("familiarity_clause", "") or "").strip(),
-                str(payload.get("continuity_clause", "") or "").strip(),
-                str(payload.get("detail_clause", "") or "").strip(),
-            )
-            composed = " ".join(value for value in ordered if value)
-            if composed:
-                return composed
-        reply = str(payload.get("reply", "") or "").strip()
-        if reply:
-            return reply
-        sentences = [
-            str(value).strip()
-            for value in list(payload.get("sentences") or [])
-            if str(value).strip()
-        ]
-        if sentences:
-            return " ".join(sentences)
-        return ""
+        return compose_friend_chat_structured_probe_reply(
+            payload,
+            probe_kind=probe_kind,
+        )
 
     def _friend_chat_probe_persona_trait_semantics(
         self,
