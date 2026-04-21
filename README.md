@@ -2,6 +2,8 @@
   <img src="https://img.shields.io/badge/python-3.14-blue" />
   <img src="https://img.shields.io/badge/benchmark-7.9%2F10-brightgreen" />
   <img src="https://img.shields.io/badge/runtime-friend__chat__zh__v1-orange" />
+  <img src="https://img.shields.io/badge/architecture-MoE%206--experts-purple" />
+  <img src="https://img.shields.io/badge/async-I%2FO%20parallel-blueviolet" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
 </p>
 
@@ -14,6 +16,26 @@
 <p align="center">
   同一个实体 · 跨会话记忆 · 跨人归属 · 脑子和嘴巴分离 · 可评测 · 可回放
 </p>
+
+---
+
+## TL;DR
+
+> 市面上的 chatbot 做的是「每一轮重新组织一次上下文并回答」。<br/>
+> RelationshipOS 做的是「**同一个人一直在这里，只是这次决定要不要认真动脑，再决定怎么说**」。
+
+| 维度 | 做法 | 对照常规 chatbot |
+|:---|:---|:---|
+| **记忆** | 三层 digest-first 结构化记忆（事实 / 关系 / 情感状态），不是把历史消息塞进 prompt | 单纯 history replay |
+| **人格** | 同一 entity 跨 session 一致（persona_state + social_world 双通道） | 每次会话像换了一个人 |
+| **决策** | Vanguard Router 两级混合分类器，自适应选 fast_reply / light_recall / deep_recall | 固定 pipeline |
+| **推理** | MoE 6 专家 DAG（Factual / Emotional / Governance / Coordination / Expression / Response）并行编排 | 单一大 prompt |
+| **归属** | 知道哪些记忆属于谁、哪些可说、哪些只能 hint、哪些必须闭嘴 | 无 social awareness |
+| **表达** | "脑子" 和 "嘴巴" 分离：先想，再自然说 | 一步到位 |
+| **评测** | 自建 5 维 probe benchmark + slot-based coverage 独立重算 | 靠主观感觉 |
+| **性能** | Foundation 阶段 `asyncio.gather` 并行 I/O，wall-clock -30~50% | 串行链式 |
+
+**Benchmark 当前成绩：`friend_chat_zh_v1` Overall 7.9 / 10**，相比历史 fix48 基线 6.1 提升 **+29%**。
 
 ---
 
