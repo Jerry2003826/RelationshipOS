@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import io
 
-import benchmarks.__main__ as benchmark_main
-from benchmarks.baseline_client import BaselineLLMClient
-from benchmarks.mem0_client import Mem0BenchmarkClient
+import pytest
+
+# The mem0 shadow backend is an optional dependency (`pip install .[benchmark]`).
+# Skip the whole module when it is not installed instead of breaking collection.
+pytest.importorskip("mem0", reason="benchmark extras not installed")
+
+import benchmarks.__main__ as benchmark_main  # noqa: E402
+from benchmarks.baseline_client import BaselineLLMClient  # noqa: E402
+from benchmarks.mem0_client import Mem0BenchmarkClient  # noqa: E402
 
 
 def test_baseline_create_session_accepts_metadata() -> None:
