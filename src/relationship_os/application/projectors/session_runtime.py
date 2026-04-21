@@ -259,10 +259,7 @@ def _build_lifecycle_runtime_defaults() -> dict[str, Any]:
 
 
 def _build_simple_payload_defaults() -> dict[str, Any]:
-    return {
-        field_name: None
-        for field_name in _DIRECT_PAYLOAD_EVENT_FIELDS.values()
-    }
+    return {field_name: None for field_name in _DIRECT_PAYLOAD_EVENT_FIELDS.values()}
 
 
 def _build_counted_payload_defaults() -> dict[str, Any]:
@@ -358,9 +355,7 @@ def _apply_session_directive_updated(
     next_state["session_directive"] = dict(event.payload.get("directive", {}))
     next_state["confidence_assessment"] = dict(event.payload.get("confidence", {}))
     next_state["strategy_decision"] = dict(event.payload.get("strategy", {}))
-    strategy_name = str(
-        (event.payload.get("strategy", {}) or {}).get("strategy", "")
-    ).strip()
+    strategy_name = str((event.payload.get("strategy", {}) or {}).get("strategy", "")).strip()
     if strategy_name:
         next_state["strategy_history"].append(strategy_name)
         next_state["strategy_history"] = next_state["strategy_history"][-8:]
@@ -369,18 +364,12 @@ def _apply_session_directive_updated(
     next_state["conversation_cadence_plan"] = dict(
         event.payload.get("conversation_cadence_plan", {})
     )
-    next_state["session_ritual_plan"] = dict(
-        event.payload.get("session_ritual_plan", {})
-    )
+    next_state["session_ritual_plan"] = dict(event.payload.get("session_ritual_plan", {}))
     next_state["somatic_orchestration_plan"] = dict(
         event.payload.get("somatic_orchestration_plan", {})
     )
-    next_state["proactive_cadence_plan"] = dict(
-        event.payload.get("proactive_cadence_plan", {})
-    )
-    next_state["response_draft_plan"] = dict(
-        event.payload.get("response_draft_plan", {})
-    )
+    next_state["proactive_cadence_plan"] = dict(event.payload.get("proactive_cadence_plan", {}))
+    next_state["response_draft_plan"] = dict(event.payload.get("response_draft_plan", {}))
     next_state["response_rendering_policy"] = dict(
         event.payload.get("response_rendering_policy", {})
     )

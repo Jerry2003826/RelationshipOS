@@ -84,8 +84,7 @@ class RouterDecisionV2:
         # bugs in rule engines that forget to normalize.
         if set(self.probabilities) != set(ALL_ROUTES):
             raise ValueError(
-                f"probabilities must contain keys {ALL_ROUTES}, "
-                f"got {sorted(self.probabilities)}"
+                f"probabilities must contain keys {ALL_ROUTES}, got {sorted(self.probabilities)}"
             )
         total = sum(self.probabilities.values())
         if not (0.98 <= total <= 1.02):
@@ -116,9 +115,7 @@ def make_decision(
     """
 
     if probabilities is None:
-        probabilities = {
-            r: (0.9 if r == route_type else 0.05) for r in ALL_ROUTES
-        }
+        probabilities = {r: (0.9 if r == route_type else 0.05) for r in ALL_ROUTES}
 
     sorted_probs = sorted(probabilities.values(), reverse=True)
     if margin is None:
@@ -144,6 +141,7 @@ def make_decision(
 
 # --- legacy compatibility shim -----------------------------------------
 
+
 @dataclass(slots=True, frozen=True)
 class RouterDecision:
     """Legacy two-class decision kept for backward compatibility.
@@ -163,9 +161,7 @@ def downgrade_to_legacy(decision: RouterDecisionV2) -> RouterDecision:
     LIGHT_RECALL falls into NEED_DEEP_THINK to preserve the legacy
     guarantee that "anything not pong goes to the deep pipeline".
     """
-    legacy_type = (
-        "FAST_PONG" if decision.route_type == "FAST_PONG" else "NEED_DEEP_THINK"
-    )
+    legacy_type = "FAST_PONG" if decision.route_type == "FAST_PONG" else "NEED_DEEP_THINK"
     return RouterDecision(
         route_type=legacy_type,
         reason=decision.reason or decision.decided_by,

@@ -46,15 +46,15 @@ def _softmax(x: list[float]) -> list[float]:
 class Tier2Classifier:
     """Thin wrapper that exposes `predict_proba` + `top_features`."""
 
-    coef: Any            # numpy array or list[list[float]]
-    intercept: Any       # numpy array or list[float]
+    coef: Any  # numpy array or list[list[float]]
+    intercept: Any  # numpy array or list[float]
     classes: list[str]
     feat_names: list[str]
-    calibrators: list[Any] | None   # per-class isotonic OR None
+    calibrators: list[Any] | None  # per-class isotonic OR None
     version: str = "0.0.0"
 
     @classmethod
-    def load(cls, path: Path) -> "Tier2Classifier":
+    def load(cls, path: Path) -> Tier2Classifier:
         with path.open("rb") as f:
             blob = pickle.load(f)
         return cls(
@@ -122,17 +122,20 @@ class PriorClassifier:
     def predict_proba(self, features: RouterFeatures) -> dict[str, float]:
         # Simple heuristic: weigh persona/memory/emotion features.
         scores = {
-            "FAST_PONG": 0.3 + 0.5 * features.is_very_short
-                        - 0.4 * features.memory_trigger_score
-                        - 0.4 * features.persona_probe_score
-                        - 0.4 * features.emotion_raw,
-            "LIGHT_RECALL": 0.3 + 0.5 * features.memory_trigger_score
-                             + 0.3 * features.self_disclosure_score
-                             - 0.4 * features.persona_probe_score,
-            "DEEP_THINK": 0.3 + 0.5 * features.emotion_raw
-                             + 0.4 * features.persona_probe_score
-                             + 0.3 * features.factual_query_score
-                             + 0.3 * features.contains_crisis_term,
+            "FAST_PONG": 0.3
+            + 0.5 * features.is_very_short
+            - 0.4 * features.memory_trigger_score
+            - 0.4 * features.persona_probe_score
+            - 0.4 * features.emotion_raw,
+            "LIGHT_RECALL": 0.3
+            + 0.5 * features.memory_trigger_score
+            + 0.3 * features.self_disclosure_score
+            - 0.4 * features.persona_probe_score,
+            "DEEP_THINK": 0.3
+            + 0.5 * features.emotion_raw
+            + 0.4 * features.persona_probe_score
+            + 0.3 * features.factual_query_score
+            + 0.3 * features.contains_crisis_term,
         }
         # Clip and softmax.
         vals = [max(scores[k], -2.0) for k in ALL_ROUTES]

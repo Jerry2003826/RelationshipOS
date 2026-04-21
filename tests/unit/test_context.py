@@ -134,7 +134,12 @@ class TestBuildContextFrame:
         assert frame.bid_signal in {"connection_request", "soft_bid", "low_signal"}
         assert frame.appraisal in {"positive", "negative", "neutral"}
         assert frame.topic in {
-            "technical", "planning", "work", "relationship", "emotion", "general",
+            "technical",
+            "planning",
+            "work",
+            "relationship",
+            "emotion",
+            "general",
         }
         assert frame.attention in {"high", "focused", "normal"}
         assert isinstance(frame.common_ground, list)

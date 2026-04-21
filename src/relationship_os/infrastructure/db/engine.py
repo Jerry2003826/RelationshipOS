@@ -6,4 +6,3 @@ def build_async_engine(database_url: str) -> AsyncEngine:
         database_url,
         pool_pre_ping=True,
     )
-

@@ -88,11 +88,14 @@ def _response_rendering_section(
     runtime_profile: str | None = None,
     archetype: str = "default",
 ) -> dict[str, object]:
-    raw = _rendering_section(
-        "response_rendering",
-        runtime_profile=runtime_profile,
-        archetype=archetype,
-    ).get(key) or {}
+    raw = (
+        _rendering_section(
+            "response_rendering",
+            runtime_profile=runtime_profile,
+            archetype=archetype,
+        ).get(key)
+        or {}
+    )
     return dict(raw) if isinstance(raw, dict) else {}
 
 
@@ -352,9 +355,7 @@ def _apply_guidance_and_cadence_draft_rules(
         "explicit_autonomy_space",
         "consent_space",
     }:
-        phrasing_constraints.append(
-            "leave deliberate conversational space after the checkpoint"
-        )
+        phrasing_constraints.append("leave deliberate conversational space after the checkpoint")
     if guidance_plan.agency_mode == "focused_question":
         state["question_strategy"] = "single_focused_question"
     must_include.extend(guidance_plan.micro_actions[:2])
@@ -399,9 +400,7 @@ def _apply_boundary_and_policy_draft_rules(
             ]
         )
         must_avoid.append("false_certainty")
-        phrasing_constraints.append(
-            "use calibrated language instead of guarantees or predictions"
-        )
+        phrasing_constraints.append("use calibrated language instead of guarantees or predictions")
     elif knowledge_boundary_decision.decision == "clarify_before_answer":
         state["opening_move"] = "clarify_with_reason"
         state["question_strategy"] = "single_focused_question"
@@ -559,9 +558,7 @@ def build_response_rendering_policy(
         archetype=archetype,
     )
     if response_draft_plan.question_strategy == "single_focused_question":
-        state["question_count_limit"] = int(
-            strategy_limits.get("single_focused_question", 1)
-        )
+        state["question_count_limit"] = int(strategy_limits.get("single_focused_question", 1))
     elif response_draft_plan.question_strategy == "check_alignment":
         state["question_count_limit"] = max(
             int(state.get("question_count_limit", 0)),
@@ -665,29 +662,28 @@ def _contains_forbidden_false_certainty_language(
         runtime_profile=runtime_profile,
         archetype=archetype,
     )
-    english_patterns = list(policy.get("en") or [
-        "definitely will",
-        "will definitely",
-        "guaranteed to",
-        "absolutely will",
-    ])
+    english_patterns = list(
+        policy.get("en")
+        or [
+            "definitely will",
+            "will definitely",
+            "guaranteed to",
+            "absolutely will",
+        ]
+    )
     chinese_patterns = list(
         policy.get("zh") or ["一定会", "绝对会", "肯定会", "保证会", "百分之百会"]
     )
     safe_english_patterns = list(
-        policy.get("safe_en")
-        or ["can't know for sure", "cannot know for sure", "not for sure"]
+        policy.get("safe_en") or ["can't know for sure", "cannot know for sure", "not for sure"]
     )
     if any(pattern in lowered for pattern in english_patterns):
         return True
     if "for sure" in lowered and not any(
-        safe_phrase in lowered
-        for safe_phrase in safe_english_patterns
+        safe_phrase in lowered for safe_phrase in safe_english_patterns
     ):
         return True
-    return any(
-        pattern in text for pattern in chinese_patterns
-    )
+    return any(pattern in text for pattern in chinese_patterns)
 
 
 def _contains_forbidden_dependency_language(
@@ -702,12 +698,15 @@ def _contains_forbidden_dependency_language(
         runtime_profile=runtime_profile,
         archetype=archetype,
     )
-    english_patterns = list(policy.get("en") or [
-        "only one who can help",
-        "your only support",
-        "only support you need",
-        "can't do without me",
-    ])
+    english_patterns = list(
+        policy.get("en")
+        or [
+            "only one who can help",
+            "your only support",
+            "only support you need",
+            "can't do without me",
+        ]
+    )
     chinese_patterns = list(
         policy.get("zh") or ["只有我能帮你", "只能靠我", "我是你唯一", "唯一依赖"]
     )
@@ -733,8 +732,7 @@ def build_response_post_audit(
     )
     includes_validation = _contains_any(
         assistant_response,
-        english_tokens=validation_en
-        or ["i've got your message", "i hear you", "i understand"],
+        english_tokens=validation_en or ["i've got your message", "i hear you", "i understand"],
         chinese_tokens=validation_zh or ["我已经收到你的输入", "我听到", "我理解"],
     )
     next_step_en, next_step_zh = _post_audit_presence_tokens(
@@ -784,20 +782,11 @@ def build_response_post_audit(
         violations.append("sentence_budget_exceeded")
     if question_count > response_rendering_policy.question_count_limit:
         violations.append("question_budget_exceeded")
-    if (
-        response_rendering_policy.include_validation
-        and not includes_validation
-    ):
+    if response_rendering_policy.include_validation and not includes_validation:
         violations.append("missing_validation")
-    if (
-        response_rendering_policy.include_next_step
-        and not includes_next_step
-    ):
+    if response_rendering_policy.include_next_step and not includes_next_step:
         violations.append("missing_next_step")
-    if (
-        response_rendering_policy.include_boundary_statement
-        and not includes_boundary_statement
-    ):
+    if response_rendering_policy.include_boundary_statement and not includes_boundary_statement:
         violations.append("missing_boundary_statement")
     if (
         response_rendering_policy.include_uncertainty_statement
@@ -914,16 +903,24 @@ def _friend_chat_sentence_priority(
     must_keep_question: bool,
 ) -> tuple[int, int, int]:
     has_question = 1 if ("?" in sentence or "？" in sentence) else 0
-    has_colloquial_tone = 1 if _contains_any(
-        sentence,
-        english_tokens=["yeah", "okay", "right", "kind of"],
-        chinese_tokens=["嗯", "就", "吧", "啊", "呢", "慢慢", "先"],
-    ) else 0
-    looks_explanatory = 1 if _contains_any(
-        sentence,
-        english_tokens=["first", "next step", "to summarize", "in short"],
-        chinese_tokens=["首先", "下一步", "总结一下", "也就是说"],
-    ) else 0
+    has_colloquial_tone = (
+        1
+        if _contains_any(
+            sentence,
+            english_tokens=["yeah", "okay", "right", "kind of"],
+            chinese_tokens=["嗯", "就", "吧", "啊", "呢", "慢慢", "先"],
+        )
+        else 0
+    )
+    looks_explanatory = (
+        1
+        if _contains_any(
+            sentence,
+            english_tokens=["first", "next step", "to summarize", "in short"],
+            chinese_tokens=["首先", "下一步", "总结一下", "也就是说"],
+        )
+        else 0
+    )
     question_bonus = 2 if must_keep_question and has_question else has_question
     return (question_bonus, has_colloquial_tone, -looks_explanatory)
 
@@ -947,22 +944,16 @@ def _extract_friend_chat_policy_safe_subset(
         for item in ["exclusive_rescue_language", "dependency_reinforcement"]
     )
     for sentence in sentences:
-        if (
-            not allow_false_certainty
-            and _contains_forbidden_false_certainty_language(
-                sentence,
-                runtime_profile=runtime_profile,
-                archetype=archetype,
-            )
+        if not allow_false_certainty and _contains_forbidden_false_certainty_language(
+            sentence,
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         ):
             continue
-        if (
-            not allow_dependency
-            and _contains_forbidden_dependency_language(
-                sentence,
-                runtime_profile=runtime_profile,
-                archetype=archetype,
-            )
+        if not allow_dependency and _contains_forbidden_dependency_language(
+            sentence,
+            runtime_profile=runtime_profile,
+            archetype=archetype,
         ):
             continue
         filtered.append(sentence)
@@ -1101,10 +1092,7 @@ def build_response_sequence_plan(
             mode = "two_part_sequence"
             reasons.append("uncertainty_then_next_step")
             segment_labels = ["uncertainty", "next_step"]
-        elif (
-            repair_assessment.severity == "high"
-            and response_rendering_policy.include_next_step
-        ):
+        elif repair_assessment.severity == "high" and response_rendering_policy.include_next_step:
             mode = "two_part_sequence"
             reasons.append("repair_then_progress")
             segment_labels = ["repair", "next_step"]
@@ -1135,9 +1123,7 @@ def build_response_output_units(
     first_reason = response_sequence_plan.reasons[0] if response_sequence_plan.reasons else ""
     if first_reason == "question_then_progress":
         question_indexes = [
-            index
-            for index, sentence in enumerate(sentences)
-            if "?" in sentence or "？" in sentence
+            index for index, sentence in enumerate(sentences) if "?" in sentence or "？" in sentence
         ]
         pivot = question_indexes[0] if question_indexes else len(sentences) - 1
         pivot = max(1, pivot)
@@ -1248,10 +1234,7 @@ def build_response_normalization_result(
         normalized = _append_sentence(normalized, sentence)
         applied_repairs.append("added_uncertainty_statement")
 
-    if (
-        "missing_boundary_statement" in response_post_audit.violations
-        and not friend_chat_runtime
-    ):
+    if "missing_boundary_statement" in response_post_audit.violations and not friend_chat_runtime:
         sentence = _rendering_template(
             "boundary",
             is_chinese=is_chinese,
@@ -1317,10 +1300,7 @@ def build_response_normalization_result(
             )
 
     if final_post_audit.status != "pass":
-        remaining = [
-            v for v in final_post_audit.violations
-            if v.startswith("forbidden_")
-        ]
+        remaining = [v for v in final_post_audit.violations if v.startswith("forbidden_")]
         if remaining and not friend_chat_runtime:
             canonical = _build_canonical_response(
                 response_rendering_policy=response_rendering_policy,

@@ -76,10 +76,7 @@ def build_policy_gate(
         regulation_mode = "calibrated"
         selected_path = "answer_with_uncertainty"
 
-    if (
-        selected_path == "reflect_and_progress"
-        and context_frame.dialogue_act == "question"
-    ):
+    if selected_path == "reflect_and_progress" and context_frame.dialogue_act == "question":
         selected_path = "clarify_then_answer"
         regulation_mode = "clarify"
 

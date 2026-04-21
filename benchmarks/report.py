@@ -84,12 +84,8 @@ def _friend_chat_exposure_summary(stats: dict[str, Any] | None) -> str:
     if not isinstance(stats, dict):
         return ""
     meta = int(stats.get("friend_chat_exposed_meta_count", 0) or 0)
-    under_grounded = int(
-        stats.get("friend_chat_exposed_under_grounded_count", 0) or 0
-    )
-    plan_noncompliant = int(
-        stats.get("friend_chat_exposed_plan_noncompliant_count", 0) or 0
-    )
+    under_grounded = int(stats.get("friend_chat_exposed_under_grounded_count", 0) or 0)
+    plan_noncompliant = int(stats.get("friend_chat_exposed_plan_noncompliant_count", 0) or 0)
     empty = int(stats.get("friend_chat_exposed_empty_count", 0) or 0)
     if meta == 0 and under_grounded == 0 and plan_noncompliant == 0 and empty == 0:
         return ""
@@ -145,11 +141,11 @@ def _arm_summary_rows(arms: dict[str, Any]) -> list[str]:
         )
         rows.append(
             f"""
-            <div class="score-card" style="--card-accent: {theme['accent']}; --card-soft: {theme['soft']};">
+            <div class="score-card" style="--card-accent: {theme["accent"]}; --card-soft: {theme["soft"]};">
               <div class="score-card__label">{_ARM_LABELS[arm_key]}</div>
-              <div class="score-card__score">{_format_score(arm.get('overall'))}</div>
-              <div class="score-card__meta">EN {_format_score(lang.get('en'))} · ZH {_format_score(lang.get('zh'))}</div>
-              <div class="score-card__meta">Avg latency {_format_score(latency.get('avg_ms'))} ms</div>
+              <div class="score-card__score">{_format_score(arm.get("overall"))}</div>
+              <div class="score-card__meta">EN {_format_score(lang.get("en"))} · ZH {_format_score(lang.get("zh"))}</div>
+              <div class="score-card__meta">Avg latency {_format_score(latency.get("avg_ms"))} ms</div>
               {failure_meta}
             </div>
             """
@@ -164,9 +160,9 @@ def _dimension_table(arms: dict[str, Any]) -> str:
             f"""
             <tr>
               <td>{label}</td>
-              <td>{_format_score(arms.get('baseline', {}).get('dimension_scores', {}).get(dimension))}</td>
-              <td>{_format_score(arms.get('mem0_oss', {}).get('dimension_scores', {}).get(dimension))}</td>
-              <td>{_format_score(arms.get('system', {}).get('dimension_scores', {}).get(dimension))}</td>
+              <td>{_format_score(arms.get("baseline", {}).get("dimension_scores", {}).get(dimension))}</td>
+              <td>{_format_score(arms.get("mem0_oss", {}).get("dimension_scores", {}).get(dimension))}</td>
+              <td>{_format_score(arms.get("system", {}).get("dimension_scores", {}).get(dimension))}</td>
             </tr>
             """
         )
@@ -180,9 +176,9 @@ def _suite_table(arms: dict[str, Any], suites: list[str]) -> str:
             f"""
             <tr>
               <td>{suite}</td>
-              <td>{_format_score(arms.get('baseline', {}).get('suites', {}).get(suite, {}).get('average_score'))}</td>
-              <td>{_format_score(arms.get('mem0_oss', {}).get('suites', {}).get(suite, {}).get('average_score'))}</td>
-              <td>{_format_score(arms.get('system', {}).get('suites', {}).get(suite, {}).get('average_score'))}</td>
+              <td>{_format_score(arms.get("baseline", {}).get("suites", {}).get(suite, {}).get("average_score"))}</td>
+              <td>{_format_score(arms.get("mem0_oss", {}).get("suites", {}).get(suite, {}).get("average_score"))}</td>
+              <td>{_format_score(arms.get("system", {}).get("suites", {}).get(suite, {}).get("average_score"))}</td>
             </tr>
             """
         )
@@ -205,15 +201,18 @@ def _comparison_cards(comparisons: dict[str, Any]) -> list[str]:
             key=lambda pair: abs(pair[1]),
             reverse=True,
         )[:3]
-        meta = " · ".join(
-            f"{_DIMENSION_LABELS.get(name, name)} {_format_delta(value)}"
-            for name, value in ranked_meta
-        ) or "No dimension deltas"
+        meta = (
+            " · ".join(
+                f"{_DIMENSION_LABELS.get(name, name)} {_format_delta(value)}"
+                for name, value in ranked_meta
+            )
+            or "No dimension deltas"
+        )
         cards.append(
             f"""
             <div class="delta-card">
-              <div class="delta-card__label">{_safe(item.get('label', key))}</div>
-              <div class="delta-card__score">{_format_delta(item.get('overall_delta'))}</div>
+              <div class="delta-card__label">{_safe(item.get("label", key))}</div>
+              <div class="delta-card__score">{_format_delta(item.get("overall_delta"))}</div>
               <div class="delta-card__meta">{_safe(meta)}</div>
             </div>
             """
@@ -233,12 +232,12 @@ def _provider_rows(provider_status: dict[str, Any]) -> str:
             f"""
             <tr>
               <td>{label}</td>
-              <td>{_safe(status.get('provider', 'n/a'))}</td>
-              <td>{_safe(status.get('model', 'n/a'))}</td>
-              <td>{_safe(status.get('mode', 'n/a'))}</td>
-              <td>{_safe(status.get('fallback', False))}</td>
-              <td>{_safe(status.get('vector_dimensions', 'n/a'))}</td>
-              <td>{_safe(status.get('error', status.get('reason', '')))}</td>
+              <td>{_safe(status.get("provider", "n/a"))}</td>
+              <td>{_safe(status.get("model", "n/a"))}</td>
+              <td>{_safe(status.get("mode", "n/a"))}</td>
+              <td>{_safe(status.get("fallback", False))}</td>
+              <td>{_safe(status.get("vector_dimensions", "n/a"))}</td>
+              <td>{_safe(status.get("error", status.get("reason", "")))}</td>
             </tr>
             """
         )
@@ -329,9 +328,9 @@ def _delta_html(items: list[dict[str, Any]], *, empty_label: str) -> str:
         rows.append(
             f"""
             <li>
-              <span class="delta-list__identity">{_safe(item['identity'])}</span>
-              <span class="delta-list__meta">{_safe(item['suite'])} · {_safe(item['language'])}</span>
-              <span class="delta-list__score">{_format_delta(item['delta'])}</span>
+              <span class="delta-list__identity">{_safe(item["identity"])}</span>
+              <span class="delta-list__meta">{_safe(item["suite"])} · {_safe(item["language"])}</span>
+              <span class="delta-list__score">{_format_delta(item["delta"])}</span>
             </li>
             """
         )
@@ -352,17 +351,17 @@ def _arm_details_html(results: dict[str, Any]) -> str:
                     f"""
                     <details class="case-card">
                       <summary>
-                        <span>{_safe(detail.get('scenario_id', 'case'))}</span>
-                        <span>{_safe(detail.get('language', 'unknown'))}</span>
-                        <span>{_format_score(detail.get('score'))}</span>
+                        <span>{_safe(detail.get("scenario_id", "case"))}</span>
+                        <span>{_safe(detail.get("language", "unknown"))}</span>
+                        <span>{_format_score(detail.get("score"))}</span>
                       </summary>
                       <div class="case-card__body">
-                        {f"<p><strong>Question:</strong> {_safe(detail.get('question'))}</p>" if detail.get('question') else ""}
-                        {f"<p><strong>Expected:</strong> {_safe(detail.get('expected'))}</p>" if detail.get('expected') else ""}
-                        {f"<p><strong>Answer:</strong> {_safe(detail.get('answer'))}</p>" if detail.get('answer') else ""}
-                        {f"<p><strong>Reason:</strong> {_safe(detail.get('reason'))}</p>" if detail.get('reason') else ""}
-                        {f"<p><strong>Deliberation:</strong> {_safe(detail.get('deliberation_mode'))} · need {_format_score(detail.get('deliberation_need'))} · {_safe(detail.get('deliberation_fast_path'))}</p>" if detail.get('deliberation_mode') else ""}
-                        {f"<p><strong>Proactive Safety:</strong> {_format_score(detail.get('proactive_safety'))} · <strong>Governance:</strong> {_format_score(detail.get('governance_alignment'))}</p>" if detail.get('governance_alignment') is not None else ""}
+                        {f"<p><strong>Question:</strong> {_safe(detail.get('question'))}</p>" if detail.get("question") else ""}
+                        {f"<p><strong>Expected:</strong> {_safe(detail.get('expected'))}</p>" if detail.get("expected") else ""}
+                        {f"<p><strong>Answer:</strong> {_safe(detail.get('answer'))}</p>" if detail.get("answer") else ""}
+                        {f"<p><strong>Reason:</strong> {_safe(detail.get('reason'))}</p>" if detail.get("reason") else ""}
+                        {f"<p><strong>Deliberation:</strong> {_safe(detail.get('deliberation_mode'))} · need {_format_score(detail.get('deliberation_need'))} · {_safe(detail.get('deliberation_fast_path'))}</p>" if detail.get("deliberation_mode") else ""}
+                        {f"<p><strong>Proactive Safety:</strong> {_format_score(detail.get('proactive_safety'))} · <strong>Governance:</strong> {_format_score(detail.get('governance_alignment'))}</p>" if detail.get("governance_alignment") is not None else ""}
                       </div>
                     </details>
                     """
@@ -373,15 +372,15 @@ def _arm_details_html(results: dict[str, Any]) -> str:
                   <div class="suite-block__header">
                     <h4>{_safe(suite_name)}</h4>
                   <div class="suite-block__meta">
-                      Avg {_format_score(suite_result.get('average_score'))}
-                      · EN {_format_score(suite_result.get('language_breakdown', {}).get('en'))}
-                      · ZH {_format_score(suite_result.get('language_breakdown', {}).get('zh'))}
+                      Avg {_format_score(suite_result.get("average_score"))}
+                      · EN {_format_score(suite_result.get("language_breakdown", {}).get("en"))}
+                      · ZH {_format_score(suite_result.get("language_breakdown", {}).get("zh"))}
                   </div>
                 </div>
-                  {f"<div class='suite-block__meta'>{_deliberation_summary(suite_result.get('deliberation_stats'))}</div>" if _deliberation_summary(suite_result.get('deliberation_stats')) else ""}
-                  {f"<div class='suite-block__meta'>{_friend_chat_exposure_summary(suite_result.get('response_diagnostics_stats'))}</div>" if _friend_chat_exposure_summary(suite_result.get('response_diagnostics_stats')) else ""}
-                  {f"<div class='suite-block__meta'>{_turn_timing_summary(suite_result.get('turn_timing_stats'))}</div>" if _turn_timing_summary(suite_result.get('turn_timing_stats')) else ""}
-                  {''.join(case_blocks) if case_blocks else '<div class="empty-state">No case details recorded.</div>'}
+                  {f"<div class='suite-block__meta'>{_deliberation_summary(suite_result.get('deliberation_stats'))}</div>" if _deliberation_summary(suite_result.get("deliberation_stats")) else ""}
+                  {f"<div class='suite-block__meta'>{_friend_chat_exposure_summary(suite_result.get('response_diagnostics_stats'))}</div>" if _friend_chat_exposure_summary(suite_result.get("response_diagnostics_stats")) else ""}
+                  {f"<div class='suite-block__meta'>{_turn_timing_summary(suite_result.get('turn_timing_stats'))}</div>" if _turn_timing_summary(suite_result.get("turn_timing_stats")) else ""}
+                  {"".join(case_blocks) if case_blocks else '<div class="empty-state">No case details recorded.</div>'}
                 </section>
                 """
             )
@@ -391,11 +390,11 @@ def _arm_details_html(results: dict[str, Any]) -> str:
               <div class="arm-panel__header">
                 <h3>{_ARM_LABELS[arm_key]}</h3>
                 <div class="arm-panel__meta">
-                  Overall {_format_score(arm.get('overall'))}
-                  · Avg latency {_format_score(arm.get('latency', {}).get('avg_ms'))} ms
+                  Overall {_format_score(arm.get("overall"))}
+                  · Avg latency {_format_score(arm.get("latency", {}).get("avg_ms"))} ms
                 </div>
               </div>
-              {''.join(suite_blocks)}
+              {"".join(suite_blocks)}
             </section>
             """
         )
@@ -421,9 +420,7 @@ def _markdown_report(results: dict[str, Any], ts: str) -> str:
     )
     md.append(f"**Judge Model**: {results.get('judge_model', 'unknown')}")
     md.append(f"**Runtime Profile**: {results.get('runtime_profile', 'default')}")
-    stress_mode = (
-        results.get("benchmark_controls", {}) or {}
-    ).get("stress_mode")
+    stress_mode = (results.get("benchmark_controls", {}) or {}).get("stress_mode")
     if stress_mode:
         md.append(f"**Stress Mode**: {stress_mode}")
     md.append(f"**Suites**: {', '.join(requested_suites) if requested_suites else 'n/a'}")
@@ -438,9 +435,7 @@ def _markdown_report(results: dict[str, Any], ts: str) -> str:
             continue
         failure_suffix = " (failure fallback)" if arm.get("failed") else ""
         failure_classification = (
-            f" / {arm.get('failure_classification', 'unknown')}"
-            if arm.get("failed")
-            else ""
+            f" / {arm.get('failure_classification', 'unknown')}" if arm.get("failed") else ""
         )
         md.append(
             f"- {_ARM_LABELS[arm_key]}: overall {_format_score(arm.get('overall'))}, "
@@ -493,7 +488,9 @@ def _markdown_report(results: dict[str, Any], ts: str) -> str:
         _DIMENSION_LABELS.get(name, name) for name in delta_dimensions
     ]
     md.append("| " + " | ".join(header) + " |")
-    md.append("|" + "|".join(["-----------", "--------:"] + ["-------:"] * len(delta_dimensions)) + "|")
+    md.append(
+        "|" + "|".join(["-----------", "--------:"] + ["-------:"] * len(delta_dimensions)) + "|"
+    )
     for key in ("system_vs_baseline", "system_vs_mem0_oss", "mem0_oss_vs_baseline"):
         item = comparisons.get(key)
         if not item:
@@ -806,28 +803,28 @@ def _html_report(results: dict[str, Any], ts: str) -> str:
       <h1>{_safe(report_title)}</h1>
       <p>{_safe(report_subtitle)}</p>
       <div class="hero-meta">
-        <div class="hero-chip">Timestamp: {_safe(results.get('timestamp', ts))}</div>
-        <div class="hero-chip">Model: {_safe(results.get('model', 'unknown'))}</div>
-        <div class="hero-chip">Benchmark Chat: {_safe(results.get('benchmark_chat_provider', 'unknown'))} / {_safe(results.get('benchmark_chat_model', 'unknown'))}</div>
-        <div class="hero-chip">Judge: {_safe(results.get('judge_model', 'unknown'))}</div>
-        <div class="hero-chip">Runtime Profile: {_safe(results.get('runtime_profile', 'default'))}</div>
-        <div class="hero-chip">Stress Mode: {_safe(benchmark_controls.get('stress_mode', 'n/a'))}</div>
-        <div class="hero-chip">Suites: {_safe(', '.join(requested_suites))}</div>
-        <div class="hero-chip">Elapsed: {_safe(results.get('total_elapsed_seconds', 0))}s</div>
+        <div class="hero-chip">Timestamp: {_safe(results.get("timestamp", ts))}</div>
+        <div class="hero-chip">Model: {_safe(results.get("model", "unknown"))}</div>
+        <div class="hero-chip">Benchmark Chat: {_safe(results.get("benchmark_chat_provider", "unknown"))} / {_safe(results.get("benchmark_chat_model", "unknown"))}</div>
+        <div class="hero-chip">Judge: {_safe(results.get("judge_model", "unknown"))}</div>
+        <div class="hero-chip">Runtime Profile: {_safe(results.get("runtime_profile", "default"))}</div>
+        <div class="hero-chip">Stress Mode: {_safe(benchmark_controls.get("stress_mode", "n/a"))}</div>
+        <div class="hero-chip">Suites: {_safe(", ".join(requested_suites))}</div>
+        <div class="hero-chip">Elapsed: {_safe(results.get("total_elapsed_seconds", 0))}s</div>
       </div>
     </section>
 
     <section class="section">
       <h2>Overall Scoreboard</h2>
       <div class="score-grid">
-        {''.join(_arm_summary_rows(arms))}
+        {"".join(_arm_summary_rows(arms))}
       </div>
     </section>
 
     <section class="section">
       <h2>Deltas</h2>
       <div class="delta-grid">
-        {''.join(_comparison_cards(results.get('comparisons', {})))}
+        {"".join(_comparison_cards(results.get("comparisons", {})))}
       </div>
     </section>
 
@@ -896,11 +893,11 @@ def _html_report(results: dict[str, Any], ts: str) -> str:
       <div class="delta-columns">
         <div>
           <h3>Top Wins</h3>
-          {_delta_html(wins, empty_label='No positive system wins recorded yet.')}
+          {_delta_html(wins, empty_label="No positive system wins recorded yet.")}
         </div>
         <div>
           <h3>Biggest Regressions</h3>
-          {_delta_html(losses, empty_label='No negative system regressions recorded.')}
+          {_delta_html(losses, empty_label="No negative system regressions recorded.")}
         </div>
       </div>
     </section>

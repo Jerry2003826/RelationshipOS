@@ -377,9 +377,7 @@ async def get_scenario(
     container: ContainerDep,
 ) -> dict[str, object]:
     try:
-        return await container.scenario_evaluation_service.get_scenario(
-            scenario_id=scenario_id
-        )
+        return await container.scenario_evaluation_service.get_scenario(scenario_id=scenario_id)
     except ScenarioNotFoundError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

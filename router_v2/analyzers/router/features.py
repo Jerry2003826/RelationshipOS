@@ -17,9 +17,9 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable
 
 try:
     import yaml  # type: ignore
@@ -38,6 +38,7 @@ LONG_LEN = 60
 
 # --- dataclasses ---------------------------------------------------------
 
+
 @dataclass(slots=True)
 class RouterFeatures:
     """Fixed-shape numeric features fed into Tier 1 / Tier 2.
@@ -46,19 +47,19 @@ class RouterFeatures:
     the fields IS the feature-vector order for the classifier.
     """
 
-    length_norm: float = 0.0          # len(text) capped / 120
-    is_very_short: float = 0.0        # 1.0 if len<=SHORT_LEN
-    is_very_long: float = 0.0         # 1.0 if len>=LONG_LEN
+    length_norm: float = 0.0  # len(text) capped / 120
+    is_very_short: float = 0.0  # 1.0 if len<=SHORT_LEN
+    is_very_long: float = 0.0  # 1.0 if len>=LONG_LEN
     has_question_mark: float = 0.0
     has_exclamation: float = 0.0
-    punct_ratio: float = 0.0          # punctuation chars / total
-    emoji_count: float = 0.0          # raw count, capped at 5
-    repeated_char_run: float = 0.0    # longest run / 10, capped
+    punct_ratio: float = 0.0  # punctuation chars / total
+    emoji_count: float = 0.0  # raw count, capped at 5
+    repeated_char_run: float = 0.0  # longest run / 10, capped
 
     memory_trigger_score: float = 0.0
     persona_probe_score: float = 0.0
-    emotion_intensity: float = 0.0    # signed: negation can push negative
-    emotion_raw: float = 0.0          # unsigned magnitude
+    emotion_intensity: float = 0.0  # signed: negation can push negative
+    emotion_raw: float = 0.0  # unsigned magnitude
     self_disclosure_score: float = 0.0
     factual_query_score: float = 0.0
     entity_score: float = 0.0
@@ -119,6 +120,7 @@ class RouterFeatures:
 
 # --- loader --------------------------------------------------------------
 
+
 @dataclass(slots=True)
 class Lexicons:
     memory: list[tuple[str, float]]
@@ -135,9 +137,7 @@ class Lexicons:
 
 def _load_yaml(path: Path) -> dict:
     if yaml is None:
-        raise RuntimeError(
-            "pyyaml is required to load lexicons; install with `pip install pyyaml`"
-        )
+        raise RuntimeError("pyyaml is required to load lexicons; install with `pip install pyyaml`")
     if not path.exists():
         return {}
     with path.open("r", encoding="utf-8") as f:
@@ -194,12 +194,7 @@ def load_lexicons(base_dir: Path | str | None = None) -> Lexicons:
 
 _PUNCT_RE = re.compile(r"[\.,!?;:~\-—…。，！？；：、]")
 _EMOJI_RE = re.compile(
-    "["
-    "\U0001F300-\U0001F6FF"
-    "\U0001F900-\U0001F9FF"
-    "\U0001FA70-\U0001FAFF"
-    "\u2600-\u27BF"
-    "]"
+    "[\U0001f300-\U0001f6ff\U0001f900-\U0001f9ff\U0001fa70-\U0001faff\u2600-\u27bf]"
 )
 _CJK_RE = re.compile(r"[\u4e00-\u9fff]")
 _LATIN_RE = re.compile(r"[A-Za-z]")

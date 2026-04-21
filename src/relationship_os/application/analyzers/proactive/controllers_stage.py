@@ -660,9 +660,7 @@ _SECOND_TOUCH_FALLBACK_STAGE_OVERRIDE_CONFIG: _FallbackStageOverrideConfig = {
     "delivery_mode": "single_message",
     "notes": ["first_touch_already_landed", "space_out_second_touch"],
     "trigger_autonomy_signals": frozenset({"explicit_opt_out", "explicit_no_pressure"}),
-    "trigger_pressure_modes": frozenset(
-        {"low_pressure_progress", "gentle_resume", "repair_soft"}
-    ),
+    "trigger_pressure_modes": frozenset({"low_pressure_progress", "gentle_resume", "repair_soft"}),
     "elevated_delay_pressure_modes": frozenset({"gentle_resume", "repair_soft"}),
 }
 
@@ -756,8 +754,7 @@ def _resolve_fallback_stage_override(
         return None
     additional_delay_seconds = (
         config["repair_delay"]
-        if stage_replan_assessment.selected_pressure_mode
-        in config["elevated_delay_pressure_modes"]
+        if stage_replan_assessment.selected_pressure_mode in config["elevated_delay_pressure_modes"]
         else config["default_delay"]
     )
     return _build_stage_controller_override(

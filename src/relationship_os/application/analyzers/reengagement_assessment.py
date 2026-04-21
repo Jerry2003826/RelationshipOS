@@ -316,10 +316,10 @@ def _apply_repair_and_system3_adjustments(
     }:
         state["blocked"] = True
         state["reasons"].append("blocked_by_emotional_debt")
-    if (
-        system3_snapshot.strategy_audit_status == "revise"
-        and profile["pressure_mode"] not in {"repair_soft", "ultra_low_pressure"}
-    ):
+    if system3_snapshot.strategy_audit_status == "revise" and profile["pressure_mode"] not in {
+        "repair_soft",
+        "ultra_low_pressure",
+    }:
         state["blocked"] = True
         state["reasons"].append("blocked_by_strategy_audit")
 
@@ -352,9 +352,9 @@ def _apply_learning_adjustments(
     learning_signal = learning_signals.get(strategy_key) or {}
     outcome_signal = outcome_signals.get(strategy_key) or {}
     has_session_signal = bool(learning_signal)
-    has_outcome_signal = bool(outcome_signal) and int(
-        outcome_signal.get("total_dispatches") or 0
-    ) > 0
+    has_outcome_signal = (
+        bool(outcome_signal) and int(outcome_signal.get("total_dispatches") or 0) > 0
+    )
 
     if has_session_signal:
         state["supporting_session_count"] = max(
@@ -424,9 +424,9 @@ def _apply_learning_adjustments(
 
         state["score"] += combined_delta
 
-        strategy_dispatches = int(
-            outcome_signal.get("total_dispatches") or 0
-        ) if has_outcome_signal else 0
+        strategy_dispatches = (
+            int(outcome_signal.get("total_dispatches") or 0) if has_outcome_signal else 0
+        )
         if total_dispatches > 0 and strategy_dispatches >= 0:
             _UCB_COEFFICIENT = 0.05
             ucb_bonus = _UCB_COEFFICIENT * math.sqrt(
@@ -437,18 +437,14 @@ def _apply_learning_adjustments(
             state["reasons"].append("ucb_exploration")
         return
 
-    if (learning_signal_count > 0 or total_dispatches > 0) and profile[
-        "pressure_mode"
-    ] in {
+    if (learning_signal_count > 0 or total_dispatches > 0) and profile["pressure_mode"] in {
         "low_pressure_presence",
         "ultra_low_pressure",
         "repair_soft",
     }:
         if total_dispatches > 0:
             _UCB_COEFFICIENT = 0.05
-            ucb_bonus = _UCB_COEFFICIENT * math.sqrt(
-                math.log(total_dispatches + 1) / 1
-            )
+            ucb_bonus = _UCB_COEFFICIENT * math.sqrt(math.log(total_dispatches + 1) / 1)
             state["exploration_bonus"] = round(ucb_bonus, 4)
         else:
             state["exploration_bonus"] = 0.03
@@ -676,10 +672,10 @@ def _apply_directive_style_reengagement_overrides(
         state["focus_points"].append("reduce_activation_before_progress")
         if runtime_coordination_snapshot.somatic_cue is not None:
             state["delivery_mode"] = "two_part_sequence"
-    elif (
-        preferred_strategy_key is None
-        and runtime_coordination_snapshot.time_awareness_mode in {"resume", "reengagement"}
-    ):
+    elif preferred_strategy_key is None and runtime_coordination_snapshot.time_awareness_mode in {
+        "resume",
+        "reengagement",
+    }:
         state.update(
             {
                 "ritual_mode": "resume_reanchor",
@@ -911,9 +907,7 @@ def build_reengagement_matrix_assessment(
         )
 
     ranked = _materialize_ranked_reengagement_candidates(candidates)
-    learning_mode = _resolve_reengagement_learning_mode(
-        list(ranked["materialized_candidates"])
-    )
+    learning_mode = _resolve_reengagement_learning_mode(list(ranked["materialized_candidates"]))
     return ReengagementMatrixAssessment(
         status="active",
         matrix_key=f"{directive.style or 'continuity'}_reengagement_matrix",
@@ -957,8 +951,7 @@ def build_reengagement_plan(
         reengagement_matrix_assessment.selected_strategy_key
         if reengagement_matrix_assessment is not None
         and reengagement_matrix_assessment.status == "active"
-        and reengagement_matrix_assessment.selected_strategy_key
-        not in {"", "hold"}
+        and reengagement_matrix_assessment.selected_strategy_key not in {"", "hold"}
         else None
     )
     state = _build_reengagement_plan_state(

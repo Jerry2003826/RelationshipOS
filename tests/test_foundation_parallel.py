@@ -332,9 +332,7 @@ def test_foundation_conscience_uses_recalled_memory():
     # Make recall return some items
     async def _recall_with_items(**kwargs):
         return {
-            "results": [
-                {"scope": "personal", "text": "test memory", "layer": "episodic"}
-            ],
+            "results": [{"scope": "personal", "text": "test memory", "layer": "episodic"}],
             "integrity_summary": {},
         }
 

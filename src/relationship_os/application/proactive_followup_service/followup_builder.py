@@ -662,7 +662,6 @@ def _build_lifecycle_phase_override_specs() -> tuple[_LifecyclePhaseOverrideSpec
 _LIFECYCLE_PHASE_OVERRIDE_SPECS = _build_lifecycle_phase_override_specs()
 
 
-
 async def build_followup_item(
     *,
     stream_service: StreamService,
@@ -742,38 +741,18 @@ def _collect_projected_followup_state_bundle(
         projected_line_transition=projections["proactive_line_transition_decision"],
         projected_line_machine=projections["proactive_line_machine_decision"],
         projected_lifecycle_state=projections["proactive_lifecycle_state_decision"],
-        projected_lifecycle_transition=projections[
-            "proactive_lifecycle_transition_decision"
-        ],
-        projected_lifecycle_machine=projections[
-            "proactive_lifecycle_machine_decision"
-        ],
-        projected_lifecycle_envelope=projections[
-            "proactive_lifecycle_envelope_decision"
-        ],
-        projected_lifecycle_scheduler=projections[
-            "proactive_lifecycle_scheduler_decision"
-        ],
+        projected_lifecycle_transition=projections["proactive_lifecycle_transition_decision"],
+        projected_lifecycle_machine=projections["proactive_lifecycle_machine_decision"],
+        projected_lifecycle_envelope=projections["proactive_lifecycle_envelope_decision"],
+        projected_lifecycle_scheduler=projections["proactive_lifecycle_scheduler_decision"],
         projected_lifecycle_window=projections["proactive_lifecycle_window_decision"],
         projected_lifecycle_queue=projections["proactive_lifecycle_queue_decision"],
-        projected_lifecycle_dispatch=projections[
-            "proactive_lifecycle_dispatch_decision"
-        ],
-        projected_lifecycle_outcome=projections[
-            "proactive_lifecycle_outcome_decision"
-        ],
-        projected_lifecycle_resolution=projections[
-            "proactive_lifecycle_resolution_decision"
-        ],
-        lifecycle_phase_overrides=_collect_followup_lifecycle_phase_overrides(
-            projections
-        ),
-        projected_dispatch_envelope=dict(
-            state.get("proactive_dispatch_envelope_decision") or {}
-        ),
-        runtime_coordination_snapshot=dict(
-            state.get("runtime_coordination_snapshot") or {}
-        ),
+        projected_lifecycle_dispatch=projections["proactive_lifecycle_dispatch_decision"],
+        projected_lifecycle_outcome=projections["proactive_lifecycle_outcome_decision"],
+        projected_lifecycle_resolution=projections["proactive_lifecycle_resolution_decision"],
+        lifecycle_phase_overrides=_collect_followup_lifecycle_phase_overrides(projections),
+        projected_dispatch_envelope=dict(state.get("proactive_dispatch_envelope_decision") or {}),
+        runtime_coordination_snapshot=dict(state.get("runtime_coordination_snapshot") or {}),
         lifecycle_controller_projection=dict(
             state.get("proactive_lifecycle_controller_decision") or {}
         ),
@@ -784,18 +763,10 @@ def _collect_followup_payload_bundle(
     context: _FollowupContext,
 ) -> _FollowupPayloadBundle:
     return _FollowupPayloadBundle(
-        dispatch_gate_payload=_event_payload(
-            context.latest_proactive_dispatch_gate_event
-        ),
-        dispatch_feedback_payload=_event_payload(
-            context.latest_proactive_dispatch_feedback_event
-        ),
-        stage_controller_payload=_event_payload(
-            context.latest_proactive_stage_controller_event
-        ),
-        line_controller_payload=_event_payload(
-            context.latest_proactive_line_controller_event
-        ),
+        dispatch_gate_payload=_event_payload(context.latest_proactive_dispatch_gate_event),
+        dispatch_feedback_payload=_event_payload(context.latest_proactive_dispatch_feedback_event),
+        stage_controller_payload=_event_payload(context.latest_proactive_stage_controller_event),
+        line_controller_payload=_event_payload(context.latest_proactive_line_controller_event),
     )
 
 
@@ -902,9 +873,7 @@ def _resolve_followup_dispatch_queue_override(
     window_seconds: int,
     skip_lifecycle_dispatch_override: bool,
 ) -> _QueueOverrideState | None:
-    lifecycle_dispatch_decision = str(
-        projected_lifecycle_dispatch.get("decision") or ""
-    )
+    lifecycle_dispatch_decision = str(projected_lifecycle_dispatch.get("decision") or "")
     lifecycle_dispatch_stage_label = str(
         projected_lifecycle_dispatch.get("current_stage_label") or ""
     )
@@ -916,23 +885,14 @@ def _resolve_followup_dispatch_queue_override(
         not skip_lifecycle_dispatch_override
         and lifecycle_dispatch_stage_label == current_stage_label
     )
-    if (
-        dispatch_applies
-        and lifecycle_dispatch_decision == "retire_lifecycle_dispatch"
-    ):
+    if dispatch_applies and lifecycle_dispatch_decision == "retire_lifecycle_dispatch":
         return None
-    if (
-        dispatch_applies
-        and lifecycle_dispatch_decision == "hold_lifecycle_dispatch"
-    ):
+    if dispatch_applies and lifecycle_dispatch_decision == "hold_lifecycle_dispatch":
         queue_status = "hold"
         seconds_until_due = None
         seconds_overdue = None
         window_remaining_seconds = None
-    elif (
-        dispatch_applies
-        and lifecycle_dispatch_decision == "reschedule_lifecycle_dispatch"
-    ):
+    elif dispatch_applies and lifecycle_dispatch_decision == "reschedule_lifecycle_dispatch":
         if due_at is not None:
             due_at = due_at + timedelta(seconds=lifecycle_dispatch_delay_seconds)
             if expires_at is not None:
@@ -940,9 +900,7 @@ def _resolve_followup_dispatch_queue_override(
             scheduling_deferred_until = due_at
             if schedule_reason:
                 if "lifecycle_dispatch_rescheduled" not in schedule_reason:
-                    schedule_reason = (
-                        f"{schedule_reason} | lifecycle_dispatch_rescheduled"
-                    )
+                    schedule_reason = f"{schedule_reason} | lifecycle_dispatch_rescheduled"
             else:
                 schedule_reason = "lifecycle_dispatch_rescheduled"
             (
@@ -980,8 +938,7 @@ def _resolve_followup_dispatch_queue_override(
         if queue_status not in {"due", "overdue"}:
             queue_status = (
                 "overdue"
-                if str(projected_lifecycle_queue.get("queue_status") or "")
-                == "overdue"
+                if str(projected_lifecycle_queue.get("queue_status") or "") == "overdue"
                 else "due"
             )
     return _QueueOverrideState(
@@ -1031,18 +988,14 @@ def _resolve_followup_proactive_stage_state(
             stage_count=max_dispatch_count,
             queue_status=queue_status,
             schedule_reason=schedule_reason,
-            progression_action=str(
-                (current_stage_progression or {}).get("on_expired") or "none"
-            ),
+            progression_action=str((current_stage_progression or {}).get("on_expired") or "none"),
             progression_advanced=progression_advanced,
             line_state=str(line_controller_payload.get("line_state") or "steady"),
             current_stage_delivery_mode=str(
-                (current_stage_directive or {}).get("delivery_mode")
-                or "single_message"
+                (current_stage_directive or {}).get("delivery_mode") or "single_message"
             ),
             current_stage_autonomy_mode=str(
-                (current_stage_directive or {}).get("autonomy_mode")
-                or "light_invitation"
+                (current_stage_directive or {}).get("autonomy_mode") or "light_invitation"
             ),
             current_reengagement_delivery_mode=str(
                 reengagement_plan.get("delivery_mode") or "single_message"
@@ -1066,20 +1019,14 @@ def _resolve_followup_proactive_stage_state(
             dispatch_envelope_decision=matching_envelope.get("decision"),
             dispatch_gate_decision=str(dispatch_gate_payload.get("decision") or ""),
             aggregate_controller_decision=str(
-                dict(state.get("proactive_aggregate_controller_decision") or {}).get(
-                    "decision"
-                )
+                dict(state.get("proactive_aggregate_controller_decision") or {}).get("decision")
                 or ""
             ),
             orchestration_controller_decision=str(
-                dict(state.get("proactive_orchestration_controller_decision") or {}).get(
-                    "decision"
-                )
+                dict(state.get("proactive_orchestration_controller_decision") or {}).get("decision")
                 or ""
             ),
-            stage_controller_decision=str(
-                stage_controller_payload.get("decision") or ""
-            ),
+            stage_controller_decision=str(stage_controller_payload.get("decision") or ""),
             line_controller_decision=str(line_controller_payload.get("decision") or ""),
         )
     )
@@ -1197,9 +1144,7 @@ def _resolve_followup_session_details(
 
 
 def _extract_followup_plan_state(state: dict[str, Any]) -> dict[str, Any]:
-    reengagement_matrix_assessment = dict(
-        state.get("reengagement_matrix_assessment") or {}
-    )
+    reengagement_matrix_assessment = dict(state.get("reengagement_matrix_assessment") or {})
     return {
         "directive": dict(state.get("proactive_followup_directive") or {}),
         "guidance_plan": dict(state.get("guidance_plan") or {}),
@@ -1208,15 +1153,11 @@ def _extract_followup_plan_state(state: dict[str, Any]) -> dict[str, Any]:
         "somatic_orchestration_plan": dict(state.get("somatic_orchestration_plan") or {}),
         "proactive_cadence_plan": dict(state.get("proactive_cadence_plan") or {}),
         "reengagement_matrix_assessment": reengagement_matrix_assessment,
-        "selected_matrix_candidate": _selected_matrix_candidate(
-            reengagement_matrix_assessment
-        ),
+        "selected_matrix_candidate": _selected_matrix_candidate(reengagement_matrix_assessment),
         "reengagement_plan": dict(state.get("reengagement_plan") or {}),
         "proactive_scheduling_plan": dict(state.get("proactive_scheduling_plan") or {}),
         "proactive_guardrail_plan": dict(state.get("proactive_guardrail_plan") or {}),
-        "proactive_orchestration_plan": dict(
-            state.get("proactive_orchestration_plan") or {}
-        ),
+        "proactive_orchestration_plan": dict(state.get("proactive_orchestration_plan") or {}),
         "proactive_actuation_plan": dict(state.get("proactive_actuation_plan") or {}),
         "proactive_progression_plan": dict(state.get("proactive_progression_plan") or {}),
     }
@@ -1299,13 +1240,16 @@ def _resolve_followup_stage_metadata(
     ]
     if dispatch_events_for_directive:
         latest_dispatch_payload = dict(dispatch_events_for_directive[-1].payload)
-        if int(
-            latest_dispatch_payload.get(
-                "proactive_cadence_remaining_after_dispatch",
-                1,
+        if (
+            int(
+                latest_dispatch_payload.get(
+                    "proactive_cadence_remaining_after_dispatch",
+                    1,
+                )
+                or 0
             )
-            or 0
-        ) <= 0:
+            <= 0
+        ):
             return None
     dispatched_stage_count = len(dispatch_events_for_directive)
     stage_labels = [
@@ -1323,24 +1267,17 @@ def _resolve_followup_stage_metadata(
     )
     if not stage_labels:
         stage_labels = ["first_touch"]
-        stage_intervals_seconds = [
-            max(0, int(directive.get("trigger_after_seconds") or 0))
-        ]
+        stage_intervals_seconds = [max(0, int(directive.get("trigger_after_seconds") or 0))]
         close_after_stage_index = 1
     max_dispatch_count = max(
         1,
-        int(
-            proactive_guardrail_plan.get("max_dispatch_count")
-            or close_after_stage_index
-        ),
+        int(proactive_guardrail_plan.get("max_dispatch_count") or close_after_stage_index),
     )
     if close_after_stage_index > 0:
         max_dispatch_count = min(max_dispatch_count, close_after_stage_index)
     if dispatched_stage_count >= max_dispatch_count:
         return None
-    stage_index_by_label = {
-        label: index + 1 for index, label in enumerate(stage_labels)
-    }
+    stage_index_by_label = {label: index + 1 for index, label in enumerate(stage_labels)}
     close_loop_stage = str(
         proactive_progression_plan.get("close_loop_stage")
         or proactive_orchestration_plan.get("close_loop_stage")
@@ -1621,16 +1558,13 @@ def _resolve_followup_stage_progression_advance(
     max_overdue_seconds = max(
         0,
         int(
-            (schedule_snapshot.payload.current_stage_progression or {}).get(
-                "max_overdue_seconds"
-            )
+            (schedule_snapshot.payload.current_stage_progression or {}).get("max_overdue_seconds")
             or 0
         ),
     )
     if (
         schedule_snapshot.expires_at is None
-        or reference_time
-        <= schedule_snapshot.expires_at + timedelta(seconds=max_overdue_seconds)
+        or reference_time <= schedule_snapshot.expires_at + timedelta(seconds=max_overdue_seconds)
     ):
         return None
     expired_action = str(
@@ -1662,8 +1596,7 @@ def _resolve_followup_stage_progression_advance(
     )
     return _StageProgressionAdvance(
         next_stage_index=next_stage_index,
-        progression_anchor_at=schedule_snapshot.expires_at
-        + timedelta(seconds=max_overdue_seconds),
+        progression_anchor_at=schedule_snapshot.expires_at + timedelta(seconds=max_overdue_seconds),
         progression_reason=" | ".join(progression_applied_actions),
     )
 
@@ -1687,10 +1620,7 @@ def _collect_projected_followup_state(
         "proactive_lifecycle_outcome_decision",
         "proactive_lifecycle_resolution_decision",
         "proactive_dispatch_envelope_decision",
-        *[
-            f"proactive_lifecycle_{phase}_decision"
-            for phase in _GENERIC_LIFECYCLE_PHASES
-        ],
+        *[f"proactive_lifecycle_{phase}_decision" for phase in _GENERIC_LIFECYCLE_PHASES],
     ]
     return {key: dict(state.get(key) or {}) for key in keys}
 
@@ -1743,9 +1673,7 @@ def _apply_followup_buffer_queue_override(
     had_schedule_reason = bool(schedule_reason)
     if remove_reason_tag is not None and schedule_reason:
         schedule_reason = " | ".join(
-            part
-            for part in str(schedule_reason).split(" | ")
-            if part != remove_reason_tag
+            part for part in str(schedule_reason).split(" | ") if part != remove_reason_tag
         )
     if had_schedule_reason:
         if reason_tag not in str(schedule_reason):
@@ -1806,9 +1734,7 @@ def _resolve_followup_lifecycle_queue_override(
             override.decision in spec.terminate_decisions or matches_current_stage
         ) and not any(matched.get(phase, False) for phase in spec.match_blockers)
         matched[spec.phase] = raw_match
-        if not raw_match or any(
-            matched.get(phase, False) for phase in spec.action_blockers
-        ):
+        if not raw_match or any(matched.get(phase, False) for phase in spec.action_blockers):
             continue
         if override.decision in spec.terminate_decisions:
             return None
@@ -1883,46 +1809,26 @@ def _build_followup_overview_fields(
         "guidance_carryover_mode": context.guidance_plan.get("carryover_mode"),
         "cadence_status": context.conversation_cadence_plan.get("status"),
         "cadence_turn_shape": context.conversation_cadence_plan.get("turn_shape"),
-        "cadence_followup_tempo": context.conversation_cadence_plan.get(
-            "followup_tempo"
-        ),
-        "cadence_user_space_mode": context.conversation_cadence_plan.get(
-            "user_space_mode"
-        ),
-        "cadence_transition_intent": context.conversation_cadence_plan.get(
-            "transition_intent"
-        ),
-        "cadence_next_checkpoint": context.conversation_cadence_plan.get(
-            "next_checkpoint"
-        ),
+        "cadence_followup_tempo": context.conversation_cadence_plan.get("followup_tempo"),
+        "cadence_user_space_mode": context.conversation_cadence_plan.get("user_space_mode"),
+        "cadence_transition_intent": context.conversation_cadence_plan.get("transition_intent"),
+        "cadence_next_checkpoint": context.conversation_cadence_plan.get("next_checkpoint"),
         "ritual_phase": context.session_ritual_plan.get("phase"),
         "ritual_opening_move": context.session_ritual_plan.get("opening_move"),
         "ritual_bridge_move": context.session_ritual_plan.get("bridge_move"),
         "ritual_closing_move": context.session_ritual_plan.get("closing_move"),
-        "ritual_continuity_anchor": context.session_ritual_plan.get(
-            "continuity_anchor"
-        ),
-        "ritual_somatic_shortcut": context.session_ritual_plan.get(
-            "somatic_shortcut"
-        ),
-        "somatic_orchestration_status": context.somatic_orchestration_plan.get(
-            "status"
-        ),
-        "somatic_orchestration_mode": context.somatic_orchestration_plan.get(
-            "primary_mode"
-        ),
-        "somatic_orchestration_body_anchor": context.somatic_orchestration_plan.get(
-            "body_anchor"
-        ),
+        "ritual_continuity_anchor": context.session_ritual_plan.get("continuity_anchor"),
+        "ritual_somatic_shortcut": context.session_ritual_plan.get("somatic_shortcut"),
+        "somatic_orchestration_status": context.somatic_orchestration_plan.get("status"),
+        "somatic_orchestration_mode": context.somatic_orchestration_plan.get("primary_mode"),
+        "somatic_orchestration_body_anchor": context.somatic_orchestration_plan.get("body_anchor"),
         "somatic_orchestration_followup_style": (
             context.somatic_orchestration_plan.get("followup_style")
         ),
         "somatic_orchestration_allow_in_followup": (
             context.somatic_orchestration_plan.get("allow_in_followup")
         ),
-        "reengagement_matrix_key": context.reengagement_matrix_assessment.get(
-            "matrix_key"
-        ),
+        "reengagement_matrix_key": context.reengagement_matrix_assessment.get("matrix_key"),
         "reengagement_matrix_selected_strategy": context.reengagement_matrix_assessment.get(
             "selected_strategy_key"
         ),
@@ -1936,45 +1842,25 @@ def _build_followup_overview_fields(
             "learning_mode"
         ),
         "reengagement_matrix_learning_context_stratum": (
-            context.reengagement_matrix_assessment.get(
-                "learning_context_stratum"
-            )
+            context.reengagement_matrix_assessment.get("learning_context_stratum")
         ),
         "reengagement_matrix_learning_signal_count": int(
-            context.reengagement_matrix_assessment.get("learning_signal_count")
-            or 0
+            context.reengagement_matrix_assessment.get("learning_signal_count") or 0
         ),
         "reengagement_matrix_selected_supporting_session_count": int(
             context.selected_matrix_candidate.get("supporting_session_count") or 0
         ),
         "reengagement_matrix_selected_contextual_supporting_session_count": int(
-            context.selected_matrix_candidate.get(
-                "contextual_supporting_session_count"
-            )
-            or 0
+            context.selected_matrix_candidate.get("contextual_supporting_session_count") or 0
         ),
         "reengagement_ritual_mode": context.reengagement_plan.get("ritual_mode"),
-        "reengagement_delivery_mode": context.reengagement_plan.get(
-            "delivery_mode"
-        ),
-        "reengagement_strategy_key": context.reengagement_plan.get(
-            "strategy_key"
-        ),
-        "reengagement_relational_move": context.reengagement_plan.get(
-            "relational_move"
-        ),
-        "reengagement_pressure_mode": context.reengagement_plan.get(
-            "pressure_mode"
-        ),
-        "reengagement_autonomy_signal": context.reengagement_plan.get(
-            "autonomy_signal"
-        ),
-        "reengagement_sequence_objective": context.reengagement_plan.get(
-            "sequence_objective"
-        ),
-        "reengagement_somatic_action": context.reengagement_plan.get(
-            "somatic_action"
-        ),
+        "reengagement_delivery_mode": context.reengagement_plan.get("delivery_mode"),
+        "reengagement_strategy_key": context.reengagement_plan.get("strategy_key"),
+        "reengagement_relational_move": context.reengagement_plan.get("relational_move"),
+        "reengagement_pressure_mode": context.reengagement_plan.get("pressure_mode"),
+        "reengagement_autonomy_signal": context.reengagement_plan.get("autonomy_signal"),
+        "reengagement_sequence_objective": context.reengagement_plan.get("sequence_objective"),
+        "reengagement_somatic_action": context.reengagement_plan.get("somatic_action"),
     }
 
 
@@ -1986,18 +1872,14 @@ def _build_followup_dispatch_and_line_fields(
     projected = bundle.projected
     return {
         "proactive_dispatch_gate_key": payloads.dispatch_gate_payload.get("gate_key"),
-        "proactive_dispatch_gate_decision": payloads.dispatch_gate_payload.get(
-            "decision"
-        ),
+        "proactive_dispatch_gate_decision": payloads.dispatch_gate_payload.get("decision"),
         "proactive_dispatch_gate_retry_after_seconds": int(
             payloads.dispatch_gate_payload.get("retry_after_seconds") or 0
         ),
         "proactive_dispatch_gate_strategy_key": payloads.dispatch_gate_payload.get(
             "selected_strategy_key"
         ),
-        "proactive_dispatch_feedback_key": payloads.dispatch_feedback_payload.get(
-            "feedback_key"
-        ),
+        "proactive_dispatch_feedback_key": payloads.dispatch_feedback_payload.get("feedback_key"),
         "proactive_dispatch_feedback_changed": bool(
             payloads.dispatch_feedback_payload.get("changed")
         ),
@@ -2027,21 +1909,11 @@ def _build_followup_dispatch_and_line_fields(
         ),
         "proactive_stage_state_key": queue.proactive_stage_state.get("state_key"),
         "proactive_stage_state_mode": queue.proactive_stage_state.get("state_mode"),
-        "proactive_stage_state_source": queue.proactive_stage_state.get(
-            "primary_source"
-        ),
-        "proactive_stage_state_queue_status": queue.proactive_stage_state.get(
-            "queue_status"
-        ),
-        "proactive_stage_state_changed": bool(
-            queue.proactive_stage_state.get("changed")
-        ),
-        "proactive_stage_controller_key": payloads.stage_controller_payload.get(
-            "controller_key"
-        ),
-        "proactive_stage_controller_decision": payloads.stage_controller_payload.get(
-            "decision"
-        ),
+        "proactive_stage_state_source": queue.proactive_stage_state.get("primary_source"),
+        "proactive_stage_state_queue_status": queue.proactive_stage_state.get("queue_status"),
+        "proactive_stage_state_changed": bool(queue.proactive_stage_state.get("changed")),
+        "proactive_stage_controller_key": payloads.stage_controller_payload.get("controller_key"),
+        "proactive_stage_controller_decision": payloads.stage_controller_payload.get("decision"),
         "proactive_stage_controller_changed": bool(
             payloads.stage_controller_payload.get("changed")
         ),
@@ -2063,18 +1935,10 @@ def _build_followup_dispatch_and_line_fields(
         "proactive_stage_controller_delivery_mode": payloads.stage_controller_payload.get(
             "selected_delivery_mode"
         ),
-        "proactive_line_controller_key": payloads.line_controller_payload.get(
-            "controller_key"
-        ),
-        "proactive_line_controller_line_state": payloads.line_controller_payload.get(
-            "line_state"
-        ),
-        "proactive_line_controller_decision": payloads.line_controller_payload.get(
-            "decision"
-        ),
-        "proactive_line_controller_changed": bool(
-            payloads.line_controller_payload.get("changed")
-        ),
+        "proactive_line_controller_key": payloads.line_controller_payload.get("controller_key"),
+        "proactive_line_controller_line_state": payloads.line_controller_payload.get("line_state"),
+        "proactive_line_controller_decision": payloads.line_controller_payload.get("decision"),
+        "proactive_line_controller_changed": bool(payloads.line_controller_payload.get("changed")),
         "proactive_line_controller_affected_stage_labels": list(
             payloads.line_controller_payload.get("affected_stage_labels") or []
         ),
@@ -2092,30 +1956,18 @@ def _build_followup_dispatch_and_line_fields(
         ),
         "proactive_line_state_key": projected.projected_line_state.get("line_key"),
         "proactive_line_state_mode": projected.projected_line_state.get("line_state"),
-        "proactive_line_state_lifecycle": projected.projected_line_state.get(
-            "lifecycle_mode"
-        ),
-        "proactive_line_state_actionability": projected.projected_line_state.get(
-            "actionability"
-        ),
-        "proactive_line_transition_key": projected.projected_line_transition.get(
-            "transition_key"
-        ),
+        "proactive_line_state_lifecycle": projected.projected_line_state.get("lifecycle_mode"),
+        "proactive_line_state_actionability": projected.projected_line_state.get("actionability"),
+        "proactive_line_transition_key": projected.projected_line_transition.get("transition_key"),
         "proactive_line_transition_mode": projected.projected_line_transition.get(
             "transition_mode"
         ),
         "proactive_line_transition_exit_mode": projected.projected_line_transition.get(
             "line_exit_mode"
         ),
-        "proactive_line_machine_key": projected.projected_line_machine.get(
-            "machine_key"
-        ),
-        "proactive_line_machine_mode": projected.projected_line_machine.get(
-            "machine_mode"
-        ),
-        "proactive_line_machine_lifecycle": projected.projected_line_machine.get(
-            "lifecycle_mode"
-        ),
+        "proactive_line_machine_key": projected.projected_line_machine.get("machine_key"),
+        "proactive_line_machine_mode": projected.projected_line_machine.get("machine_mode"),
+        "proactive_line_machine_lifecycle": projected.projected_line_machine.get("lifecycle_mode"),
         "proactive_line_machine_actionability": projected.projected_line_machine.get(
             "actionability"
         ),
@@ -2340,23 +2192,13 @@ def _build_followup_scheduling_fields(
     stage_resolution: _StageResolution,
 ) -> dict[str, Any]:
     return {
-        "proactive_scheduling_status": context.proactive_scheduling_plan.get(
-            "status"
-        ),
-        "proactive_scheduling_mode": context.proactive_scheduling_plan.get(
-            "scheduler_mode"
-        ),
+        "proactive_scheduling_status": context.proactive_scheduling_plan.get("status"),
+        "proactive_scheduling_mode": context.proactive_scheduling_plan.get("scheduler_mode"),
         "proactive_scheduling_min_seconds_since_last_outbound": int(
-            context.proactive_scheduling_plan.get(
-                "min_seconds_since_last_outbound"
-            )
-            or 0
+            context.proactive_scheduling_plan.get("min_seconds_since_last_outbound") or 0
         ),
         "proactive_scheduling_first_touch_extra_delay_seconds": int(
-            context.proactive_scheduling_plan.get(
-                "first_touch_extra_delay_seconds"
-            )
-            or 0
+            context.proactive_scheduling_plan.get("first_touch_extra_delay_seconds") or 0
         ),
         "proactive_scheduling_stage_spacing_mode": context.proactive_scheduling_plan.get(
             "stage_spacing_mode"
@@ -2364,26 +2206,17 @@ def _build_followup_scheduling_fields(
         "proactive_scheduling_low_pressure_guard": context.proactive_scheduling_plan.get(
             "low_pressure_guard"
         ),
-        "proactive_guardrail_key": context.proactive_guardrail_plan.get(
-            "guardrail_key"
-        ),
+        "proactive_guardrail_key": context.proactive_guardrail_plan.get("guardrail_key"),
         "proactive_guardrail_max_dispatch_count": context.max_dispatch_count,
         "proactive_guardrail_stage_min_seconds_since_last_user": int(
-            (stage_resolution.current_stage_guardrail or {}).get(
-                "min_seconds_since_last_user"
-            )
-            or 0
+            (stage_resolution.current_stage_guardrail or {}).get("min_seconds_since_last_user") or 0
         ),
         "proactive_guardrail_stage_min_seconds_since_last_dispatch": int(
-            (stage_resolution.current_stage_guardrail or {}).get(
-                "min_seconds_since_last_dispatch"
-            )
+            (stage_resolution.current_stage_guardrail or {}).get("min_seconds_since_last_dispatch")
             or 0
         ),
         "proactive_guardrail_stage_on_guardrail_hit": (
-            (stage_resolution.current_stage_guardrail or {}).get(
-                "on_guardrail_hit"
-            )
+            (stage_resolution.current_stage_guardrail or {}).get("on_guardrail_hit")
         ),
         "proactive_guardrail_hard_stop_conditions": list(
             context.proactive_guardrail_plan.get("hard_stop_conditions") or []
@@ -2415,9 +2248,7 @@ def _build_followup_orchestration_fields(
         "proactive_orchestration_stage_closing_style": (
             (stage_resolution.current_stage_directive or {}).get("closing_style")
         ),
-        "proactive_actuation_key": context.proactive_actuation_plan.get(
-            "actuation_key"
-        ),
+        "proactive_actuation_key": context.proactive_actuation_plan.get("actuation_key"),
         "proactive_actuation_opening_move": (
             (stage_resolution.current_stage_actuation or {}).get("opening_move")
         ),
@@ -2428,25 +2259,19 @@ def _build_followup_orchestration_fields(
             (stage_resolution.current_stage_actuation or {}).get("closing_move")
         ),
         "proactive_actuation_continuity_anchor": (
-            (stage_resolution.current_stage_actuation or {}).get(
-                "continuity_anchor"
-            )
+            (stage_resolution.current_stage_actuation or {}).get("continuity_anchor")
         ),
         "proactive_actuation_somatic_mode": (
             (stage_resolution.current_stage_actuation or {}).get("somatic_mode")
         ),
         "proactive_actuation_somatic_body_anchor": (
-            (stage_resolution.current_stage_actuation or {}).get(
-                "somatic_body_anchor"
-            )
+            (stage_resolution.current_stage_actuation or {}).get("somatic_body_anchor")
         ),
         "proactive_actuation_followup_style": (
             (stage_resolution.current_stage_actuation or {}).get("followup_style")
         ),
         "proactive_actuation_user_space_signal": (
-            (stage_resolution.current_stage_actuation or {}).get(
-                "user_space_signal"
-            )
+            (stage_resolution.current_stage_actuation or {}).get("user_space_signal")
         ),
     }
 
@@ -2458,24 +2283,17 @@ def _build_followup_progression_and_cadence_fields(
     queue: _ResolvedFollowupQueueBundle,
 ) -> dict[str, Any]:
     return {
-        "proactive_progression_key": context.proactive_progression_plan.get(
-            "progression_key"
-        ),
+        "proactive_progression_key": context.proactive_progression_plan.get("progression_key"),
         "proactive_progression_close_loop_stage": context.close_loop_stage,
         "proactive_progression_stage_action": (
             (stage_resolution.current_stage_progression or {}).get("on_expired")
         ),
         "proactive_progression_max_overdue_seconds": int(
-            (stage_resolution.current_stage_progression or {}).get(
-                "max_overdue_seconds"
-            )
-            or 0
+            (stage_resolution.current_stage_progression or {}).get("max_overdue_seconds") or 0
         ),
         "proactive_progression_advanced": stage_resolution.progression_advanced,
         "proactive_progression_reason": stage_resolution.progression_reason,
-        "trigger_after_seconds": int(
-            context.directive.get("trigger_after_seconds") or 0
-        ),
+        "trigger_after_seconds": int(context.directive.get("trigger_after_seconds") or 0),
         "window_seconds": int(context.directive.get("window_seconds") or 0),
         "proactive_cadence_key": context.proactive_cadence_plan.get("cadence_key"),
         "proactive_cadence_status": context.proactive_cadence_plan.get("status"),
@@ -2498,12 +2316,8 @@ def _build_followup_progression_and_cadence_fields(
         ),
         "proactive_cadence_dispatched_stage_count": context.dispatched_stage_count,
         "due_at": queue.due_at.isoformat() if queue.due_at is not None else None,
-        "base_due_at": (
-            queue.base_due_at.isoformat() if queue.base_due_at is not None else None
-        ),
-        "expires_at": (
-            queue.expires_at.isoformat() if queue.expires_at is not None else None
-        ),
+        "base_due_at": (queue.base_due_at.isoformat() if queue.base_due_at is not None else None),
+        "expires_at": (queue.expires_at.isoformat() if queue.expires_at is not None else None),
         "seconds_until_due": queue.seconds_until_due,
         "seconds_overdue": queue.seconds_overdue,
         "window_remaining_seconds": queue.window_remaining_seconds,
@@ -2524,22 +2338,12 @@ def _build_followup_directive_runtime_fields(
     return {
         "opening_hint": context.directive.get("opening_hint"),
         "rationale": context.directive.get("rationale"),
-        "trigger_conditions": list(
-            context.directive.get("trigger_conditions") or []
-        ),
+        "trigger_conditions": list(context.directive.get("trigger_conditions") or []),
         "hold_reasons": list(context.directive.get("hold_reasons") or []),
-        "scheduling_notes": list(
-            context.proactive_scheduling_plan.get("scheduling_notes") or []
-        ),
-        "time_awareness_mode": projected.runtime_coordination_snapshot.get(
-            "time_awareness_mode"
-        ),
-        "cognitive_load_band": projected.runtime_coordination_snapshot.get(
-            "cognitive_load_band"
-        ),
-        "proactive_style": projected.runtime_coordination_snapshot.get(
-            "proactive_style"
-        ),
+        "scheduling_notes": list(context.proactive_scheduling_plan.get("scheduling_notes") or []),
+        "time_awareness_mode": projected.runtime_coordination_snapshot.get("time_awareness_mode"),
+        "cognitive_load_band": projected.runtime_coordination_snapshot.get("cognitive_load_band"),
+        "proactive_style": projected.runtime_coordination_snapshot.get("proactive_style"),
         "somatic_cue": projected.runtime_coordination_snapshot.get("somatic_cue"),
         "turn_count": int(context.state.get("turn_count") or 0),
     }
@@ -2606,9 +2410,7 @@ def _build_followup_timestamp_fields(
             if context.latest_proactive_line_controller_event is not None
             else None
         ),
-        "last_event_at": (
-            context.events[-1].occurred_at.isoformat() if context.events else None
-        ),
+        "last_event_at": (context.events[-1].occurred_at.isoformat() if context.events else None),
     }
 
 
@@ -2617,29 +2419,17 @@ def _build_followup_generic_lifecycle_fields(
 ) -> dict[str, Any]:
     fields: dict[str, Any] = {}
     for phase in _GENERIC_LIFECYCLE_PHASES:
-        phase_projection = projected.projections[
-            f"proactive_lifecycle_{phase}_decision"
-        ]
-        fields[f"proactive_lifecycle_{phase}_key"] = phase_projection.get(
-            f"{phase}_key"
+        phase_projection = projected.projections[f"proactive_lifecycle_{phase}_decision"]
+        fields[f"proactive_lifecycle_{phase}_key"] = phase_projection.get(f"{phase}_key")
+        fields[f"proactive_lifecycle_{phase}_status"] = phase_projection.get("status")
+        fields[f"proactive_lifecycle_{phase}_mode"] = phase_projection.get(f"{phase}_mode")
+        fields[f"proactive_lifecycle_{phase}_decision"] = phase_projection.get("decision")
+        fields[f"proactive_lifecycle_{phase}_actionability"] = phase_projection.get("actionability")
+        fields[f"proactive_lifecycle_{phase}_active_stage_label"] = phase_projection.get(
+            "active_stage_label"
         )
-        fields[f"proactive_lifecycle_{phase}_status"] = phase_projection.get(
-            "status"
-        )
-        fields[f"proactive_lifecycle_{phase}_mode"] = phase_projection.get(
-            f"{phase}_mode"
-        )
-        fields[f"proactive_lifecycle_{phase}_decision"] = phase_projection.get(
-            "decision"
-        )
-        fields[f"proactive_lifecycle_{phase}_actionability"] = phase_projection.get(
-            "actionability"
-        )
-        fields[f"proactive_lifecycle_{phase}_active_stage_label"] = (
-            phase_projection.get("active_stage_label")
-        )
-        fields[f"proactive_lifecycle_{phase}_queue_override_status"] = (
-            phase_projection.get("queue_override_status")
+        fields[f"proactive_lifecycle_{phase}_queue_override_status"] = phase_projection.get(
+            "queue_override_status"
         )
         fields[f"proactive_lifecycle_{phase}_remaining_stage_count"] = int(
             phase_projection.get("remaining_stage_count") or 0
@@ -2686,9 +2476,7 @@ def _stage_entry(
 def _selected_matrix_candidate(
     reengagement_matrix_assessment: dict[str, Any],
 ) -> dict[str, Any]:
-    selected_strategy_key = str(
-        reengagement_matrix_assessment.get("selected_strategy_key") or ""
-    )
+    selected_strategy_key = str(reengagement_matrix_assessment.get("selected_strategy_key") or "")
     for item in list(reengagement_matrix_assessment.get("candidates") or []):
         candidate = dict(item)
         if bool(candidate.get("selected")):
@@ -2763,10 +2551,7 @@ def _compute_stage_schedule(
     due_at = base_due_at
     min_seconds_since_last_outbound = max(
         0,
-        int(
-            proactive_scheduling_plan.get("min_seconds_since_last_outbound")
-            or 0
-        ),
+        int(proactive_scheduling_plan.get("min_seconds_since_last_outbound") or 0),
     )
     outbound_reference_time = (
         dispatch_events_for_directive[-1].occurred_at
@@ -2811,9 +2596,7 @@ def _apply_matrix_learning_spacing(
     if "progression_advanced" in str(schedule_reason or ""):
         return due_at, expires_at, schedule_reason
 
-    learning_mode = str(
-        reengagement_matrix_assessment.get("learning_mode") or "cold_start"
-    )
+    learning_mode = str(reengagement_matrix_assessment.get("learning_mode") or "cold_start")
     if learning_mode == "contextual_reinforcement":
         return due_at, expires_at, schedule_reason
 
@@ -2892,14 +2675,10 @@ def _apply_stage_guardrail(
         return due_at, expires_at, schedule_reason
 
     delay_extension = guardrail_due_at - due_at
-    adjusted_expires_at = (
-        expires_at + delay_extension if expires_at is not None else None
-    )
+    adjusted_expires_at = expires_at + delay_extension if expires_at is not None else None
     guardrail_reason = f"guardrail:{'+'.join(reasons) or 'defer'}"
     adjusted_reason = (
-        f"{schedule_reason}|{guardrail_reason}"
-        if schedule_reason
-        else guardrail_reason
+        f"{schedule_reason}|{guardrail_reason}" if schedule_reason else guardrail_reason
     )
     return guardrail_due_at, adjusted_expires_at, adjusted_reason
 
@@ -2919,8 +2698,7 @@ def _apply_dispatch_gate(
 
     if (
         dispatch_events_for_directive
-        and latest_dispatch_gate_event.occurred_at
-        <= dispatch_events_for_directive[-1].occurred_at
+        and latest_dispatch_gate_event.occurred_at <= dispatch_events_for_directive[-1].occurred_at
     ):
         return due_at, expires_at, schedule_reason
 
@@ -2938,9 +2716,7 @@ def _apply_dispatch_gate(
     gate_due_at = gate_anchor_at + timedelta(seconds=retry_after_seconds)
     adjusted_expires_at = gate_due_at + timedelta(seconds=window_seconds)
     gate_reason = f"dispatch_gate:{payload.get('gate_key') or 'defer'}"
-    adjusted_reason = (
-        f"{schedule_reason}|{gate_reason}" if schedule_reason else gate_reason
-    )
+    adjusted_reason = f"{schedule_reason}|{gate_reason}" if schedule_reason else gate_reason
     return gate_due_at, adjusted_expires_at, adjusted_reason
 
 
@@ -2973,9 +2749,7 @@ def _apply_stage_controller(
 
     adjusted_due_at = due_at + timedelta(seconds=additional_delay_seconds)
     adjusted_expires_at = adjusted_due_at + timedelta(seconds=window_seconds)
-    controller_reason = (
-        f"controller:{payload.get('controller_key') or 'slow_next_stage'}"
-    )
+    controller_reason = f"controller:{payload.get('controller_key') or 'slow_next_stage'}"
     reasons = [reason for reason in [schedule_reason, controller_reason] if reason]
     return adjusted_due_at, adjusted_expires_at, " | ".join(reasons) or None
 
@@ -2992,9 +2766,8 @@ def _apply_line_controller(
     if due_at is None or latest_line_controller_event is None:
         return due_at, expires_at, schedule_reason
 
-    if (
-        current_stage_label == "final_soft_close"
-        and "progression_advanced" in str(schedule_reason or "")
+    if current_stage_label == "final_soft_close" and "progression_advanced" in str(
+        schedule_reason or ""
     ):
         return due_at, expires_at, schedule_reason
 
@@ -3064,9 +2837,7 @@ def _resolve_queue_status(
             window_remaining_seconds,
         )
 
-    if window_seconds == 0 or (
-        expires_at is not None and reference_time <= expires_at
-    ):
+    if window_seconds == 0 or (expires_at is not None and reference_time <= expires_at):
         window_remaining_seconds = (
             max(
                 0,

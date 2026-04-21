@@ -76,28 +76,34 @@ def _looks_like_meta_reasoning(text: str) -> bool:
     meta_policy = dict(_rendering_policy().get("meta_reasoning") or {})
     prompt_leakage = any(
         token in normalized
-        for token in list(meta_policy.get("prompt_leakage_tokens") or (
-            "session guard",
-            "memory card",
-            "entity card",
-            "relationship card",
-            "conscience card",
-            "recent turns",
-            "reply contract",
-            "stored information",
-            "the persona is",
-            "stay in-world",
-        ))
+        for token in list(
+            meta_policy.get("prompt_leakage_tokens")
+            or (
+                "session guard",
+                "memory card",
+                "entity card",
+                "relationship card",
+                "conscience card",
+                "recent turns",
+                "reply contract",
+                "stored information",
+                "the persona is",
+                "stay in-world",
+            )
+        )
     )
     if normalized.startswith(
-        tuple(meta_policy.get("leading_prefixes") or (
-            "i should ",
-            "i need to ",
-            "i want to ",
-            "i'm supposed to ",
-            "im supposed to ",
-            "i have to ",
-        ))
+        tuple(
+            meta_policy.get("leading_prefixes")
+            or (
+                "i should ",
+                "i need to ",
+                "i want to ",
+                "i'm supposed to ",
+                "im supposed to ",
+                "i have to ",
+            )
+        )
     ):
         return True
     references_user = any(
@@ -108,49 +114,58 @@ def _looks_like_meta_reasoning(text: str) -> bool:
         )
     )
     third_person_summary = normalized.startswith(
-        tuple(meta_policy.get("third_person_starts") or (
-            "they mentioned",
-            "they said",
-            "they shared",
-            "they might be",
-            "they may be",
-            "they could be",
-            "the user mentioned",
-            "the user said",
-            "the user shared",
-            "from what they said",
-            "from what they shared",
-            "based on what they said",
-            "based on what they shared",
-        ))
+        tuple(
+            meta_policy.get("third_person_starts")
+            or (
+                "they mentioned",
+                "they said",
+                "they shared",
+                "they might be",
+                "they may be",
+                "they could be",
+                "the user mentioned",
+                "the user said",
+                "the user shared",
+                "from what they said",
+                "from what they shared",
+                "based on what they said",
+                "based on what they shared",
+            )
+        )
     )
     chinese_meta_reasoning = any(
         token in normalized
-        for token in list(meta_policy.get("chinese_meta_tokens") or (
-            "用户问我",
-            "我需要根据角色设定",
-            "根据角色设定",
-            "现在开始",
-            "我要先",
-            "首先，我需要",
-            "回答要",
-            "我会先",
-            "先按",
-            "先用",
-        ))
+        for token in list(
+            meta_policy.get("chinese_meta_tokens")
+            or (
+                "用户问我",
+                "我需要根据角色设定",
+                "根据角色设定",
+                "现在开始",
+                "我要先",
+                "首先，我需要",
+                "回答要",
+                "我会先",
+                "先按",
+                "先用",
+            )
+        )
     )
     planning_language = any(
         token in normalized
-        for token in list(meta_policy.get("planning_tokens") or (
-            "i need to",
-            "i should",
-            "let me",
-            "i'll",
-            "i need to respond",
-            "i should respond",
-            "i need to answer",
-            "i should answer",
-        ))
+        for token in list(
+            meta_policy.get("planning_tokens")
+            or (
+                "i need to",
+                "i should",
+                "let me",
+                "i'll",
+                "i need to respond",
+                "i should respond",
+                "i need to answer",
+                "i should answer",
+            )
+        )
     )
     reflective_opening = normalized.startswith(
         tuple(
@@ -160,27 +175,32 @@ def _looks_like_meta_reasoning(text: str) -> bool:
     )
     drafting_language = any(
         token in normalized
-        for token in list(meta_policy.get("drafting_tokens") or (
-            "let me start by",
-            "maybe say something like",
-            "i'll start by",
-            "i'll say",
-            "i want to say",
-            "validate",
-            "validating",
-            "acknowledge",
-            "acknowledging",
-            "reassure",
-            "they might be feeling",
-            "they may be feeling",
-        ))
+        for token in list(
+            meta_policy.get("drafting_tokens")
+            or (
+                "let me start by",
+                "maybe say something like",
+                "i'll start by",
+                "i'll say",
+                "i want to say",
+                "validate",
+                "validating",
+                "acknowledge",
+                "acknowledging",
+                "reassure",
+                "they might be feeling",
+                "they may be feeling",
+            )
+        )
     )
-    return prompt_leakage or (references_user and planning_language) or (
-        reflective_opening and planning_language
-    ) or (
-        normalized.startswith(("let me ", "maybe ", "i'll ", "i will "))
-        and drafting_language
-    ) or third_person_summary or chinese_meta_reasoning
+    return (
+        prompt_leakage
+        or (references_user and planning_language)
+        or (reflective_opening and planning_language)
+        or (normalized.startswith(("let me ", "maybe ", "i'll ", "i will ")) and drafting_language)
+        or third_person_summary
+        or chinese_meta_reasoning
+    )
 
 
 def _strip_meta_reasoning_prefix(text: str) -> str:
@@ -213,17 +233,17 @@ def _strip_thinking_tags(text: str) -> str:
     spoken_match = re.search(r"<spoken_words>([\s\S]*?)(?:</spoken_words>|$)", text)
     if spoken_match:
         return _strip_meta_reasoning_prefix(spoken_match.group(1).strip())
-    
+
     # 2. Fallback to think/internal_thought strip logic
     if "<think>" not in text and "<internal_thought>" not in text:
         return _strip_meta_reasoning_prefix(text)
-        
+
     stripped = re.sub(r"<(think|internal_thought)>[\s\S]*?</\1>", "", text)
     stripped = re.sub(r"<(think|internal_thought)>[\s\S]*", "", stripped).strip()
-    
+
     if stripped:
         return _strip_meta_reasoning_prefix(stripped)
-        
+
     # Entire output was a think block — extract inner text as fallback
     inner = re.sub(r"</?(think|internal_thought)>", "", text).strip()
     return _strip_meta_reasoning_prefix(inner if inner else text)
@@ -248,10 +268,12 @@ def _serialize_message_content(content: str | list[ContentBlock]) -> str | list[
         elif block.type == "image_url" and block.url:
             parts.append({"type": "image_url", "image_url": {"url": block.url}})
         elif block.type == "audio_url" and block.url:
-            parts.append({
-                "type": "input_audio",
-                "input_audio": {"data": block.url, "format": block.mime_type or "wav"},
-            })
+            parts.append(
+                {
+                    "type": "input_audio",
+                    "input_audio": {"data": block.url, "format": block.mime_type or "wav"},
+                }
+            )
     return parts if parts else ""
 
 
@@ -259,10 +281,7 @@ def _extract_user_text(message: LLMMessage) -> str:
     """Get plain text from a message regardless of content format."""
     if isinstance(message.content, str):
         return message.content
-    return " ".join(
-        block.text for block in message.content
-        if block.type == "text" and block.text
-    )
+    return " ".join(block.text for block in message.content if block.type == "text" and block.text)
 
 
 def build_safe_fallback_text(
@@ -412,17 +431,48 @@ def _memory_fact_to_second_person(text: str) -> str:
     for old, new in replacements:
         if normalized.startswith(old):
             if old.isascii():
-                return new[:1].upper() + new[1:] + normalized[len(old):]
-            return new + normalized[len(old):]
+                return new[:1].upper() + new[1:] + normalized[len(old) :]
+            return new + normalized[len(old) :]
     return normalized
 
 
 def _memory_item_keywords(text: str) -> set[str]:
     stopwords = {
-        "the", "and", "that", "this", "with", "from", "have", "your", "you",
-        "are", "was", "were", "into", "about", "they", "them", "their", "my",
-        "his", "her", "for", "after", "before", "where", "what", "when", "who",
-        "name", "named", "tell", "me", "do", "did", "know", "anything",
+        "the",
+        "and",
+        "that",
+        "this",
+        "with",
+        "from",
+        "have",
+        "your",
+        "you",
+        "are",
+        "was",
+        "were",
+        "into",
+        "about",
+        "they",
+        "them",
+        "their",
+        "my",
+        "his",
+        "her",
+        "for",
+        "after",
+        "before",
+        "where",
+        "what",
+        "when",
+        "who",
+        "name",
+        "named",
+        "tell",
+        "me",
+        "do",
+        "did",
+        "know",
+        "anything",
     }
     keywords = {
         token.casefold()
@@ -445,8 +495,7 @@ def _looks_like_query_echo(value: str, user_text: str) -> bool:
     if normalized_value == normalized_user:
         return True
     if len(normalized_user.split()) >= 5 and (
-        normalized_value.startswith(normalized_user)
-        or normalized_user.startswith(normalized_value)
+        normalized_value.startswith(normalized_user) or normalized_user.startswith(normalized_value)
     ):
         return True
     return False
@@ -547,11 +596,10 @@ def _memory_owner_display(item: dict[str, Any], *, is_chinese: bool) -> str:
         hint_value = subject_hint.split(":", 1)[1].strip()
         if hint_value and hint_value != "unknown":
             return _normalize_friend_chat_owner_surface(hint_value, is_chinese=is_chinese)
-    owner = str(
-        item.get("subject_user_id")
-        or item.get("source_user_id")
+    owner = (
+        str(item.get("subject_user_id") or item.get("source_user_id") or "someone").strip()
         or "someone"
-    ).strip() or "someone"
+    )
     return _normalize_friend_chat_owner_surface(owner, is_chinese=is_chinese) or "someone"
 
 
@@ -559,11 +607,7 @@ def _allowed_cross_user_subjects(request: LLMRequest) -> set[str]:
     allowed = request.metadata.get("entity_source_user_ids", [])
     if not isinstance(allowed, list):
         return set()
-    return {
-        str(item).strip()
-        for item in allowed
-        if str(item).strip()
-    }
+    return {str(item).strip() for item in allowed if str(item).strip()}
 
 
 def _select_fallback_memory_item(
@@ -581,6 +625,7 @@ def _select_fallback_memory_item(
         ),
         "",
     )
+
     def _priority(item: dict[str, Any]) -> tuple[float, float, float]:
         guard = str(item.get("attribution_guard", "") or "")
         scope = str(item.get("scope", "") or "")
@@ -631,6 +676,7 @@ def _select_fallback_memory_item(
 def _select_friend_chat_social_item(request: LLMRequest) -> dict[str, Any] | None:
     items = _friend_chat_other_memory_items(request)
     if items:
+
         def _is_viable_social_item(candidate: dict[str, Any]) -> bool:
             value = str(candidate.get("value", "") or "").strip("。！？；;，, ")
             subject = _memory_owner_display(candidate, is_chinese=True)
@@ -653,9 +699,7 @@ def _select_friend_chat_social_item(request: LLMRequest) -> dict[str, Any] | Non
             key=lambda candidate: (
                 1.0
                 if (
-                    _extract_friend_chat_social_entity_token(
-                        str(candidate.get("value", "") or "")
-                    )
+                    _extract_friend_chat_social_entity_token(str(candidate.get("value", "") or ""))
                     and _extract_friend_chat_social_entity_token(
                         str(candidate.get("value", "") or "")
                     )
@@ -720,14 +764,11 @@ def _select_factual_memory_items(
         "月饼",
     )
     self_scopes = {"self_user", "session", "user"}
-    allow_cross_user = (
-        not factual_self_query
-        and conscience_mode in {
-            "partial_reveal",
-            "direct_reveal",
-            "dramatic_confrontation",
-        }
-    )
+    allow_cross_user = not factual_self_query and conscience_mode in {
+        "partial_reveal",
+        "direct_reveal",
+        "dramatic_confrontation",
+    }
 
     candidates: list[tuple[tuple[float, float, float, float], dict[str, Any]]] = []
     for item in _metadata_memory_items(request):
@@ -760,14 +801,10 @@ def _select_factual_memory_items(
         overlap = len(_memory_item_keywords(value) & query_keywords)
         lowered_value = value.casefold()
         slot_bonus = 0.0
-        if asks_pet_name and (
-            any(token in lowered_value for token in pet_tokens)
-        ):
+        if asks_pet_name and (any(token in lowered_value for token in pet_tokens)):
             slot_bonus += 1.5
         if asks_origin and (
-            "grew up" in lowered_value
-            or "from " in lowered_value
-            or "长大" in value
+            "grew up" in lowered_value or "from " in lowered_value or "长大" in value
         ):
             slot_bonus += 1.5
         scope_bonus = 0.0
@@ -799,8 +836,10 @@ def _select_factual_memory_items(
     if asks_origin:
         for _, item in candidates:
             lowered_value = str(item.get("value", "")).casefold()
-            if "grew up" in lowered_value or "from " in lowered_value or "长大" in str(
-                item.get("value", "")
+            if (
+                "grew up" in lowered_value
+                or "from " in lowered_value
+                or "长大" in str(item.get("value", ""))
             ):
                 prioritized.append(item)
                 break
@@ -869,7 +908,8 @@ def _build_mode_grounded_fallback_text(request: LLMRequest) -> str | None:
     ambiguity_required = bool(request.metadata.get("entity_ambiguity_required", True))
     factual_item = _select_fallback_memory_item(
         request,
-        allow_cross_user=rendering_mode in {
+        allow_cross_user=rendering_mode
+        in {
             "factual_recall_mode",
             "social_disclosure_mode",
             "dramatic_confrontation_mode",
@@ -911,8 +951,7 @@ def _build_mode_grounded_fallback_text(request: LLMRequest) -> str | None:
                         rendered.append(f"{owner_display}提过，{value}")
                     else:
                         rendered.append(
-                            f"{owner_display} shared that "
-                            f"{value[:1].casefold() + value[1:]}"
+                            f"{owner_display} shared that {value[:1].casefold() + value[1:]}"
                         )
             if rendered:
                 if len(rendered) == 1:
@@ -990,8 +1029,7 @@ def _build_mode_grounded_fallback_text(request: LLMRequest) -> str | None:
             if is_chinese:
                 return f"我知道一些和{owner_display}有关的事。现在能说的是：{value}"
             return (
-                f"I know more than I'm saying about {owner_display}. "
-                f"What I can say is that {value}"
+                f"I know more than I'm saying about {owner_display}. What I can say is that {value}"
             )
         if is_chinese:
             return f"我知道一些和{owner_display}有关的事，但现在不想把它摊成廉价爆料。"
@@ -1083,7 +1121,9 @@ def _friend_chat_extract_drink_preference_from_text(text: str) -> str:
         return ""
     explicit_patterns = (
         re.compile(r"(?P<drink>[\u4e00-\u9fffA-Za-z]{1,8}拿铁)"),
-        re.compile(r"(?:常喝|爱喝|喜欢喝|平常还是会喝|平时会喝|一般喝)(?P<drink>[^，。！？；]{2,14})"),
+        re.compile(
+            r"(?:常喝|爱喝|喜欢喝|平常还是会喝|平时会喝|一般喝)(?P<drink>[^，。！？；]{2,14})"
+        ),
         re.compile(r"喝(?P<drink>[^，。！？；]{2,14})(?:比较多|比较顺|比较习惯)?"),
     )
     for pattern in explicit_patterns:
@@ -1128,9 +1168,7 @@ def _friend_chat_enriched_fact_slots(request: LLMRequest) -> dict[str, Any]:
             drink_preference = _friend_chat_extract_drink_preference_from_text(text)
             if drink_preference:
                 break
-    if not pet_kind and any(
-        token in text for text in texts for token in ("猫", "小猫", "猫咪")
-    ):
+    if not pet_kind and any(token in text for text in texts for token in ("猫", "小猫", "猫咪")):
         pet_kind = "猫"
     communication_preference = _friend_chat_infer_communication_preference(
         request,
@@ -1637,8 +1675,7 @@ def _friend_chat_relationship_signal_ids_from_text(text: str) -> list[str]:
     ):
         signal_ids.append("still_here")
     if any(
-        token in normalized
-        for token in ("记得", "小习惯", "细节", "想起你", "想起来了", "没忘记")
+        token in normalized for token in ("记得", "小习惯", "细节", "想起你", "想起来了", "没忘记")
     ):
         signal_ids.append("remembers_details")
     if any(
@@ -1810,9 +1847,7 @@ def _compose_friend_chat_structured_probe_reply(
     if reply:
         return reply
     sentences = [
-        str(value).strip()
-        for value in list(payload.get("sentences") or [])
-        if str(value).strip()
+        str(value).strip() for value in list(payload.get("sentences") or []) if str(value).strip()
     ]
     if sentences:
         return " ".join(sentences)
@@ -1828,9 +1863,7 @@ def _recompute_friend_chat_probe_slot_covered_fact_tokens(
     request: LLMRequest,
 ) -> list[str]:
     probe_kind = str(
-        payload.get("probe_kind")
-        or request.metadata.get("friend_chat_probe_kind")
-        or ""
+        payload.get("probe_kind") or request.metadata.get("friend_chat_probe_kind") or ""
     ).strip()
     probe_plan = _friend_chat_metadata_dict(request, "friend_chat_probe_answer_plan")
     covered: list[str] = []
@@ -1877,9 +1910,7 @@ def _recompute_friend_chat_probe_slot_covered_signal_ids(
     request: LLMRequest,
 ) -> list[str]:
     probe_kind = str(
-        payload.get("probe_kind")
-        or request.metadata.get("friend_chat_probe_kind")
-        or ""
+        payload.get("probe_kind") or request.metadata.get("friend_chat_probe_kind") or ""
     ).strip()
     expected_signal_ids = _friend_chat_probe_required_signal_ids(request)
     covered: list[str] = []
@@ -1939,9 +1970,7 @@ def _recompute_friend_chat_probe_slot_covered_persona_traits(
     request: LLMRequest,
 ) -> list[str]:
     probe_kind = str(
-        payload.get("probe_kind")
-        or request.metadata.get("friend_chat_probe_kind")
-        or ""
+        payload.get("probe_kind") or request.metadata.get("friend_chat_probe_kind") or ""
     ).strip()
     if probe_kind != "persona_state":
         return []
@@ -1968,9 +1997,7 @@ def _recompute_friend_chat_probe_slot_covered_disclosure_posture(
     request: LLMRequest,
 ) -> str:
     probe_kind = str(
-        payload.get("probe_kind")
-        or request.metadata.get("friend_chat_probe_kind")
-        or ""
+        payload.get("probe_kind") or request.metadata.get("friend_chat_probe_kind") or ""
     ).strip()
     required_posture = _friend_chat_probe_required_disclosure_posture(request)
     if (
@@ -2052,11 +2079,7 @@ def _friend_chat_disclosure_posture_matches(text: str, posture: str) -> bool:
     if not normalized or not normalized_posture:
         return False
     if normalized_posture == "partial_withhold":
-        return (
-            "不全说" in normalized
-            or "少说一点" in normalized
-            or "不方便多说" in normalized
-        )
+        return "不全说" in normalized or "少说一点" in normalized or "不方便多说" in normalized
     return False
 
 
@@ -2089,9 +2112,7 @@ def _friend_chat_infer_communication_preference(
     request: LLMRequest,
     fact_slots: dict[str, Any],
 ) -> str:
-    communication_preference = str(
-        fact_slots.get("communication_preference", "") or ""
-    ).strip()
+    communication_preference = str(fact_slots.get("communication_preference", "") or "").strip()
     if communication_preference:
         return communication_preference
 
@@ -2101,9 +2122,7 @@ def _friend_chat_infer_communication_preference(
         for value in list(fact_slots.get("living_facts") or [])
         if str(value).strip()
     )
-    candidate_texts.extend(
-        _friend_chat_candidate_texts(request, include_recent_messages=True)
-    )
+    candidate_texts.extend(_friend_chat_candidate_texts(request, include_recent_messages=True))
     candidate_texts.extend(
         str(item.get("value", "")).strip()
         for item in _metadata_memory_items(request)
@@ -2114,12 +2133,9 @@ def _friend_chat_infer_communication_preference(
         normalized = _normalize_friend_chat_probe_text(text)
         if not normalized:
             continue
-        if (
-            ("语音" in normalized or "长语音" in normalized or "语音条" in normalized)
-            and any(
-                token in normalized
-                for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "长")
-            )
+        if ("语音" in normalized or "长语音" in normalized or "语音条" in normalized) and any(
+            token in normalized
+            for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "长")
         ):
             return "别发太长语音"
         if "大道理" in normalized:
@@ -2226,9 +2242,7 @@ def _is_friend_chat_probe_under_grounded(cleaned: str, request: LLMRequest) -> b
         answer_signal_ids = []
 
     fact_token_hit_count = sum(
-        1
-        for token in expected_fact_tokens
-        if token and token in normalized_answer
+        1 for token in expected_fact_tokens if token and token in normalized_answer
     )
     signal_hit_count = len(set(answer_signal_ids) & set(expected_signal_ids))
     posture_hit_count = (
@@ -2300,9 +2314,7 @@ def _is_friend_chat_probe_under_grounded_with_coverage(
     )
     normalized_covered_posture = str(covered_disclosure_posture or "").strip()
     expected_persona_traits = _friend_chat_probe_required_persona_traits(request)
-    min_persona_trait_count = _friend_chat_probe_minimum_required_persona_trait_count(
-        request
-    )
+    min_persona_trait_count = _friend_chat_probe_minimum_required_persona_trait_count(request)
 
     if probe_kind == "persona_state":
         answer_signal_ids = _friend_chat_state_signal_ids_from_text(cleaned)
@@ -2323,21 +2335,24 @@ def _is_friend_chat_probe_under_grounded_with_coverage(
         if token and (token in normalized_answer or token in normalized_covered_fact_tokens)
     )
     signal_hit_count = len(
-        set(answer_signal_ids).union(set(normalized_covered_signal_ids))
-        & set(expected_signal_ids)
+        set(answer_signal_ids).union(set(normalized_covered_signal_ids)) & set(expected_signal_ids)
     )
     persona_trait_hit_count = len(
         set(answer_persona_traits).union(set(covered_persona_traits or []))
         & set(expected_persona_traits)
     )
-    posture_hit_count = 1 if (
-        _friend_chat_disclosure_posture_matches(cleaned, expected_posture)
-        or (
-            expected_posture
-            and normalized_covered_posture
-            and normalized_covered_posture == expected_posture
+    posture_hit_count = (
+        1
+        if (
+            _friend_chat_disclosure_posture_matches(cleaned, expected_posture)
+            or (
+                expected_posture
+                and normalized_covered_posture
+                and normalized_covered_posture == expected_posture
+            )
         )
-    ) else 0
+        else 0
+    )
 
     if probe_kind == "memory_recap":
         threshold = min(4, len(expected_fact_tokens))
@@ -2396,9 +2411,7 @@ def _is_friend_chat_probe_plan_noncompliant(
     if not normalized_answer:
         return False
     normalized_violations = {
-        str(value).strip()
-        for value in list(violations or [])
-        if str(value).strip()
+        str(value).strip() for value in list(violations or []) if str(value).strip()
     }
     if normalized_violations.intersection(
         {"stage_direction", "question", "missing_required_item", "wrong_perspective", "new_fact"}
@@ -2420,9 +2433,7 @@ def _is_friend_chat_probe_plan_noncompliant(
     expected_posture = _friend_chat_probe_required_disclosure_posture(request)
     min_signal_count = _friend_chat_probe_minimum_required_signal_count(request)
     expected_persona_traits = _friend_chat_probe_required_persona_traits(request)
-    min_persona_trait_count = _friend_chat_probe_minimum_required_persona_trait_count(
-        request
-    )
+    min_persona_trait_count = _friend_chat_probe_minimum_required_persona_trait_count(request)
     min_fact_count = _friend_chat_probe_minimum_required_fact_token_count(request)
     supporting_fact_tokens = _dedupe_texts(
         [
@@ -2468,16 +2479,14 @@ def _is_friend_chat_probe_plan_noncompliant(
         if token and (token in normalized_answer or token in normalized_covered_fact_tokens)
     )
     signal_hit_count = len(
-        set(answer_signal_ids).union(set(normalized_covered_signal_ids))
-        & set(expected_signal_ids)
+        set(answer_signal_ids).union(set(normalized_covered_signal_ids)) & set(expected_signal_ids)
     )
     persona_trait_hit_count = len(
         set(answer_persona_traits).union(set(covered_persona_traits or []))
         & set(expected_persona_traits)
     )
     supporting_fact_hit = any(
-        token
-        and (token in normalized_answer or token in normalized_covered_fact_tokens)
+        token and (token in normalized_answer or token in normalized_covered_fact_tokens)
         for token in supporting_fact_tokens
     )
     posture_ok = (
@@ -2522,9 +2531,7 @@ def _is_friend_chat_probe_plan_noncompliant(
             return True
         return False
     if probe_kind == "persona_state":
-        required_persona_traits = min_persona_trait_count or min(
-            3, len(expected_persona_traits)
-        )
+        required_persona_traits = min_persona_trait_count or min(3, len(expected_persona_traits))
         if required_persona_traits > 0:
             return persona_trait_hit_count < required_persona_traits
         required = min_signal_count or min(2, len(expected_signal_ids))
@@ -2594,9 +2601,10 @@ def build_grounded_template_reply(request: LLMRequest) -> str | None:
         return None
     if float(factual_item.get("final_rank_score", 0.0) or 0.0) < 0.45:
         return None
-    if rendering_mode == "dramatic_confrontation_mode" and float(
-        request.metadata.get("entity_dramatic_value", 0.0) or 0.0
-    ) < 0.45:
+    if (
+        rendering_mode == "dramatic_confrontation_mode"
+        and float(request.metadata.get("entity_dramatic_value", 0.0) or 0.0) < 0.45
+    ):
         return None
     return _build_mode_grounded_fallback_text(request)
 
@@ -2625,10 +2633,7 @@ def _extract_response_text(value: Any) -> str:
     if isinstance(value, str):
         return value.strip()
     if isinstance(value, list):
-        parts = [
-            _extract_response_text(item)
-            for item in value
-        ]
+        parts = [_extract_response_text(item) for item in value]
         return " ".join(part for part in parts if part).strip()
     if isinstance(value, dict):
         for key in ("content", "text", "value", "output_text"):
@@ -2654,9 +2659,7 @@ class MockLLMClient(LLMClient):
         )
         topic = str(request.metadata.get("topic", "the current topic"))
         next_action = str(request.metadata.get("next_action", "clarify_then_answer"))
-        opening_move = str(
-            request.metadata.get("drafting_opening_move", "acknowledge_and_orient")
-        )
+        opening_move = str(request.metadata.get("drafting_opening_move", "acknowledge_and_orient"))
         question_strategy = str(request.metadata.get("drafting_question_strategy", "none"))
         rendering_mode = str(request.metadata.get("rendering_mode", "supportive_progress"))
         rendering_max_sentences = int(request.metadata.get("rendering_max_sentences", 4))
@@ -2761,9 +2764,7 @@ class LiteLLMClient(LLMClient):
             self._logger.warning(
                 "llm_circuit_open",
                 model=request.model or self._model,
-                resets_in_seconds=round(
-                    self._circuit_open_until - time.monotonic(), 1
-                ),
+                resets_in_seconds=round(self._circuit_open_until - time.monotonic(), 1),
             )
             return LLMResponse(
                 model=request.model or self._model,
@@ -2790,9 +2791,7 @@ class LiteLLMClient(LLMClient):
         for attempt in range(self._max_retries):
             started_at = time.perf_counter()
             try:
-                response = await asyncio.to_thread(
-                    self._invoke_completion, request
-                )
+                response = await asyncio.to_thread(self._invoke_completion, request)
             except Exception as exc:
                 latency_ms = int((time.perf_counter() - started_at) * 1000)
                 retryable = self._is_retryable(exc)
@@ -2828,9 +2827,7 @@ class LiteLLMClient(LLMClient):
                 model=parsed.model,
                 latency_ms=latency_ms,
                 prompt_tokens=parsed.usage.prompt_tokens if parsed.usage else 0,
-                completion_tokens=(
-                    parsed.usage.completion_tokens if parsed.usage else 0
-                ),
+                completion_tokens=(parsed.usage.completion_tokens if parsed.usage else 0),
             )
             return parsed
 
@@ -2899,8 +2896,7 @@ class LiteLLMClient(LLMClient):
                 prompt_tokens=int(usage_data.get("input_tokens", 0)),
                 completion_tokens=int(usage_data.get("output_tokens", 0)),
                 total_tokens=int(
-                    usage_data.get("input_tokens", 0)
-                    + usage_data.get("output_tokens", 0)
+                    usage_data.get("input_tokens", 0) + usage_data.get("output_tokens", 0)
                 ),
             )
         self._logger.info(
@@ -2920,6 +2916,7 @@ class LiteLLMClient(LLMClient):
 
     def _load_aresponses_callable(self) -> Any:
         from litellm import aresponses
+
         return aresponses
 
     def _is_retryable(self, exc: Exception) -> bool:
@@ -2936,9 +2933,7 @@ class LiteLLMClient(LLMClient):
     def _record_failure(self) -> None:
         self._consecutive_failures += 1
         if self._consecutive_failures >= self._circuit_breaker_threshold:
-            self._circuit_open_until = (
-                time.monotonic() + self._circuit_breaker_reset_seconds
-            )
+            self._circuit_open_until = time.monotonic() + self._circuit_breaker_reset_seconds
             self._logger.error(
                 "llm_circuit_opened",
                 model=self._model,
@@ -2993,8 +2988,8 @@ class LiteLLMClient(LLMClient):
                 payload,
                 request,
             )
-            slot_covered_persona_traits = (
-                _recompute_friend_chat_probe_slot_covered_persona_traits(payload, request)
+            slot_covered_persona_traits = _recompute_friend_chat_probe_slot_covered_persona_traits(
+                payload, request
             )
             slot_covered_disclosure_posture = (
                 _recompute_friend_chat_probe_slot_covered_disclosure_posture(
@@ -3005,9 +3000,7 @@ class LiteLLMClient(LLMClient):
             covered_fact_tokens = _dedupe_texts(
                 [*text_covered_fact_tokens, *slot_covered_fact_tokens]
             )
-            covered_signal_ids = _dedupe_texts(
-                [*text_covered_signal_ids, *slot_covered_signal_ids]
-            )
+            covered_signal_ids = _dedupe_texts([*text_covered_signal_ids, *slot_covered_signal_ids])
             covered_disclosure_posture = (
                 text_covered_disclosure_posture or slot_covered_disclosure_posture
             )
@@ -3039,9 +3032,7 @@ class LiteLLMClient(LLMClient):
                 "structured_probe_violations": violations,
                 "structured_probe_slot_covered_fact_tokens": slot_covered_fact_tokens,
                 "structured_probe_slot_covered_signal_ids": slot_covered_signal_ids,
-                "structured_probe_slot_covered_persona_traits": (
-                    slot_covered_persona_traits
-                ),
+                "structured_probe_slot_covered_persona_traits": (slot_covered_persona_traits),
                 "structured_probe_slot_covered_disclosure_posture": (
                     slot_covered_disclosure_posture
                 ),
@@ -3075,18 +3066,14 @@ class LiteLLMClient(LLMClient):
                         "sanitization_mode": "friend_chat_expose_meta",
                         "friend_chat_exposed_meta": True,
                     }
-                plan_noncompliant = _is_friend_chat_probe_plan_noncompliant(
-                    cleaned, request
-                )
+                plan_noncompliant = _is_friend_chat_probe_plan_noncompliant(cleaned, request)
                 under_grounded = _is_friend_chat_probe_under_grounded(cleaned, request)
                 if plan_noncompliant:
                     self._logger.warning(
                         "llm_output_plan_noncompliant_exposed_without_fallback",
                         model=request.model or self._model,
                         raw_preview=raw_text[:160],
-                        probe_kind=str(
-                            request.metadata.get("friend_chat_probe_kind", "") or ""
-                        ),
+                        probe_kind=str(request.metadata.get("friend_chat_probe_kind", "") or ""),
                     )
                     diagnostics: dict[str, Any] = {
                         "sanitization_mode": "friend_chat_expose_plan_noncompliant",
@@ -3167,44 +3154,22 @@ class LiteLLMClient(LLMClient):
         return (
             build_sanitized_relational_fallback_text(
                 last_user_message,
-                rendering_mode=str(
-                    request.metadata.get(
-                        "rendering_mode", "supportive_progress"
-                    )
-                ),
+                rendering_mode=str(request.metadata.get("rendering_mode", "supportive_progress")),
                 include_boundary_statement=bool(
-                    request.metadata.get(
-                        "rendering_include_boundary_statement", False
-                    )
+                    request.metadata.get("rendering_include_boundary_statement", False)
                 ),
                 include_uncertainty_statement=bool(
-                    request.metadata.get(
-                        "rendering_include_uncertainty_statement", False
-                    )
+                    request.metadata.get("rendering_include_uncertainty_statement", False)
                 ),
-                question_count_limit=int(
-                    request.metadata.get(
-                        "rendering_question_count_limit", 0
-                    )
-                ),
-                entity_name=str(
-                    request.metadata.get("entity_name", "RelationshipOS")
-                ),
-                archetype=str(
-                    request.metadata.get(
-                        "entity_persona_archetype", "default"
-                    )
-                ),
-                runtime_profile=str(
-                    request.metadata.get("policy_profile", "default")
-                ),
+                question_count_limit=int(request.metadata.get("rendering_question_count_limit", 0)),
+                entity_name=str(request.metadata.get("entity_name", "RelationshipOS")),
+                archetype=str(request.metadata.get("entity_persona_archetype", "default")),
+                runtime_profile=str(request.metadata.get("policy_profile", "default")),
             ),
             {"sanitization_mode": "generic_fallback"},
         )
 
-    def _parse_response(
-        self, response: Any, request: LLMRequest, latency_ms: int
-    ) -> LLMResponse:
+    def _parse_response(self, response: Any, request: LLMRequest, latency_ms: int) -> LLMResponse:
         choices = _response_get(response, "choices", []) or []
         first_choice = choices[0] if choices else {}
         message = _response_get(first_choice, "message", {})
@@ -3240,9 +3205,7 @@ class LiteLLMClient(LLMClient):
             request,
         )
         return LLMResponse(
-            model=str(
-                _response_get(response, "model", request.model or self._model)
-            ),
+            model=str(_response_get(response, "model", request.model or self._model)),
             output_text=output_text,
             tool_calls=tool_calls,
             usage=usage,
@@ -3297,10 +3260,7 @@ class MiniMaxClient(LiteLLMClient):
         endpoint = self._normalize_minimax_endpoint(self._api_base)
         payload: dict[str, Any] = {
             "model": request.model or self._model or "M2-her",
-            "messages": [
-                self._serialize_minimax_message(message)
-                for message in request.messages
-            ],
+            "messages": [self._serialize_minimax_message(message) for message in request.messages],
             "temperature": max(0.01, min(1.0, request.temperature)),
             "top_p": 0.95,
             "stream": False,

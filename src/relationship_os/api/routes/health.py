@@ -24,13 +24,9 @@ async def readiness(container: ContainerDep) -> dict[str, object]:
     else:
         checks["database"] = "not_configured"
 
-    checks["job_executor"] = (
-        "running" if container.job_executor.is_running else "stopped"
-    )
+    checks["job_executor"] = "running" if container.job_executor.is_running else "stopped"
     checks["dispatcher"] = (
-        "running"
-        if container.proactive_followup_dispatcher.is_running
-        else "stopped"
+        "running" if container.proactive_followup_dispatcher.is_running else "stopped"
     )
     all_ok = all(v in ("ok", "running", "not_configured") for v in checks.values())
     return {"status": "ok" if all_ok else "degraded", "checks": checks}

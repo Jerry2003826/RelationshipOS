@@ -191,12 +191,8 @@ class System3Snapshot:
     relational_governance_trigger: str = "relational_line_stable"
     relational_governance_notes: list[str] = field(default_factory=list)
     relational_governance_trajectory_status: str = "stable"
-    relational_governance_trajectory_target: str = (
-        "steady_bounded_relational_progress"
-    )
-    relational_governance_trajectory_trigger: str = (
-        "relational_governance_stable"
-    )
+    relational_governance_trajectory_target: str = "steady_bounded_relational_progress"
+    relational_governance_trajectory_trigger: str = "relational_governance_stable"
     relational_governance_trajectory_notes: list[str] = field(default_factory=list)
     safety_governance_status: str = "pass"
     safety_governance_target: str = "steady_safe_relational_support"
@@ -219,12 +215,8 @@ class System3Snapshot:
     stability_governance_trigger: str = "stability_line_stable"
     stability_governance_notes: list[str] = field(default_factory=list)
     stability_governance_trajectory_status: str = "stable"
-    stability_governance_trajectory_target: str = (
-        "steady_bounded_relational_stability"
-    )
-    stability_governance_trajectory_trigger: str = (
-        "stability_governance_stable"
-    )
+    stability_governance_trajectory_target: str = "steady_bounded_relational_stability"
+    stability_governance_trajectory_trigger: str = "stability_governance_stable"
     stability_governance_trajectory_notes: list[str] = field(default_factory=list)
     growth_transition_status: str = "stable"
     growth_transition_target: str = "steadying"

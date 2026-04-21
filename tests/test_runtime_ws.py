@@ -33,8 +33,7 @@ def test_runtime_websocket_stream_subscription_receives_trace_and_projection_upd
             assert trace_snapshot["type"] == "trace_snapshot"
             assert trace_snapshot["stream_id"] == "ws-session"
             assert any(
-                event["event_type"] == "session.started"
-                for event in trace_snapshot["trace"]
+                event["event_type"] == "session.started" for event in trace_snapshot["trace"]
             )
             assert projection_snapshot["type"] == "session_projection"
             assert projection_snapshot["projection"]["state"]["session"]["started"] is True
@@ -51,8 +50,7 @@ def test_runtime_websocket_stream_subscription_receives_trace_and_projection_upd
             assert trace_batch["type"] == "trace_batch"
             assert trace_batch["stream_id"] == "ws-session"
             assert any(
-                event["event_type"] == "assistant.message.sent"
-                for event in trace_batch["events"]
+                event["event_type"] == "assistant.message.sent" for event in trace_batch["events"]
             )
             assert projection_update["type"] == "session_projection"
             assert projection_update["projection"]["state"]["turn_count"] == 1
@@ -108,8 +106,6 @@ def test_runtime_websocket_stream_subscription_receives_job_and_archive_updates(
             assert completed_job["session_id"] == "ws-job-session"
             assert completed_job["last_worker_id"]
             assert archive_update is not None
-            assert (
-                archive_update["event"]["event_type"] == "system.session.archived"
-            )
+            assert archive_update["event"]["event_type"] == "system.session.archived"
             assert runtime_overview is not None
             assert runtime_overview["runtime"]["job_runtime"]["worker_id"]

@@ -34,18 +34,14 @@ from router_v2.analyzers.router.features import (  # noqa: E402
     extract_features,
     load_lexicons,
 )
-from router_v2.analyzers.router.mini_llm_arbiter import (  # noqa: E402
-    ArbiterError,
-    MiniLLMArbiter,
-)
 from router_v2.analyzers.router.rule_engine import default_engine  # noqa: E402
 from router_v2.analyzers.router.vanguard_router_v2 import (  # noqa: E402
     RouterConfig,
     VanguardRouterV2,
 )
 
-
 # --- contracts ----------------------------------------------------------
+
 
 def test_decision_probabilities_must_sum_to_one():
     with pytest.raises(ValueError):
@@ -68,6 +64,7 @@ def test_decision_downgrade_to_legacy():
 
 
 # --- features -----------------------------------------------------------
+
 
 def test_features_are_bounded_and_fired_terms_populated():
     lex = load_lexicons()
@@ -93,6 +90,7 @@ def test_features_empty_input():
 
 
 # --- rule engine --------------------------------------------------------
+
 
 def test_rule_safety_crisis_wins_over_fast_pong():
     eng = default_engine()
@@ -121,6 +119,7 @@ def test_rule_set_is_safety_only():
 
 
 # --- cascade ------------------------------------------------------------
+
 
 def _router():
     return VanguardRouterV2.from_default()
@@ -205,11 +204,13 @@ def test_arbiter_degraded_path_sets_health_flag():
 
 def test_arbiter_valid_json_parsed():
     def good_llm(_prompt: str, _timeout: float) -> str:
-        return json.dumps({
-            "route_type": "LIGHT_RECALL",
-            "confidence": 0.7,
-            "why": "mock",
-        })
+        return json.dumps(
+            {
+                "route_type": "LIGHT_RECALL",
+                "confidence": 0.7,
+                "why": "mock",
+            }
+        )
 
     cfg = RouterConfig(abstention_threshold=1.1)
     r = VanguardRouterV2.from_default(call_llm=good_llm, config=cfg)
@@ -221,6 +222,7 @@ def test_arbiter_valid_json_parsed():
 
 
 # --- circuit breaker ----------------------------------------------------
+
 
 def test_circuit_breaker_trips_after_threshold():
     cb = CircuitBreaker(failure_threshold=2, cooldown_sec=60.0)
@@ -238,6 +240,7 @@ def test_circuit_breaker_recovers():
     cb.on_failure()
     assert cb.state is BreakerState.OPEN
     import time as _t
+
     _t.sleep(0.02)
     assert cb.allow()  # cooldown expired → HALF_OPEN
     cb.on_success()

@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from .circuit_breaker import BreakerOpenError, CircuitBreaker
 from .contracts import ALL_ROUTES, RouteType

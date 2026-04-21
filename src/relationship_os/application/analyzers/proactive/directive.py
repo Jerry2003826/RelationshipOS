@@ -100,8 +100,7 @@ def build_proactive_followup_directive(
             opening_hint = "re-anchor shared context first, then reopen the easiest next step."
         elif guidance_plan.handoff_mode == "repair_soft_ping":
             opening_hint = (
-                "reconnect gently, keep pressure low, and leave room for the user "
-                "not to reply."
+                "reconnect gently, keep pressure low, and leave room for the user not to reply."
             )
         elif guidance_plan.handoff_mode == "autonomy_preserving_ping":
             opening_hint = "check in without taking over, and keep the user's choice explicit."
@@ -109,13 +108,11 @@ def build_proactive_followup_directive(
             opening_hint = "reflect the state briefly, then reopen one grounded next step."
         if session_ritual_plan.closing_move == "grounding_close":
             opening_hint = (
-                "reconnect softly, offer one grounding cue, then reopen "
-                "the smallest safe step."
+                "reconnect softly, offer one grounding cue, then reopen the smallest safe step."
             )
         elif session_ritual_plan.closing_move == "repair_soft_close":
             opening_hint = (
-                "reconnect with attunement first and keep the follow-up "
-                "explicitly non-demanding."
+                "reconnect with attunement first and keep the follow-up explicitly non-demanding."
             )
         elif session_ritual_plan.closing_move == "boundary_safe_close":
             opening_hint = "check in without taking over, and keep the user's choice visible."

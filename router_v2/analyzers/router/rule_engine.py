@@ -21,10 +21,10 @@ from __future__ import annotations
 import operator
 import re
 import threading
-import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 try:
     import yaml  # type: ignore
@@ -33,7 +33,6 @@ except ImportError:
 
 from .contracts import ALL_ROUTES, RouteType
 from .features import RouterFeatures
-
 
 _OPS: dict[str, Callable[[Any, Any], bool]] = {
     "<": operator.lt,
@@ -78,12 +77,13 @@ class RuleEngineResult:
 
 # --- condition evaluator --------------------------------------------------
 
+
 def _eval_condition(cond: Any, features: RouterFeatures, text_lower: str) -> bool:
     if cond is None:
         return False
     if isinstance(cond, str):
         if cond.startswith("contains:"):
-            return cond[len("contains:"):].lower() in text_lower
+            return cond[len("contains:") :].lower() in text_lower
         m = _F_EXPR.match(cond)
         if m:
             attr = m.group("attr")
@@ -108,6 +108,7 @@ def _eval_condition(cond: Any, features: RouterFeatures, text_lower: str) -> boo
 
 
 # --- engine ---------------------------------------------------------------
+
 
 @dataclass(slots=True)
 class RuleEngine:
@@ -192,9 +193,7 @@ class RuleEngine:
 
 # --- convenience factory --------------------------------------------------
 
-_DEFAULT_RULES = (
-    Path(__file__).resolve().parents[2] / "policies" / "router" / "rules_zh.yaml"
-)
+_DEFAULT_RULES = Path(__file__).resolve().parents[2] / "policies" / "router" / "rules_zh.yaml"
 
 
 def default_engine() -> RuleEngine:

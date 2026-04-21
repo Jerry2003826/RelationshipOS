@@ -59,9 +59,7 @@ def _build_stage_refresh_defaults(
         "question_mode": str((stage_directive or {}).get("question_mode") or "default"),
         "autonomy_mode": refreshed_autonomy_mode,
         "opening_move": str((stage_actuation or {}).get("opening_move") or "soft_open"),
-        "bridge_move": str(
-            (stage_actuation or {}).get("bridge_move") or "resume_the_open_loop"
-        ),
+        "bridge_move": str((stage_actuation or {}).get("bridge_move") or "resume_the_open_loop"),
         "closing_move": str((stage_actuation or {}).get("closing_move") or "light_handoff"),
         "continuity_anchor": str(
             (stage_actuation or {}).get("continuity_anchor") or "shared_context_resume"
@@ -243,8 +241,7 @@ def _refresh_plan_changed(
             != str((stage_actuation or {}).get("closing_move") or "light_handoff"),
             defaults["continuity_anchor"]
             != str((stage_actuation or {}).get("continuity_anchor") or "shared_context_resume"),
-            defaults["somatic_mode"]
-            != str((stage_actuation or {}).get("somatic_mode") or "none"),
+            defaults["somatic_mode"] != str((stage_actuation or {}).get("somatic_mode") or "none"),
             defaults["user_space_signal"]
             != str(
                 (stage_actuation or {}).get("user_space_signal")
@@ -647,8 +644,7 @@ def _has_governance_watch_or_recenter(
     system3_snapshot: System3Snapshot,
 ) -> bool:
     return any(
-        str(getattr(system3_snapshot, f"{domain}_governance_status", "pass"))
-        in {"watch", "revise"}
+        str(getattr(system3_snapshot, f"{domain}_governance_status", "pass")) in {"watch", "revise"}
         or str(
             getattr(
                 system3_snapshot,
@@ -702,9 +698,7 @@ def _build_stage_replan_state(
 ) -> dict[str, Any]:
     return {
         "stage_label": stage_refresh_plan.stage_label or "first_touch",
-        "dispatch_window_status": (
-            stage_refresh_plan.dispatch_window_status or "on_time_dispatch"
-        ),
+        "dispatch_window_status": (stage_refresh_plan.dispatch_window_status or "on_time_dispatch"),
         "selected_strategy_key": reengagement_plan.strategy_key,
         "selected_ritual_mode": reengagement_plan.ritual_mode,
         "selected_delivery_mode": stage_refresh_plan.refreshed_delivery_mode,
@@ -763,16 +757,10 @@ def _apply_dispatch_feedback_replan_override(
         return
     state["selected_strategy_key"] = dispatch_feedback_assessment.selected_strategy_key
     state["selected_pressure_mode"] = dispatch_feedback_assessment.selected_pressure_mode
-    state["selected_autonomy_signal"] = (
-        dispatch_feedback_assessment.selected_autonomy_signal
-    )
+    state["selected_autonomy_signal"] = dispatch_feedback_assessment.selected_autonomy_signal
     state["selected_delivery_mode"] = dispatch_feedback_assessment.selected_delivery_mode
-    state["selected_sequence_objective"] = (
-        dispatch_feedback_assessment.selected_sequence_objective
-    )
-    state["replan_notes"].append(
-        f"dispatch_feedback:{dispatch_feedback_assessment.feedback_key}"
-    )
+    state["selected_sequence_objective"] = dispatch_feedback_assessment.selected_sequence_objective
+    state["replan_notes"].append(f"dispatch_feedback:{dispatch_feedback_assessment.feedback_key}")
 
 
 def _apply_stage_label_replan_override(
@@ -788,9 +776,7 @@ def _apply_stage_label_replan_override(
         state["selected_delivery_mode"] = stage_refresh_plan.refreshed_delivery_mode
         state["selected_autonomy_signal"] = "explicit_no_pressure"
         if dispatch_feedback_assessment.changed:
-            state["selected_delivery_mode"] = (
-                dispatch_feedback_assessment.selected_delivery_mode
-            )
+            state["selected_delivery_mode"] = dispatch_feedback_assessment.selected_delivery_mode
             state["selected_autonomy_signal"] = (
                 dispatch_feedback_assessment.selected_autonomy_signal
             )
@@ -798,9 +784,7 @@ def _apply_stage_label_replan_override(
             state["selected_strategy_key"] = "repair_soft_resume_bridge"
             state["selected_relational_move"] = "repair_bridge"
             state["selected_pressure_mode"] = "repair_soft"
-            state["selected_sequence_objective"] = (
-                "reconnect_without_relational_demand"
-            )
+            state["selected_sequence_objective"] = "reconnect_without_relational_demand"
             state["replan_notes"].append("second_touch_replanned_for_repair_safety")
             if dispatch_feedback_assessment.changed:
                 state["selected_sequence_objective"] = (
@@ -813,9 +797,7 @@ def _apply_stage_label_replan_override(
             state["selected_sequence_objective"] = "re_anchor_then_continue"
             state["replan_notes"].append("second_touch_replanned_as_resume_bridge")
             if dispatch_feedback_assessment.changed:
-                state["selected_strategy_key"] = (
-                    dispatch_feedback_assessment.selected_strategy_key
-                )
+                state["selected_strategy_key"] = dispatch_feedback_assessment.selected_strategy_key
                 state["selected_pressure_mode"] = (
                     dispatch_feedback_assessment.selected_pressure_mode
                 )
@@ -829,33 +811,23 @@ def _apply_stage_label_replan_override(
         state["selected_delivery_mode"] = "single_message"
         state["selected_somatic_action"] = None
         if dispatch_feedback_assessment.feedback_key == "final_stage_after_defer_close_out":
-            state["selected_strategy_key"] = (
-                dispatch_feedback_assessment.selected_strategy_key
-            )
+            state["selected_strategy_key"] = dispatch_feedback_assessment.selected_strategy_key
             state["selected_relational_move"] = "continuity_ping"
-            state["selected_pressure_mode"] = (
-                dispatch_feedback_assessment.selected_pressure_mode
-            )
+            state["selected_pressure_mode"] = dispatch_feedback_assessment.selected_pressure_mode
             state["selected_autonomy_signal"] = (
                 dispatch_feedback_assessment.selected_autonomy_signal
             )
-            state["selected_delivery_mode"] = (
-                dispatch_feedback_assessment.selected_delivery_mode
-            )
+            state["selected_delivery_mode"] = dispatch_feedback_assessment.selected_delivery_mode
             state["selected_sequence_objective"] = (
                 dispatch_feedback_assessment.selected_sequence_objective
             )
-            state["replan_notes"].append(
-                "final_soft_close_replanned_from_dispatch_feedback"
-            )
+            state["replan_notes"].append("final_soft_close_replanned_from_dispatch_feedback")
         elif low_pressure_context:
             state["selected_strategy_key"] = "repair_soft_reentry"
             state["selected_relational_move"] = "repair_bridge"
             state["selected_pressure_mode"] = "repair_soft"
             state["selected_autonomy_signal"] = "explicit_no_pressure"
-            state["selected_sequence_objective"] = (
-                "reconnect_without_relational_demand"
-            )
+            state["selected_sequence_objective"] = "reconnect_without_relational_demand"
             state["replan_notes"].append("final_soft_close_replanned_for_repair_safety")
         else:
             state["selected_strategy_key"] = "continuity_soft_ping"
@@ -887,8 +859,7 @@ def _apply_stage_controller_replan_override(
     ):
         return
     state["selected_delivery_mode"] = (
-        prior_stage_controller_decision.selected_delivery_mode
-        or state["selected_delivery_mode"]
+        prior_stage_controller_decision.selected_delivery_mode or state["selected_delivery_mode"]
     )
     state["selected_autonomy_signal"] = (
         prior_stage_controller_decision.selected_autonomy_signal
@@ -896,8 +867,7 @@ def _apply_stage_controller_replan_override(
     )
     if stage_label == "second_touch":
         state["selected_strategy_key"] = (
-            prior_stage_controller_decision.selected_strategy_key
-            or state["selected_strategy_key"]
+            prior_stage_controller_decision.selected_strategy_key or state["selected_strategy_key"]
         )
         state["selected_relational_move"] = "context_bridge"
         state["selected_pressure_mode"] = (
@@ -907,8 +877,7 @@ def _apply_stage_controller_replan_override(
         state["selected_sequence_objective"] = "re_anchor_then_continue"
     elif stage_label == "final_soft_close":
         state["selected_strategy_key"] = (
-            prior_stage_controller_decision.selected_strategy_key
-            or state["selected_strategy_key"]
+            prior_stage_controller_decision.selected_strategy_key or state["selected_strategy_key"]
         )
         state["selected_relational_move"] = "continuity_ping"
         state["selected_pressure_mode"] = (
@@ -937,8 +906,7 @@ def _apply_line_controller_replan_override(
     ):
         return
     state["selected_delivery_mode"] = (
-        prior_line_controller_decision.selected_delivery_mode
-        or state["selected_delivery_mode"]
+        prior_line_controller_decision.selected_delivery_mode or state["selected_delivery_mode"]
     )
     if stage_label == "second_touch":
         state["selected_autonomy_signal"] = "explicit_no_pressure"
@@ -951,9 +919,7 @@ def _apply_line_controller_replan_override(
         state["selected_autonomy_signal"] = "archive_light_thread"
         state["selected_pressure_mode"] = "archive_light_presence"
         state["selected_sequence_objective"] = "presence_then_optional_reply"
-    state["replan_notes"].append(
-        f"line_controller:{prior_line_controller_decision.controller_key}"
-    )
+    state["replan_notes"].append(f"line_controller:{prior_line_controller_decision.controller_key}")
 
 
 def _build_stage_replan_changed(
@@ -1054,9 +1020,7 @@ def build_proactive_stage_replan_assessment(
         "recenter",
     ):
         state["selected_autonomy_signal"] = "explicit_no_pressure"
-        state["replan_notes"].append(
-            "user_model_trajectory_force_no_pressure"
-        )
+        state["replan_notes"].append("user_model_trajectory_force_no_pressure")
     if getattr(system3_snapshot, "moral_trajectory_status", None) == "recenter":
         state["selected_pressure_mode"] = "archive_light_thread"
         state["replan_notes"].append("moral_recenter_force_archive_light")
@@ -1066,9 +1030,7 @@ def build_proactive_stage_replan_assessment(
         reengagement_plan=reengagement_plan,
     )
 
-    replan_key = (
-        f"{stage_label}_{dispatch_window_status}_{state['selected_strategy_key']}"
-    )
+    replan_key = f"{stage_label}_{dispatch_window_status}_{state['selected_strategy_key']}"
     if not changed:
         replan_key = f"{stage_label}_{dispatch_window_status}_stable"
 

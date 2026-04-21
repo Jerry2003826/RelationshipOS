@@ -96,25 +96,17 @@ async def build_user_profile(
         mem_state: dict[str, Any] = mem_proj.get("state", {})
 
         # Aggregate semantic concepts → identity facts
-        concepts = (
-            mem_state.get("semantic_memory", {}).get("concepts") or []
-        )
-        identity_facts = _merge_aggregated_items(
-            identity_facts, concepts, _MAX_SEMANTIC_CONCEPTS
-        )
+        concepts = mem_state.get("semantic_memory", {}).get("concepts") or []
+        identity_facts = _merge_aggregated_items(identity_facts, concepts, _MAX_SEMANTIC_CONCEPTS)
 
         # Aggregate relational signals → preference signals
-        signals = (
-            mem_state.get("relational_memory", {}).get("signals") or []
-        )
+        signals = mem_state.get("relational_memory", {}).get("signals") or []
         preference_signals = _merge_aggregated_items(
             preference_signals, signals, _MAX_RELATIONAL_SIGNALS
         )
 
         # Aggregate reflective insights
-        insights = (
-            mem_state.get("reflective_memory", {}).get("insights") or []
-        )
+        insights = mem_state.get("reflective_memory", {}).get("insights") or []
         reflective_insights = _merge_aggregated_items(
             reflective_insights, insights, _MAX_REFLECTIVE_INSIGHTS
         )

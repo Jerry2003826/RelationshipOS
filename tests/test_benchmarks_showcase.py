@@ -135,10 +135,7 @@ def test_score_expected_answer_for_naturalness_accepts_chatty_style_signal() -> 
 
 def test_score_expected_answer_for_social_world_control_uses_concept_level_withhold() -> None:
     scored = score_expected_answer_for_category(
-        answer=(
-            "阿宁提过，海盐是她那只猫。你知道就行，别替我到处说，"
-            "尤其别说得太满。"
-        ),
+        answer=("阿宁提过，海盐是她那只猫。你知道就行，别替我到处说，尤其别说得太满。"),
         expected="阿宁 海盐 不全说",
         category="social_world_control",
     )
@@ -193,10 +190,7 @@ def test_score_expected_answer_for_cross_session_accepts_relaxed_continuity_vari
 
 def test_score_expected_answer_diagnostic_uses_category_aware_concepts() -> None:
     scored = score_expected_answer_diagnostic(
-        answer=(
-            "阿宁提过，海盐是她那只猫。你知道就行，别替我到处说，"
-            "尤其别说得太满。"
-        ),
+        answer=("阿宁提过，海盐是她那只猫。你知道就行，别替我到处说，尤其别说得太满。"),
         expected="阿宁 海盐 不全说",
         category="social_world_control",
     )
@@ -297,7 +291,7 @@ def test_run_friend_chat_zh_uses_persona_specific_scoring(monkeypatch) -> None:
                                     }
                                 }
                             }
-                        }
+                        },
                     },
                 },
             )()
@@ -340,14 +334,8 @@ def test_run_friend_chat_zh_uses_persona_specific_scoring(monkeypatch) -> None:
     assert result["details"][0]["deliberation_mode"] == "light_recall"
     assert result["deliberation_stats"]["mode_counts"]["light_recall"] >= 1
     assert result["deliberation_stats"]["avg_need"] == 0.63
-    assert (
-        result["response_diagnostics_stats"]["friend_chat_exposed_under_grounded_count"]
-        >= 1
-    )
-    assert (
-        result["response_diagnostics_stats"]["friend_chat_exposed_plan_noncompliant_count"]
-        >= 1
-    )
+    assert result["response_diagnostics_stats"]["friend_chat_exposed_under_grounded_count"] >= 1
+    assert result["response_diagnostics_stats"]["friend_chat_exposed_plan_noncompliant_count"] >= 1
     assert result["turn_timing_stats"]["probe_session_mutation_count"] == 0
 
 
@@ -1060,9 +1048,7 @@ def test_minimax_backend_normalizes_endpoint_variants() -> None:
         == "https://api.minimax.io/v1/text/chatcompletion_v2"
     )
     assert (
-        backend._normalize_minimax_endpoint(
-            "https://api.minimax.io/v1/text/chatcompletion_v2"
-        )
+        backend._normalize_minimax_endpoint("https://api.minimax.io/v1/text/chatcompletion_v2")
         == "https://api.minimax.io/v1/text/chatcompletion_v2"
     )
 

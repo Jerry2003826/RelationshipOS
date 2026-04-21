@@ -816,10 +816,7 @@ def test_stage_and_line_controller_soften_for_stability_without_safety_trigger()
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_stability_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_stability_watch_spacing"
     assert stage_controller_decision.target_stage_label == "second_touch"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
@@ -901,10 +898,7 @@ def test_stage_and_line_controller_soften_for_autonomy_without_other_triggers() 
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_autonomy_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_autonomy_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -987,10 +981,7 @@ def test_stage_and_line_controller_soften_for_boundary_without_other_triggers() 
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_boundary_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_boundary_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1077,10 +1068,7 @@ def test_stage_and_line_controller_soften_for_support_without_other_triggers() -
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_support_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_support_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1171,10 +1159,7 @@ def test_stage_and_line_controller_soften_for_clarity_without_other_triggers() -
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_clarity_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_clarity_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1269,10 +1254,7 @@ def test_stage_and_line_controller_soften_for_pacing_without_other_triggers() ->
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_pacing_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_pacing_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1371,10 +1353,7 @@ def test_stage_and_line_controller_soften_for_attunement_without_other_triggers(
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_attunement_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_attunement_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1477,10 +1456,7 @@ def test_stage_and_line_controller_soften_for_commitment_without_other_triggers(
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_commitment_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_commitment_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1587,10 +1563,7 @@ def test_stage_and_line_controller_soften_for_disclosure_without_other_triggers(
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_disclosure_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_disclosure_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1701,10 +1674,7 @@ def test_stage_and_line_controller_soften_for_reciprocity_without_other_triggers
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_reciprocity_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_reciprocity_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1819,10 +1789,7 @@ def test_stage_and_line_controller_soften_for_progress_without_other_triggers() 
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_progress_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_progress_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -1923,10 +1890,7 @@ def test_stage_and_line_controller_soften_for_pressure_without_safety_or_stabili
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_pressure_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_pressure_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -2031,8 +1995,7 @@ def test_stage_and_line_controller_soften_for_trust_without_other_triggers() -> 
 
     assert line_controller_decision.changed is True
     assert (
-        line_controller_decision.controller_key
-        == "remaining_line_trust_softened_after_first_touch"
+        line_controller_decision.controller_key == "remaining_line_trust_softened_after_first_touch"
     )
     assert line_controller_decision.line_state == "softened"
     assert line_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
@@ -2104,10 +2067,7 @@ def test_stage_and_line_controller_soften_for_continuity_without_other_triggers(
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_continuity_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_continuity_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -2301,10 +2261,7 @@ def test_stage_and_line_controller_soften_for_relational_without_other_triggers(
     )
 
     assert stage_controller_decision.changed is True
-    assert (
-        stage_controller_decision.controller_key
-        == "second_touch_relational_watch_spacing"
-    )
+    assert stage_controller_decision.controller_key == "second_touch_relational_watch_spacing"
     assert stage_controller_decision.selected_strategy_key == "resume_context_bridge"
     assert stage_controller_decision.selected_autonomy_signal == "explicit_no_pressure"
 
@@ -4155,9 +4112,7 @@ def test_lifecycle_scheduler_defers_buffered_lifecycle() -> None:
     assert decision.queue_status_hint == "scheduled"
     assert decision.actionability == "buffer"
     assert decision.additional_delay_seconds == 900
-    assert decision.scheduler_key.startswith(
-        "second_touch_defer_lifecycle_schedule_"
-    )
+    assert decision.scheduler_key.startswith("second_touch_defer_lifecycle_schedule_")
 
 
 def test_lifecycle_window_keeps_deferred_buffered_lifecycle() -> None:
@@ -4642,10 +4597,7 @@ def test_lifecycle_resolution_tracks_post_dispatch_line_result() -> None:
             next_lifecycle_mode="winding_down",
         ),
     )
-    assert (
-        buffered_close_loop_resolution.resolution_mode
-        == "buffered_lifecycle_resolution"
-    )
+    assert buffered_close_loop_resolution.resolution_mode == "buffered_lifecycle_resolution"
     assert buffered_close_loop_resolution.decision == "buffer_lifecycle_resolution"
     assert buffered_close_loop_resolution.queue_override_status == "scheduled"
 
@@ -5130,9 +5082,7 @@ def test_lifecycle_eligibility_tracks_keep_buffer_pause_and_archive() -> None:
         lifecycle_availability_decision=open_availability
     )
 
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     assert eligible.eligibility_mode == "eligible_lifecycle_eligibility"
     assert eligible.decision == "keep_lifecycle_eligible"
     assert eligible.queue_override_status is None
@@ -5221,9 +5171,7 @@ def test_lifecycle_candidate_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
 
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
@@ -5316,9 +5264,7 @@ def test_lifecycle_selectability_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5414,9 +5360,7 @@ def test_lifecycle_reentry_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5515,9 +5459,7 @@ def test_lifecycle_reactivation_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5619,9 +5561,7 @@ def test_lifecycle_resumption_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5726,9 +5666,7 @@ def test_lifecycle_readiness_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5836,9 +5774,7 @@ def test_lifecycle_arming_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5858,9 +5794,7 @@ def test_lifecycle_arming_tracks_keep_buffer_pause_and_archive() -> None:
         lifecycle_resumption_decision=resumption
     )
 
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
     assert arming.arming_mode == "armed_lifecycle_arming"
     assert arming.decision == "keep_lifecycle_arming"
     assert arming.queue_override_status is None
@@ -5949,9 +5883,7 @@ def test_lifecycle_trigger_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -5970,13 +5902,9 @@ def test_lifecycle_trigger_tracks_keep_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
 
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
     assert trigger.trigger_mode == "triggerable_lifecycle_trigger"
     assert trigger.decision == "keep_lifecycle_trigger"
     assert trigger.queue_override_status is None
@@ -6065,9 +5993,7 @@ def test_lifecycle_launch_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6086,16 +6012,10 @@ def test_lifecycle_launch_tracks_keep_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
 
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
     assert launch.launch_mode == "launchable_lifecycle_launch"
     assert launch.decision == "keep_lifecycle_launch"
     assert launch.queue_override_status is None
@@ -6184,9 +6104,7 @@ def test_lifecycle_handoff_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6205,19 +6123,11 @@ def test_lifecycle_handoff_tracks_keep_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
 
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     assert handoff.handoff_mode == "handoff_ready_lifecycle_handoff"
     assert handoff.decision == "keep_lifecycle_handoff"
     assert handoff.queue_override_status is None
@@ -6306,9 +6216,7 @@ def test_lifecycle_continuation_tracks_keep_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6327,18 +6235,10 @@ def test_lifecycle_continuation_tracks_keep_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
 
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
@@ -6431,9 +6331,7 @@ def test_lifecycle_sustainment_tracks_sustain_buffer_pause_and_archive() -> None
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6452,18 +6350,10 @@ def test_lifecycle_sustainment_tracks_sustain_buffer_pause_and_archive() -> None
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -6559,9 +6449,7 @@ def test_lifecycle_stewardship_tracks_steward_buffer_pause_and_archive() -> None
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6580,18 +6468,10 @@ def test_lifecycle_stewardship_tracks_steward_buffer_pause_and_archive() -> None
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -6690,9 +6570,7 @@ def test_lifecycle_guardianship_tracks_guard_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6711,18 +6589,10 @@ def test_lifecycle_guardianship_tracks_guard_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -6824,9 +6694,7 @@ def test_lifecycle_oversight_tracks_oversee_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6845,18 +6713,10 @@ def test_lifecycle_oversight_tracks_oversee_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -6961,9 +6821,7 @@ def test_lifecycle_assurance_tracks_assure_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -6982,18 +6840,10 @@ def test_lifecycle_assurance_tracks_assure_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -7010,9 +6860,7 @@ def test_lifecycle_assurance_tracks_assure_buffer_pause_and_archive() -> None:
         lifecycle_guardianship_decision=guardianship
     )
 
-    assurance = build_proactive_lifecycle_assurance_decision(
-        lifecycle_oversight_decision=oversight
-    )
+    assurance = build_proactive_lifecycle_assurance_decision(lifecycle_oversight_decision=oversight)
     assert assurance.assurance_mode == "assured_lifecycle_assurance"
     assert assurance.decision == "assure_lifecycle_assurance"
     assert assurance.queue_override_status is None
@@ -7101,9 +6949,7 @@ def test_lifecycle_attestation_tracks_attest_buffer_pause_and_archive() -> None:
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -7122,18 +6968,10 @@ def test_lifecycle_attestation_tracks_attest_buffer_pause_and_archive() -> None:
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -7149,9 +6987,7 @@ def test_lifecycle_attestation_tracks_attest_buffer_pause_and_archive() -> None:
     oversight = build_proactive_lifecycle_oversight_decision(
         lifecycle_guardianship_decision=guardianship
     )
-    assurance = build_proactive_lifecycle_assurance_decision(
-        lifecycle_oversight_decision=oversight
-    )
+    assurance = build_proactive_lifecycle_assurance_decision(lifecycle_oversight_decision=oversight)
 
     attestation = build_proactive_lifecycle_attestation_decision(
         lifecycle_assurance_decision=assurance
@@ -7244,9 +7080,7 @@ def test_lifecycle_verification_tracks_verify_buffer_pause_and_archive() -> None
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -7265,18 +7099,10 @@ def test_lifecycle_verification_tracks_verify_buffer_pause_and_archive() -> None
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -7292,9 +7118,7 @@ def test_lifecycle_verification_tracks_verify_buffer_pause_and_archive() -> None
     oversight = build_proactive_lifecycle_oversight_decision(
         lifecycle_guardianship_decision=guardianship
     )
-    assurance = build_proactive_lifecycle_assurance_decision(
-        lifecycle_oversight_decision=oversight
-    )
+    assurance = build_proactive_lifecycle_assurance_decision(lifecycle_oversight_decision=oversight)
     attestation = build_proactive_lifecycle_attestation_decision(
         lifecycle_assurance_decision=assurance
     )
@@ -7390,9 +7214,7 @@ def test_lifecycle_certification_tracks_certify_buffer_pause_and_archive() -> No
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -7411,18 +7233,10 @@ def test_lifecycle_certification_tracks_certify_buffer_pause_and_archive() -> No
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -7438,9 +7252,7 @@ def test_lifecycle_certification_tracks_certify_buffer_pause_and_archive() -> No
     oversight = build_proactive_lifecycle_oversight_decision(
         lifecycle_guardianship_decision=guardianship
     )
-    assurance = build_proactive_lifecycle_assurance_decision(
-        lifecycle_oversight_decision=oversight
-    )
+    assurance = build_proactive_lifecycle_assurance_decision(lifecycle_oversight_decision=oversight)
     attestation = build_proactive_lifecycle_attestation_decision(
         lifecycle_assurance_decision=assurance
     )
@@ -7539,9 +7351,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     retained = build_proactive_lifecycle_retention_decision(
         lifecycle_availability_decision=open_availability
     )
-    eligible = build_proactive_lifecycle_eligibility_decision(
-        lifecycle_retention_decision=retained
-    )
+    eligible = build_proactive_lifecycle_eligibility_decision(lifecycle_retention_decision=retained)
     candidate = build_proactive_lifecycle_candidate_decision(
         lifecycle_eligibility_decision=eligible
     )
@@ -7560,18 +7370,10 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     readiness = build_proactive_lifecycle_readiness_decision(
         lifecycle_resumption_decision=resumption
     )
-    arming = build_proactive_lifecycle_arming_decision(
-        lifecycle_readiness_decision=readiness
-    )
-    trigger = build_proactive_lifecycle_trigger_decision(
-        lifecycle_arming_decision=arming
-    )
-    launch = build_proactive_lifecycle_launch_decision(
-        lifecycle_trigger_decision=trigger
-    )
-    handoff = build_proactive_lifecycle_handoff_decision(
-        lifecycle_launch_decision=launch
-    )
+    arming = build_proactive_lifecycle_arming_decision(lifecycle_readiness_decision=readiness)
+    trigger = build_proactive_lifecycle_trigger_decision(lifecycle_arming_decision=arming)
+    launch = build_proactive_lifecycle_launch_decision(lifecycle_trigger_decision=trigger)
+    handoff = build_proactive_lifecycle_handoff_decision(lifecycle_launch_decision=launch)
     continuation = build_proactive_lifecycle_continuation_decision(
         lifecycle_handoff_decision=handoff
     )
@@ -7587,9 +7389,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     oversight = build_proactive_lifecycle_oversight_decision(
         lifecycle_guardianship_decision=guardianship
     )
-    assurance = build_proactive_lifecycle_assurance_decision(
-        lifecycle_oversight_decision=oversight
-    )
+    assurance = build_proactive_lifecycle_assurance_decision(lifecycle_oversight_decision=oversight)
     attestation = build_proactive_lifecycle_attestation_decision(
         lifecycle_assurance_decision=assurance
     )
@@ -7673,9 +7473,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=900,
         )
     )
-    assert (
-        buffered_ratification.ratification_mode == "buffered_lifecycle_ratification"
-    )
+    assert buffered_ratification.ratification_mode == "buffered_lifecycle_ratification"
     assert buffered_ratification.decision == "buffer_lifecycle_ratification"
     assert buffered_ratification.queue_override_status == "scheduled"
 
@@ -7708,9 +7506,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_ratification.ratification_mode == "archived_lifecycle_ratification"
-    )
+    assert archived_ratification.ratification_mode == "archived_lifecycle_ratification"
     assert archived_ratification.decision == "archive_lifecycle_ratification"
     assert archived_ratification.actionability == "archive"
 
@@ -7787,10 +7583,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=900,
         )
     )
-    assert (
-        buffered_authorization.authorization_mode
-        == "buffered_lifecycle_authorization"
-    )
+    assert buffered_authorization.authorization_mode == "buffered_lifecycle_authorization"
     assert buffered_authorization.decision == "buffer_lifecycle_authorization"
     assert buffered_authorization.queue_override_status == "scheduled"
 
@@ -7823,10 +7616,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_authorization.authorization_mode
-        == "archived_lifecycle_authorization"
-    )
+    assert archived_authorization.authorization_mode == "archived_lifecycle_authorization"
     assert archived_authorization.decision == "archive_lifecycle_authorization"
     assert archived_authorization.actionability == "archive"
 
@@ -7885,9 +7675,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     assert archived_enactment.decision == "archive_lifecycle_enactment"
     assert archived_enactment.actionability == "archive"
 
-    finalized = build_proactive_lifecycle_finality_decision(
-        lifecycle_enactment_decision=enacted
-    )
+    finalized = build_proactive_lifecycle_finality_decision(lifecycle_enactment_decision=enacted)
     assert finalized.finality_mode == "finalized_lifecycle_finality"
     assert finalized.decision == "finalize_lifecycle_finality"
     assert finalized.queue_override_status is None
@@ -7940,9 +7728,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     assert archived_finality.decision == "archive_lifecycle_finality"
     assert archived_finality.actionability == "archive"
 
-    completed = build_proactive_lifecycle_completion_decision(
-        lifecycle_finality_decision=finalized
-    )
+    completed = build_proactive_lifecycle_completion_decision(lifecycle_finality_decision=finalized)
     assert completed.completion_mode == "completed_lifecycle_completion"
     assert completed.decision == "complete_lifecycle_completion"
     assert completed.queue_override_status is None
@@ -8053,10 +7839,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     completed_disposition = build_proactive_lifecycle_disposition_decision(
         lifecycle_conclusion_decision=completed_conclusion
     )
-    assert (
-        completed_disposition.disposition_mode
-        == "completed_lifecycle_disposition"
-    )
+    assert completed_disposition.disposition_mode == "completed_lifecycle_disposition"
     assert completed_disposition.decision == "complete_lifecycle_disposition"
     assert completed_disposition.queue_override_status is None
 
@@ -8071,9 +7854,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=1500,
         )
     )
-    assert (
-        buffered_disposition.disposition_mode == "buffered_lifecycle_disposition"
-    )
+    assert buffered_disposition.disposition_mode == "buffered_lifecycle_disposition"
     assert buffered_disposition.decision == "buffer_lifecycle_disposition"
     assert buffered_disposition.queue_override_status == "scheduled"
 
@@ -8106,9 +7887,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_disposition.disposition_mode == "archived_lifecycle_disposition"
-    )
+    assert archived_disposition.disposition_mode == "archived_lifecycle_disposition"
     assert archived_disposition.decision == "archive_lifecycle_disposition"
     assert archived_disposition.actionability == "archive"
 
@@ -8280,10 +8059,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
     completed_persistence = build_proactive_lifecycle_persistence_decision(
         lifecycle_tenure_decision=completed_tenure
     )
-    assert (
-        completed_persistence.persistence_mode
-        == "persistent_lifecycle_persistence"
-    )
+    assert completed_persistence.persistence_mode == "persistent_lifecycle_persistence"
     assert completed_persistence.decision == "keep_lifecycle_persistence"
     assert completed_persistence.queue_override_status is None
 
@@ -8298,10 +8074,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=2700,
         )
     )
-    assert (
-        buffered_persistence.persistence_mode
-        == "buffered_lifecycle_persistence"
-    )
+    assert buffered_persistence.persistence_mode == "buffered_lifecycle_persistence"
     assert buffered_persistence.decision == "buffer_lifecycle_persistence"
     assert buffered_persistence.queue_override_status == "scheduled"
 
@@ -8334,20 +8107,14 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_persistence.persistence_mode
-        == "archived_lifecycle_persistence"
-    )
+    assert archived_persistence.persistence_mode == "archived_lifecycle_persistence"
     assert archived_persistence.decision == "archive_lifecycle_persistence"
     assert archived_persistence.actionability == "archive"
 
     completed_durability = build_proactive_lifecycle_durability_decision(
         lifecycle_persistence_decision=completed_persistence
     )
-    assert (
-        completed_durability.durability_mode
-        == "durable_lifecycle_durability"
-    )
+    assert completed_durability.durability_mode == "durable_lifecycle_durability"
     assert completed_durability.decision == "keep_lifecycle_durability"
     assert completed_durability.queue_override_status is None
 
@@ -8362,10 +8129,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=3000,
         )
     )
-    assert (
-        buffered_durability.durability_mode
-        == "buffered_lifecycle_durability"
-    )
+    assert buffered_durability.durability_mode == "buffered_lifecycle_durability"
     assert buffered_durability.decision == "buffer_lifecycle_durability"
     assert buffered_durability.queue_override_status == "scheduled"
 
@@ -8398,20 +8162,14 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_durability.durability_mode
-        == "archived_lifecycle_durability"
-    )
+    assert archived_durability.durability_mode == "archived_lifecycle_durability"
     assert archived_durability.decision == "archive_lifecycle_durability"
     assert archived_durability.actionability == "archive"
 
     completed_longevity = build_proactive_lifecycle_longevity_decision(
         lifecycle_durability_decision=completed_durability
     )
-    assert (
-        completed_longevity.longevity_mode
-        == "enduring_lifecycle_longevity"
-    )
+    assert completed_longevity.longevity_mode == "enduring_lifecycle_longevity"
     assert completed_longevity.decision == "keep_lifecycle_longevity"
     assert completed_longevity.queue_override_status is None
 
@@ -8426,10 +8184,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             additional_delay_seconds=3300,
         )
     )
-    assert (
-        buffered_longevity.longevity_mode
-        == "buffered_lifecycle_longevity"
-    )
+    assert buffered_longevity.longevity_mode == "buffered_lifecycle_longevity"
     assert buffered_longevity.decision == "buffer_lifecycle_longevity"
     assert buffered_longevity.queue_override_status == "scheduled"
 
@@ -8462,10 +8217,7 @@ def test_lifecycle_confirmation_tracks_confirm_buffer_pause_and_archive() -> Non
             line_exit_mode="close_loop",
         )
     )
-    assert (
-        archived_longevity.longevity_mode
-        == "archived_lifecycle_longevity"
-    )
+    assert archived_longevity.longevity_mode == "archived_lifecycle_longevity"
     assert archived_longevity.decision == "archive_lifecycle_longevity"
     assert archived_longevity.actionability == "archive"
 

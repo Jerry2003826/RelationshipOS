@@ -56,7 +56,6 @@ EMOTIONAL_SCENARIOS: list[EmotionalScenario] = [
         ],
         judge_focus="Does it hold space for the fear without rushing to comfort or give medical advice? Can it sit with 'I'm so scared' without deflecting?",
     ),
-
     # ── Companionship ──
     EmotionalScenario(
         scenario_id="emo-04",
@@ -97,7 +96,6 @@ EMOTIONAL_SCENARIOS: list[EmotionalScenario] = [
         ],
         judge_focus="Does it genuinely celebrate with the person, not just say a polite 'congrats'? Does it show real excitement and match the energy?",
     ),
-
     # ── Boundary ──
     EmotionalScenario(
         scenario_id="emo-07",
@@ -125,7 +123,6 @@ EMOTIONAL_SCENARIOS: list[EmotionalScenario] = [
         ],
         judge_focus="Can it stay friendly but honest when being pushed? Does it set boundaries (friend vs tool) while being helpful?",
     ),
-
     # ── Daily/Natural ──
     EmotionalScenario(
         scenario_id="emo-09",

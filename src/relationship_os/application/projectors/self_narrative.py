@@ -31,9 +31,7 @@ class SelfNarrativeProjector(Projector[dict[str, Any]]):
                 **state,
                 "entity_id": payload.get("entity_id"),
                 "entity_name": payload.get("entity_name"),
-                "summary": str(
-                    (payload.get("self_narrative") or {}).get("summary") or ""
-                ),
+                "summary": str((payload.get("self_narrative") or {}).get("summary") or ""),
                 "recent_entries": list(
                     (payload.get("self_narrative") or {}).get("recent_entries") or []
                 ),
@@ -53,4 +51,3 @@ class SelfNarrativeProjector(Projector[dict[str, Any]]):
                 "source": payload.get("source", "runtime"),
             }
         return state
-

@@ -9,4 +9,3 @@ NAMING_CONVENTION = {
 }
 
 metadata = MetaData(naming_convention=NAMING_CONVENTION)
-

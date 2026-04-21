@@ -34,7 +34,7 @@ def main() -> int:
     labels: dict[str, str] = {}
 
     for p in glob.glob(args.logs):
-        with open(p, "r", encoding="utf-8") as f:
+        with open(p, encoding="utf-8") as f:
             for ln in f:
                 ln = ln.strip()
                 if not ln:

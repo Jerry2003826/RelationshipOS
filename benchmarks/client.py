@@ -47,9 +47,12 @@ class RelationshipOSClient:
                     raise httpx.ReadError(f"Server error {result.status_code}")
                 return result
             except (
-                httpx.ReadError, httpx.ConnectError,
-                httpx.RemoteProtocolError, httpx.ReadTimeout,
-                httpx.WriteTimeout, httpx.PoolTimeout,
+                httpx.ReadError,
+                httpx.ConnectError,
+                httpx.RemoteProtocolError,
+                httpx.ReadTimeout,
+                httpx.WriteTimeout,
+                httpx.PoolTimeout,
             ) as exc:
                 if attempt == self.MAX_RETRIES - 1:
                     raise
@@ -155,8 +158,7 @@ class RelationshipOSClient:
                 return job
             time.sleep(delay)
         raise TimeoutError(
-            f"Job {job_id} did not finish within {timeout_seconds:.1f}s; "
-            f"last state was {last_job}"
+            f"Job {job_id} did not finish within {timeout_seconds:.1f}s; last state was {last_job}"
         )
 
     def consolidate_session(

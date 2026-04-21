@@ -20,24 +20,21 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
 
-from .circuit_breaker import CircuitBreaker
-from .contracts import ALL_ROUTES, RouteType, RouterDecisionV2, make_decision
+from .circuit_breaker import BreakerOpenError, CircuitBreaker
+from .contracts import ALL_ROUTES, RouterDecisionV2, RouteType, make_decision
 from .features import Lexicons, RouterFeatures, extract_features, load_lexicons
-from .mini_llm_arbiter import ArbiterError, MiniLLMArbiter, LLMCallable
-from .circuit_breaker import BreakerOpenError
+from .mini_llm_arbiter import ArbiterError, LLMCallable, MiniLLMArbiter
 from .rule_engine import RuleEngine, default_engine
 from .tier2_classifier import PriorClassifier, Tier2Classifier, load_or_fallback
 
 logger = logging.getLogger(__name__)
 
 
-_DEFAULT_MODEL = (
-    Path(__file__).resolve().parents[2] / "policies" / "router" / "model.joblib"
-)
+_DEFAULT_MODEL = Path(__file__).resolve().parents[2] / "policies" / "router" / "model.joblib"
 
 
 ShadowLogger = Callable[[dict], None]
@@ -48,7 +45,7 @@ class RouterConfig:
     """Runtime-tunable thresholds. Safe to hot-reload."""
 
     abstention_threshold: float = 0.60  # Tier 2 below this → Tier 3
-    margin_threshold: float = 0.15      # below this → shadow-log
+    margin_threshold: float = 0.15  # below this → shadow-log
     enable_tier3: bool = True
     tier3_timeout_sec: float = 1.5
     tier3_max_latency_budget_ms: float = 1500.0
@@ -76,7 +73,7 @@ class VanguardRouterV2:
         model_path: Path = _DEFAULT_MODEL,
         config: RouterConfig | None = None,
         shadow_logger: ShadowLogger | None = None,
-    ) -> "VanguardRouterV2":
+    ) -> VanguardRouterV2:
         lex = load_lexicons()
         engine = default_engine()
         tier2 = load_or_fallback(model_path)
@@ -125,7 +122,9 @@ class VanguardRouterV2:
             disagree = t2_top != sc.vote
             # Final probabilities: blend rule confidence with tier2 for
             # downstream abstention logic, keep rule class as argmax.
-            probs = _fuse_probs(rule_class=sc.vote, rule_conf=sc.confidence, tier2=t2_probs, weight=0.75)
+            probs = _fuse_probs(
+                rule_class=sc.vote, rule_conf=sc.confidence, tier2=t2_probs, weight=0.75
+            )
             latency = (time.perf_counter() - t0) * 1000
             decision = make_decision(
                 route_type=sc.vote,
@@ -157,10 +156,7 @@ class VanguardRouterV2:
         top_class: RouteType = max(t2_probs, key=t2_probs.get)  # type: ignore[assignment]
 
         # Tier 3 only when ambiguous AND an arbiter is wired.
-        if (
-            self.arbiter is not None
-            and confidence < self.config.abstention_threshold
-        ):
+        if self.arbiter is not None and confidence < self.config.abstention_threshold:
             t3_start = time.perf_counter()
             try:
                 arb = self.arbiter.arbitrate(text)
@@ -234,7 +230,12 @@ class VanguardRouterV2:
                 {
                     "text": text,
                     "features": {
-                        n: v for n, v in zip(RouterFeatures.feature_names(), features.as_vector())
+                        n: v
+                        for n, v in zip(
+                            RouterFeatures.feature_names(),
+                            features.as_vector(),
+                            strict=False,
+                        )
                     },
                     "fired_terms": list(features.fired_terms),
                     "route_type": decision.route_type,
@@ -255,6 +256,7 @@ class VanguardRouterV2:
 
 # --- fusion helpers -------------------------------------------------------
 
+
 def _fuse_probs(
     *,
     rule_class: RouteType,
@@ -274,17 +276,13 @@ def _fuse_probs(
     return {r: fused[r] / total for r in ALL_ROUTES}
 
 
-def _blend(
-    t2: dict[str, float], prior: dict[str, float], *, weight: float
-) -> dict[str, float]:
+def _blend(t2: dict[str, float], prior: dict[str, float], *, weight: float) -> dict[str, float]:
     out = {r: (1 - weight) * t2.get(r, 0.0) + weight * prior.get(r, 0.0) for r in ALL_ROUTES}
     total = sum(out.values()) or 1.0
     return {r: out[r] / total for r in ALL_ROUTES}
 
 
-def _overlay(
-    t2: dict[str, float], cls: RouteType, conf: float
-) -> dict[str, float]:
+def _overlay(t2: dict[str, float], cls: RouteType, conf: float) -> dict[str, float]:
     """Put `cls` at probability `conf`, renormalize the rest from t2."""
     mass = max(1.0 - conf, 1e-6)
     others = [r for r in ALL_ROUTES if r != cls]

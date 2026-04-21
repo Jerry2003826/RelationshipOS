@@ -81,8 +81,7 @@ def _pretty_json(value: object) -> str:
 def _tone(label: object | None) -> str:
     lowered = str(label or "").lower()
     if any(
-        token in lowered
-        for token in ["pass", "ok", "stable", "completed", "direct", "improved"]
+        token in lowered for token in ["pass", "ok", "stable", "completed", "direct", "improved"]
     ):
         return "good"
     if any(
@@ -109,9 +108,7 @@ def _tone(label: object | None) -> str:
 
 def _badge(label: object | None, *, tone: str | None = None) -> str:
     resolved_tone = tone or _tone(label)
-    return (
-        f'<span class="badge badge-{resolved_tone}">{_text(label, fallback="n/a")}</span>'
-    )
+    return f'<span class="badge badge-{resolved_tone}">{_text(label, fallback="n/a")}</span>'
 
 
 def _metric_card(label: str, value: object | None, detail: str) -> str:
@@ -134,12 +131,7 @@ def _labeled_value(label: str, value: object | None) -> str:
 
 
 def _empty_state(title: str, detail: str) -> str:
-    return (
-        '<div class="empty-state">'
-        f'<h3>{escape(title)}</h3>'
-        f'<p>{escape(detail)}</p>'
-        "</div>"
-    )
+    return f'<div class="empty-state"><h3>{escape(title)}</h3><p>{escape(detail)}</p></div>'
 
 
 def _detail_url(
@@ -161,14 +153,18 @@ def _detail_url(
 
 
 async def _fetch_overview_data(container: RuntimeContainer) -> dict[str, Any]:
-    runtime_overview, sessions_payload, jobs_payload, archives_payload, evaluations_payload = (
-        await asyncio.gather(
-            build_runtime_overview_payload(container),
-            container.runtime_service.list_sessions(),
-            container.job_service.list_jobs(),
-            container.audit_service.list_archived_sessions(),
-            container.evaluation_service.list_session_evaluations(),
-        )
+    (
+        runtime_overview,
+        sessions_payload,
+        jobs_payload,
+        archives_payload,
+        evaluations_payload,
+    ) = await asyncio.gather(
+        build_runtime_overview_payload(container),
+        container.runtime_service.list_sessions(),
+        container.job_service.list_jobs(),
+        container.audit_service.list_archived_sessions(),
+        container.evaluation_service.list_session_evaluations(),
     )
     sessions = sorted(
         sessions_payload,
@@ -645,10 +641,10 @@ def _build_session_detail_header(
         '<section class="fragment-section">'
         f'<div class="section-header"><h2>{_text(session_id)}</h2>'
         f'<div class="section-badges">{_badge(summary.get("latest_strategy"))}'
-        f'{_badge(summary.get("latest_response_post_audit_status"))}'
-        f'{_badge(summary.get("latest_response_normalization_final_status"))}</div></div>'
+        f"{_badge(summary.get('latest_response_post_audit_status'))}"
+        f"{_badge(summary.get('latest_response_normalization_final_status'))}</div></div>"
         f'<p class="lead">指纹 {_text(audit.get("fingerprint"))} · '
-        f'事件 {audit.get("event_count", 0)} · 轮次 {summary.get("turn_count", 0)}</p>'
+        f"事件 {audit.get('event_count', 0)} · 轮次 {summary.get('turn_count', 0)}</p>"
         "</section>"
     )
 
@@ -970,7 +966,7 @@ def _build_session_detail_replay_grid(
         [
             _labeled_value(
                 "投影器",
-                f'{projector.get("name")}@{projector.get("version")}',
+                f"{projector.get('name')}@{projector.get('version')}",
             ),
             _labeled_value("回放状态", "consistent" if audit.get("consistent") else "drift"),
             _labeled_value("指纹", _shorten(audit.get("fingerprint"), limit=22)),
@@ -992,7 +988,7 @@ def _build_session_detail_projection_grid(
         [
             _labeled_value(
                 "选中投影器",
-                f'{selected_projector.get("name")}@{selected_projector.get("version")}',
+                f"{selected_projector.get('name')}@{selected_projector.get('version')}",
             ),
             _labeled_value("投影事件", replay.get("event_count")),
             _labeled_value(
@@ -1013,7 +1009,7 @@ def _build_session_detail_transcript_rows(runtime_state: dict[str, Any]) -> str:
             '<li class="trace-row">'
             f'<div class="trace-title">{_text(message.get("role"))}</div>'
             f'<div class="trace-meta">{_timestamp(message.get("occurred_at"))}</div>'
-            f'<p>{_shorten(message.get("content"), limit=220)}</p>'
+            f"<p>{_shorten(message.get('content'), limit=220)}</p>"
             "</li>"
         )
         for message in list(runtime_state.get("messages", []))[-6:]
@@ -1026,7 +1022,7 @@ def _build_session_detail_replay_event_rows(replay: dict[str, Any]) -> str:
             '<li class="trace-row">'
             f'<div class="trace-title">{_text(event.get("event_type"))}</div>'
             f'<div class="trace-meta">#{event.get("version")} · '
-            f'{_timestamp(event.get("occurred_at"))}</div>'
+            f"{_timestamp(event.get('occurred_at'))}</div>"
             "</li>"
         )
         for event in list(replay.get("events", []))[-6:]
@@ -1048,10 +1044,10 @@ def _build_scenarios_focus_cards(
             '<article class="list-card">'
             f'<div class="list-title">{_text(item.get("title"))}</div>'
             '<div class="list-meta">'
-            f'{_badge(item.get("type"), tone="neutral")}'
-            f'{_badge(status)}'
+            f"{_badge(item.get('type'), tone='neutral')}"
+            f"{_badge(status)}"
             "</div>"
-            f'<p>{_text(item.get("detail"))}</p>'
+            f"<p>{_text(item.get('detail'))}</p>"
             "</article>"
         )
         for item in items[:limit]
@@ -1073,7 +1069,7 @@ def _build_scenarios_action_cards(
             '<article class="list-card">'
             f'<div class="list-title">{_text(action)}</div>'
             '<div class="list-meta">'
-            f'{_badge(status)}'
+            f"{_badge(status)}"
             "</div>"
             "</article>"
         )
@@ -1087,10 +1083,7 @@ def _build_scenarios_section(
     grid_items: list[tuple[str, object | None]],
     cards_html: str,
 ) -> str:
-    grid_html = "".join(
-        _labeled_value(label, value)
-        for label, value in grid_items
-    )
+    grid_html = "".join(_labeled_value(label, value) for label, value in grid_items)
     return (
         '<section class="fragment-section">'
         f'<div class="section-header"><h2>{escape(title)}</h2></div>'
@@ -1110,11 +1103,11 @@ def _build_launch_signoff_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(domain.get("domain"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(domain.get("signoff"))}'
-                f'{_badge(domain.get("status"))}'
-                f'{_badge(domain.get("owner"), tone="neutral")}'
+                f"{_badge(domain.get('signoff'))}"
+                f"{_badge(domain.get('status'))}"
+                f"{_badge(domain.get('owner'), tone='neutral')}"
                 "</div>"
-                f'<p>{_text(domain.get("detail"))}</p>'
+                f"<p>{_text(domain.get('detail'))}</p>"
                 f'<p class="muted">来源 {_text(", ".join(domain.get("sources", [])))}</p>'
                 "</article>"
             )
@@ -1129,15 +1122,15 @@ def _build_launch_signoff_section_html(
         '<section class="fragment-section">'
         '<div class="section-header"><h2>上线签核</h2></div>'
         '<div class="kv-grid">'
-        f'{_labeled_value("状态", launch_signoff.get("status"))}'
-        f'{_labeled_value("已批准域", launch_signoff_summary.get("approved_domain_count"))}'
-        f'{_labeled_value("审核域", launch_signoff_summary.get("review_domain_count"))}'
-        f'{_labeled_value("暂停域", launch_signoff_summary.get("hold_domain_count"))}'
-        f'{_labeled_value("发版档案", launch_signoff_summary.get("release_dossier_status"))}'
-        f'{_labeled_value("运行时", launch_signoff_summary.get("ship_readiness_status"))}'
-        f'{_labeled_value("安全", launch_signoff_summary.get("safety_barriers_status"))}'
-        f'{_labeled_value("治理", launch_signoff_summary.get("governance_status"))}'
-        f'{_labeled_value("迁移", launch_signoff_summary.get("migration_readiness_status"))}'
+        f"{_labeled_value('状态', launch_signoff.get('status'))}"
+        f"{_labeled_value('已批准域', launch_signoff_summary.get('approved_domain_count'))}"
+        f"{_labeled_value('审核域', launch_signoff_summary.get('review_domain_count'))}"
+        f"{_labeled_value('暂停域', launch_signoff_summary.get('hold_domain_count'))}"
+        f"{_labeled_value('发版档案', launch_signoff_summary.get('release_dossier_status'))}"
+        f"{_labeled_value('运行时', launch_signoff_summary.get('ship_readiness_status'))}"
+        f"{_labeled_value('安全', launch_signoff_summary.get('safety_barriers_status'))}"
+        f"{_labeled_value('治理', launch_signoff_summary.get('governance_status'))}"
+        f"{_labeled_value('迁移', launch_signoff_summary.get('migration_readiness_status'))}"
         "</div>"
         f'<div class="signal-list">{launch_signoff_cards}</div>'
         "</section>"
@@ -1154,7 +1147,7 @@ def _build_redteam_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(action)}</div>'
                 '<div class="list-meta">'
-                f'{_badge(redteam_report.get("status"))}'
+                f"{_badge(redteam_report.get('status'))}"
                 "</div>"
                 "</article>"
             )
@@ -1166,11 +1159,11 @@ def _build_redteam_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(item.get("title"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(item.get("status"))}'
-                f'{_badge(item.get("latest_boundary_decision"), tone="neutral")}'
+                f"{_badge(item.get('status'))}"
+                f"{_badge(item.get('latest_boundary_decision'), tone='neutral')}"
                 "</div>"
-                f'<p>策略路径 {_text(item.get("latest_policy_path"))} · '
-                f'守护 {_text(item.get("policy_gate_guarded_turn_count"))}</p>'
+                f"<p>策略路径 {_text(item.get('latest_policy_path'))} · "
+                f"守护 {_text(item.get('policy_gate_guarded_turn_count'))}</p>"
                 f'<p class="muted">{_text(item.get("run_id"))}</p>'
                 "</article>"
             )
@@ -1185,21 +1178,27 @@ def _build_redteam_section_html(
         '<section class="fragment-section">'
         '<div class="section-header"><h2>红队鲁棒性</h2></div>'
         '<div class="kv-grid">'
-        f'{_labeled_value("状态", redteam_report.get("status"))}'
-        f'{_labeled_value("近期结果", redteam_summary.get("redteam_result_count"))}'
-        f'{_labeled_value("通过率", redteam_summary.get("redteam_pass_rate"))}'
-        f'{_labeled_value(
-            "严重事件",
-            redteam_summary.get("critical_redteam_incident_count"),
-        )}'
-        f'{_labeled_value(
-            "最新边界",
-            redteam_summary.get("latest_redteam_boundary_decision"),
-        )}'
-        f'{_labeled_value(
-            "最新策略路径",
-            redteam_summary.get("latest_redteam_policy_path"),
-        )}'
+        f"{_labeled_value('状态', redteam_report.get('status'))}"
+        f"{_labeled_value('近期结果', redteam_summary.get('redteam_result_count'))}"
+        f"{_labeled_value('通过率', redteam_summary.get('redteam_pass_rate'))}"
+        f"{
+            _labeled_value(
+                '严重事件',
+                redteam_summary.get('critical_redteam_incident_count'),
+            )
+        }"
+        f"{
+            _labeled_value(
+                '最新边界',
+                redteam_summary.get('latest_redteam_boundary_decision'),
+            )
+        }"
+        f"{
+            _labeled_value(
+                '最新策略路径',
+                redteam_summary.get('latest_redteam_policy_path'),
+            )
+        }"
         "</div>"
         f'<div class="signal-list">{redteam_cards}</div>'
         "</section>"
@@ -1217,11 +1216,11 @@ def _build_misalignment_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(item.get("type"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(item.get("module"), tone="neutral")}'
-                f'{_badge(item.get("count"))}'
+                f"{_badge(item.get('module'), tone='neutral')}"
+                f"{_badge(item.get('count'))}"
                 "</div>"
-                f'<p>场景 {_text(item.get("scenario_count"))} · 运行 '
-                f'{_text(item.get("run_count"))}</p>'
+                f"<p>场景 {_text(item.get('scenario_count'))} · 运行 "
+                f"{_text(item.get('run_count'))}</p>"
                 "</article>"
             )
             for item in taxonomy_items[:4]
@@ -1237,11 +1236,11 @@ def _build_misalignment_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(item.get("title"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(item.get("taxonomy_type"))}'
-                f'{_badge(item.get("module"), tone="neutral")}'
+                f"{_badge(item.get('taxonomy_type'))}"
+                f"{_badge(item.get('module'), tone='neutral')}"
                 "</div>"
-                f'<p>{_text(item.get("metric"))} · 实际 {_text(item.get("actual"))} · '
-                f'期望 {_text(item.get("expected"))}</p>'
+                f"<p>{_text(item.get('metric'))} · 实际 {_text(item.get('actual'))} · "
+                f"期望 {_text(item.get('expected'))}</p>"
                 f'<p class="muted">{_text(item.get("run_id"))}</p>'
                 "</article>"
             )
@@ -1256,10 +1255,10 @@ def _build_misalignment_section_html(
         '<section class="fragment-section">'
         '<div class="section-header"><h2>失对齐分类</h2></div>'
         '<div class="kv-grid">'
-        f'{_labeled_value("窗口", misalignment_report.get("window"))}'
-        f'{_labeled_value("运行", misalignment_report.get("run_count"))}'
-        f'{_labeled_value("事件", misalignment_report.get("incident_count"))}'
-        f'{_labeled_value("分类", misalignment_report.get("taxonomy_count"))}'
+        f"{_labeled_value('窗口', misalignment_report.get('window'))}"
+        f"{_labeled_value('运行', misalignment_report.get('run_count'))}"
+        f"{_labeled_value('事件', misalignment_report.get('incident_count'))}"
+        f"{_labeled_value('分类', misalignment_report.get('taxonomy_count'))}"
         "</div>"
         f'<div class="signal-list">{taxonomy_cards}{incident_cards}</div>'
         "</section>"
@@ -1277,10 +1276,10 @@ def _build_release_gate_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(item.get("title"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(item.get("type"), tone="neutral")}'
-                f'{_badge(release_gate.get("status"))}'
+                f"{_badge(item.get('type'), tone='neutral')}"
+                f"{_badge(release_gate.get('status'))}"
                 "</div>"
-                f'<p>{_text(item.get("detail"))}</p>'
+                f"<p>{_text(item.get('detail'))}</p>"
                 "</article>"
             )
             for item in gate_focus_areas
@@ -1294,14 +1293,14 @@ def _build_release_gate_section_html(
         '<section class="fragment-section">'
         '<div class="section-header"><h2>发版过线</h2></div>'
         '<div class="kv-grid">'
-        f'{_labeled_value("状态", release_gate.get("status"))}'
-        f'{_labeled_value("最新运行", release_gate.get("latest_run_id"))}'
-        f'{_labeled_value("通过率", release_gate.get("overall_pass_rate"))}'
-        f'{_labeled_value("不稳定", release_gate.get("unstable_scenario_count"))}'
-        f'{_labeled_value("近期覆盖", coverage.get("recent_covered_scenario_count"))}'
-        f'{_labeled_value("最新套件大小", coverage.get("latest_run_scenario_count"))}'
-        f'{_labeled_value("阻断原因", release_gate.get("blocked_reason_count"))}'
-        f'{_labeled_value("审核原因", release_gate.get("review_reason_count"))}'
+        f"{_labeled_value('状态', release_gate.get('status'))}"
+        f"{_labeled_value('最新运行', release_gate.get('latest_run_id'))}"
+        f"{_labeled_value('通过率', release_gate.get('overall_pass_rate'))}"
+        f"{_labeled_value('不稳定', release_gate.get('unstable_scenario_count'))}"
+        f"{_labeled_value('近期覆盖', coverage.get('recent_covered_scenario_count'))}"
+        f"{_labeled_value('最新套件大小', coverage.get('latest_run_scenario_count'))}"
+        f"{_labeled_value('阻断原因', release_gate.get('blocked_reason_count'))}"
+        f"{_labeled_value('审核原因', release_gate.get('review_reason_count'))}"
         "</div>"
         f'<div class="signal-list">{gate_focus_cards}</div>'
         "</section>"
@@ -1313,8 +1312,7 @@ def _build_baseline_track_section_html(baseline: dict[str, Any] | None) -> str:
         baseline_changed = [
             item
             for item in list(baseline.get("scenarios", []))
-            if item.get("status_delta") != "stable"
-            or item.get("score_delta") not in {0, None}
+            if item.get("status_delta") != "stable" or item.get("score_delta") not in {0, None}
         ]
         if baseline_changed:
             baseline_cards = "".join(
@@ -1322,13 +1320,13 @@ def _build_baseline_track_section_html(baseline: dict[str, Any] | None) -> str:
                     '<article class="list-card">'
                     f'<div class="list-title">{_text(item.get("title"))}</div>'
                     '<div class="list-meta">'
-                    f'{_badge(item.get("status_delta"))}'
-                    f'{_badge(item.get("baseline_status"), tone="neutral")}'
-                    f'{_badge(item.get("candidate_status"))}'
+                    f"{_badge(item.get('status_delta'))}"
+                    f"{_badge(item.get('baseline_status'), tone='neutral')}"
+                    f"{_badge(item.get('candidate_status'))}"
                     "</div>"
-                    f'<p>基线 {_text(baseline.get("baseline_label"))} · 检查 '
-                    f'{_text(item.get("baseline_passed_checks"))} → '
-                    f'{_text(item.get("candidate_passed_checks"))}</p>'
+                    f"<p>基线 {_text(baseline.get('baseline_label'))} · 检查 "
+                    f"{_text(item.get('baseline_passed_checks'))} → "
+                    f"{_text(item.get('candidate_passed_checks'))}</p>"
                     "</article>"
                 )
                 for item in baseline_changed[:4]
@@ -1342,12 +1340,12 @@ def _build_baseline_track_section_html(baseline: dict[str, Any] | None) -> str:
             '<section class="fragment-section">'
             '<div class="section-header"><h2>基线追踪</h2></div>'
             '<div class="kv-grid">'
-            f'{_labeled_value("标签", baseline.get("baseline_label"))}'
-            f'{_labeled_value("基线运行", baseline.get("baseline_run_id"))}'
-            f'{_labeled_value("最新运行", baseline.get("candidate_run_id"))}'
-            f'{_labeled_value("总体变化", baseline.get("overall_delta"))}'
-            f'{_labeled_value("变更场景", baseline.get("changed_scenario_count"))}'
-            f'{_labeled_value("基线设定于", _timestamp(baseline.get("baseline_set_at")))}'
+            f"{_labeled_value('标签', baseline.get('baseline_label'))}"
+            f"{_labeled_value('基线运行', baseline.get('baseline_run_id'))}"
+            f"{_labeled_value('最新运行', baseline.get('candidate_run_id'))}"
+            f"{_labeled_value('总体变化', baseline.get('overall_delta'))}"
+            f"{_labeled_value('变更场景', baseline.get('changed_scenario_count'))}"
+            f"{_labeled_value('基线设定于', _timestamp(baseline.get('baseline_set_at')))}"
             "</div>"
             f'<div class="signal-list">{baseline_cards}</div>'
             "</section>"
@@ -1355,10 +1353,12 @@ def _build_baseline_track_section_html(baseline: dict[str, Any] | None) -> str:
     return (
         '<section class="fragment-section">'
         '<div class="section-header"><h2>基线追踪</h2></div>'
-        f'{_empty_state(
-            "暂无基线锚定",
-            "设定默认场景基线后，此面板将追踪最新运行与基线的对比。",
-        )}'
+        f"{
+            _empty_state(
+                '暂无基线锚定',
+                '设定默认场景基线后，此面板将追踪最新运行与基线的对比。',
+            )
+        }"
         "</section>"
     )
 
@@ -1373,15 +1373,15 @@ def _build_stability_report_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(item.get("title"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(item.get("stability"))}'
-                f'{_badge(item.get("latest_status"))}'
-                f'{_badge(item.get("status_delta"))}'
+                f"{_badge(item.get('stability'))}"
+                f"{_badge(item.get('latest_status'))}"
+                f"{_badge(item.get('status_delta'))}"
                 "</div>"
-                f'<p>通过率 {_text(item.get("pass_rate"))} · 退化 '
-                f'{_text(item.get("regression_count"))} · 变更 '
-                f'{_text(item.get("changed_count"))}</p>'
+                f"<p>通过率 {_text(item.get('pass_rate'))} · 退化 "
+                f"{_text(item.get('regression_count'))} · 变更 "
+                f"{_text(item.get('changed_count'))}</p>"
                 f'<p class="muted">最新运行 {_text(item.get("latest_run_id"))} · '
-                f'窗口 {_text(item.get("recent_run_count"))}</p>'
+                f"窗口 {_text(item.get('recent_run_count'))}</p>"
                 "</article>"
             )
             for item in watchlist
@@ -1400,12 +1400,12 @@ def _build_stability_report_section_html(
         '<section class="fragment-section">'
         '<div class="section-header"><h2>稳定性报告</h2></div>'
         '<div class="kv-grid">'
-        f'{_labeled_value("窗口", report.get("window"))}'
-        f'{_labeled_value("运行", report.get("run_count"))}'
-        f'{_labeled_value("通过率", report.get("overall_pass_rate"))}'
-        f'{_labeled_value("最新状态", report.get("latest_overall_status"))}'
-        f'{_labeled_value("退化", regression_count)}'
-        f'{_labeled_value("观察列表", report.get("unstable_scenario_count"))}'
+        f"{_labeled_value('窗口', report.get('window'))}"
+        f"{_labeled_value('运行', report.get('run_count'))}"
+        f"{_labeled_value('通过率', report.get('overall_pass_rate'))}"
+        f"{_labeled_value('最新状态', report.get('latest_overall_status'))}"
+        f"{_labeled_value('退化', regression_count)}"
+        f"{_labeled_value('观察列表', report.get('unstable_scenario_count'))}"
         "</div>"
         f'<div class="signal-list">{stability_cards}</div>'
         "</section>"
@@ -1417,8 +1417,7 @@ def _build_regression_watch_section_html(comparison: dict[str, Any] | None) -> s
         changed_scenarios = [
             item
             for item in comparison["scenarios"]
-            if item["status_delta"] != "stable"
-            or item["score_delta"] not in {0, None}
+            if item["status_delta"] != "stable" or item["score_delta"] not in {0, None}
         ]
         if changed_scenarios:
             delta_cards = "".join(
@@ -1426,13 +1425,13 @@ def _build_regression_watch_section_html(comparison: dict[str, Any] | None) -> s
                     '<article class="list-card">'
                     f'<div class="list-title">{_text(item.get("title"))}</div>'
                     '<div class="list-meta">'
-                    f'{_badge(item.get("status_delta"))}'
-                    f'{_badge(item.get("baseline_status"), tone="neutral")}'
-                    f'{_badge(item.get("candidate_status"))}'
+                    f"{_badge(item.get('status_delta'))}"
+                    f"{_badge(item.get('baseline_status'), tone='neutral')}"
+                    f"{_badge(item.get('candidate_status'))}"
                     "</div>"
-                    f'<p>检查 {_text(item.get("baseline_passed_checks"))} → '
-                    f'{_text(item.get("candidate_passed_checks"))} / '
-                    f'{_text(item.get("check_count"))}</p>'
+                    f"<p>检查 {_text(item.get('baseline_passed_checks'))} → "
+                    f"{_text(item.get('candidate_passed_checks'))} / "
+                    f"{_text(item.get('check_count'))}</p>"
                     '<p class="muted">'
                     f"{_scenario_diff_detail(item)}"
                     "</p>"
@@ -1449,12 +1448,12 @@ def _build_regression_watch_section_html(comparison: dict[str, Any] | None) -> s
             '<section class="fragment-section">'
             '<div class="section-header"><h2>退化监控</h2></div>'
             '<div class="kv-grid">'
-            f'{_labeled_value("最新运行", comparison.get("candidate_run_id"))}'
-            f'{_labeled_value("基线运行", comparison.get("baseline_run_id"))}'
-            f'{_labeled_value("总体变化", comparison.get("overall_delta"))}'
-            f'{_labeled_value("变更场景", comparison.get("changed_scenario_count"))}'
-            f'{_labeled_value("改进", comparison.get("delta_counts", {}).get("improved"))}'
-            f'{_labeled_value("退化", comparison.get("delta_counts", {}).get("regressed"))}'
+            f"{_labeled_value('最新运行', comparison.get('candidate_run_id'))}"
+            f"{_labeled_value('基线运行', comparison.get('baseline_run_id'))}"
+            f"{_labeled_value('总体变化', comparison.get('overall_delta'))}"
+            f"{_labeled_value('变更场景', comparison.get('changed_scenario_count'))}"
+            f"{_labeled_value('改进', comparison.get('delta_counts', {}).get('improved'))}"
+            f"{_labeled_value('退化', comparison.get('delta_counts', {}).get('regressed'))}"
             "</div>"
             f'<div class="signal-list">{delta_cards}</div>'
             "</section>"
@@ -1462,10 +1461,12 @@ def _build_regression_watch_section_html(comparison: dict[str, Any] | None) -> s
     return (
         '<section class="fragment-section">'
         '<div class="section-header"><h2>退化监控</h2></div>'
-        f'{_empty_state(
-            "需要两次运行",
-            "运行套件两次后，此面板将显示运行间的偏移。",
-        )}'
+        f"{
+            _empty_state(
+                '需要两次运行',
+                '运行套件两次后，此面板将显示运行间的偏移。',
+            )
+        }"
         "</section>"
     )
 
@@ -1479,15 +1480,15 @@ def _build_scenario_trends_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(trend.get("title"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(trend.get("category"))}'
-                f'{_badge(trend.get("latest_status"))}'
-                f'{_badge(trend.get("status_delta"))}'
+                f"{_badge(trend.get('category'))}"
+                f"{_badge(trend.get('latest_status'))}"
+                f"{_badge(trend.get('status_delta'))}"
                 "</div>"
-                f'<p>运行 {trend.get("total_runs", 0)} · 通过率 '
-                f'{_text(trend.get("pass_rate"))} · 最新运行 '
-                f'{_text(trend.get("latest_run_id"))}</p>'
+                f"<p>运行 {trend.get('total_runs', 0)} · 通过率 "
+                f"{_text(trend.get('pass_rate'))} · 最新运行 "
+                f"{_text(trend.get('latest_run_id'))}</p>"
                 f'<p class="muted">近期窗口 {trend.get("recent_run_count", 0)} · '
-                f'最新 {_timestamp(trend.get("latest_started_at"))}</p>'
+                f"最新 {_timestamp(trend.get('latest_started_at'))}</p>"
                 "</article>"
             )
             for trend in visible_trends[:LIST_LIMIT]
@@ -1526,7 +1527,7 @@ def _build_recent_runs_section_html(
                     'hx-swap="innerHTML" '
                     f'x-on:click="selectedSession = {_js_string(session_id)}; '
                     f'window.relationshipOSConsole?.selectSession({_js_string(session_id)})">'
-                    f'{_shorten((result.get("scenario") or {}).get("title"), limit=32)}'
+                    f"{_shorten((result.get('scenario') or {}).get('title'), limit=32)}"
                     "</button>"
                 )
             hidden_result_count = max(len(list(run.get("results", []))) - 3, 0)
@@ -1539,14 +1540,14 @@ def _build_recent_runs_section_html(
                 '<article class="list-card">'
                 f'<div class="list-title">{_text(run.get("run_id"))}</div>'
                 '<div class="list-meta">'
-                f'{_badge(run.get("overall_status"))}'
-                f'{_badge(f"{run.get("scenario_count", 0)} 个场景", tone="neutral")}'
+                f"{_badge(run.get('overall_status'))}"
+                f"{_badge(f'{run.get("scenario_count", 0)} 个场景', tone='neutral')}"
                 "</div>"
-                f'<p>通过 {run.get("status_counts", {}).get("pass", 0)} · '
-                f'审核 {run.get("status_counts", {}).get("review", 0)} · '
-                f'开始于 {_timestamp(run.get("started_at"))}</p>'
+                f"<p>通过 {run.get('status_counts', {}).get('pass', 0)} · "
+                f"审核 {run.get('status_counts', {}).get('review', 0)} · "
+                f"开始于 {_timestamp(run.get('started_at'))}</p>"
                 '<div class="inline-actions">'
-                f'{"".join(session_actions) or _badge("无会话详情", tone="neutral")}'
+                f"{''.join(session_actions) or _badge('无会话详情', tone='neutral')}"
                 f"{extra_detail}"
                 "</div>"
                 "</article>"
@@ -1658,15 +1659,11 @@ def _build_overview_context(data: dict[str, Any]) -> dict[str, Any]:
         "runtime_grid": runtime_grid,
         "evaluation_rows": evaluation_rows,
         "evaluation_empty_title": "暂无评测",
-        "evaluation_empty_detail": (
-            "运行一轮会话后，控制台将在此处显示风险信号。"
-        ),
+        "evaluation_empty_detail": ("运行一轮会话后，控制台将在此处显示风险信号。"),
         "proactive_grid": proactive_grid,
         "proactive_rows": proactive_rows,
         "proactive_empty_title": "暂无主动跟进排队",
-        "proactive_empty_detail": (
-            "当会话足够稳定可进行时间驱动的回访时，将显示在此处。"
-        ),
+        "proactive_empty_detail": ("当会话足够稳定可进行时间驱动的回访时，将显示在此处。"),
     }
 
 
@@ -1685,16 +1682,12 @@ def _entity_signal_card(
     muted_detail: str | None = None,
 ) -> str:
     badge_html = "".join(badges or [])
-    muted_html = (
-        f'<p class="muted">{escape(muted_detail)}</p>'
-        if muted_detail
-        else ""
-    )
+    muted_html = f'<p class="muted">{escape(muted_detail)}</p>' if muted_detail else ""
     return (
         '<article class="list-card">'
         f'<div class="list-title">{escape(title)}</div>'
         f'<div class="list-meta">{badge_html}</div>'
-        f'<p>{escape(detail)}</p>'
+        f"<p>{escape(detail)}</p>"
         f"{muted_html}"
         "</article>"
     )
@@ -1848,7 +1841,7 @@ async def _render_entity_fragment(container: RuntimeContainer) -> str:
         '<section class="fragment-section">'
         '<div class="section-header"><h2>服务器人格</h2></div>'
         f'<p class="lead">{_text(overview.get("entity_name"))} · '
-        f'情绪 {_text(mood.get("tone"))} · 良心 {_text(conscience.get("mode"))}</p>'
+        f"情绪 {_text(mood.get('tone'))} · 良心 {_text(conscience.get('mode'))}</p>"
         f'<div class="signal-list">{trait_grid}</div>'
         "</section>"
         '<section class="fragment-section">'
@@ -1879,8 +1872,8 @@ async def _render_entity_fragment(container: RuntimeContainer) -> str:
 def _format_risk_signal(summary: dict[str, Any]) -> str:
     return ", ".join(
         [
-            f'违规={summary.get("response_post_audit_total_violation_count", 0)}',
-            f'归一化={summary.get("response_normalization_changed_turn_count", 0)}',
+            f"违规={summary.get('response_post_audit_total_violation_count', 0)}",
+            f"归一化={summary.get('response_normalization_changed_turn_count', 0)}",
         ]
     )
 
@@ -1914,9 +1907,7 @@ def _build_sessions_context(
         return {
             "cards": [],
             "empty_title": "暂无会话",
-            "empty_detail": (
-                "创建或处理一个会话，它将出现在此处用于回放和审计。"
-            ),
+            "empty_detail": ("创建或处理一个会话，它将出现在此处用于回放和审计。"),
         }
 
     return {
@@ -1928,18 +1919,14 @@ def _build_sessions_context(
                 "badges": [
                     _badge_data(summary.get("latest_strategy")),
                     _badge_data(summary.get("latest_response_post_audit_status")),
-                    _badge_data(
-                        summary.get("latest_response_normalization_final_status")
-                    ),
+                    _badge_data(summary.get("latest_response_normalization_final_status")),
                 ],
                 "detail": (
                     f"轮次 {session.get('turn_count', 0)} · "
                     f"事件 {session.get('event_count', 0)} · "
                     f"安全 {_display_text(summary.get('avg_psychological_safety'))}"
                 ),
-                "muted_detail": (
-                    f"最近事件 {_display_timestamp(session.get('last_event_at'))}"
-                ),
+                "muted_detail": (f"最近事件 {_display_timestamp(session.get('last_event_at'))}"),
             }
             for session in sorted_sessions[:LIST_LIMIT]
             for summary in [dict(summaries.get(str(session["session_id"]), {}))]
@@ -1958,9 +1945,7 @@ async def _render_sessions_fragment(
         container.runtime_service.list_sessions(),
         container.evaluation_service.list_session_evaluations(),
     )
-    summaries = {
-        str(item["session_id"]): item for item in evaluations_payload.get("sessions", [])
-    }
+    summaries = {str(item["session_id"]): item for item in evaluations_payload.get("sessions", [])}
     return _render_template(
         "console/sessions_fragment.html",
         **_build_sessions_context(
@@ -1976,9 +1961,7 @@ def _build_jobs_context(jobs: list[dict[str, Any]]) -> dict[str, Any]:
         return {
             "cards": [],
             "empty_title": "暂无计划任务",
-            "empty_detail": (
-                "离线整合和恢复任务将显示在此处。"
-            ),
+            "empty_detail": ("离线整合和恢复任务将显示在此处。"),
         }
     return {
         "cards": [
@@ -2022,9 +2005,7 @@ def _build_archives_context(
         return {
             "cards": [],
             "empty_title": "暂无归档会话",
-            "empty_detail": (
-                "归档会话将在整合标记为持久化后显示在此处。"
-            ),
+            "empty_detail": ("归档会话将在整合标记为持久化后显示在此处。"),
         }
     return {
         "cards": [
@@ -2040,9 +2021,7 @@ def _build_archives_context(
                     "快照 "
                     f"{_display_text((archive.get('latest_snapshot') or {}).get('snapshot_id'))}"
                 ),
-                "muted_detail": (
-                    f"归档于 {_display_timestamp(archive.get('archived_at'))}"
-                ),
+                "muted_detail": (f"归档于 {_display_timestamp(archive.get('archived_at'))}"),
             }
             for archive in archives[:LIST_LIMIT]
             for session_id in [str(archive["session_id"])]
@@ -2069,9 +2048,7 @@ def _build_evaluations_preference_context(
     preference_report: dict[str, Any],
 ) -> dict[str, Any]:
     top_strategies = list(preference_report.get("strategies", []))
-    reengagement_learning_report = dict(
-        preference_report.get("reengagement_learning") or {}
-    )
+    reengagement_learning_report = dict(preference_report.get("reengagement_learning") or {})
     top_reengagement_learning = list(reengagement_learning_report.get("strategies", []))
     return {
         "preference_metrics": [
@@ -2105,9 +2082,7 @@ def _build_evaluations_preference_context(
             for item in top_strategies[:3]
         ],
         "strategy_empty_title": "暂无策略信号",
-        "strategy_empty_detail": (
-            "当非场景会话积累后，去噪的策略偏好信号将在此显示。"
-        ),
+        "strategy_empty_detail": ("当非场景会话积累后，去噪的策略偏好信号将在此显示。"),
         "reengagement_metrics": [
             {
                 "label": "模式",
@@ -2115,15 +2090,11 @@ def _build_evaluations_preference_context(
             },
             {
                 "label": "上下文",
-                "value": _display_text(
-                    reengagement_learning_report.get("context_stratum")
-                ),
+                "value": _display_text(reengagement_learning_report.get("context_stratum")),
             },
             {
                 "label": "信号",
-                "value": _display_text(
-                    reengagement_learning_report.get("strategy_count")
-                ),
+                "value": _display_text(reengagement_learning_report.get("strategy_count")),
             },
             {
                 "label": "匹配",
@@ -2148,9 +2119,7 @@ def _build_evaluations_preference_context(
             for item in top_reengagement_learning[:3]
         ],
         "reengagement_empty_title": "暂无重连学习",
-        "reengagement_empty_detail": (
-            "当主动会话积累后，矩阵学习信号将在此显示。"
-        ),
+        "reengagement_empty_detail": ("当主动会话积累后，矩阵学习信号将在此显示。"),
     }
 
 
@@ -2283,16 +2252,14 @@ _EVALUATION_SORT_INT_FIELDS: tuple[str, ...] = (
 
 def _build_evaluation_card_badges_html(summary: dict[str, Any]) -> str:
     return "".join(
-        _badge(summary.get(field), tone=tone)
-        for field, tone in _EVALUATION_CARD_BADGE_SPECS
+        _badge(summary.get(field), tone=tone) for field, tone in _EVALUATION_CARD_BADGE_SPECS
     )
 
 
 def _build_evaluation_card_body_html(summary: dict[str, Any]) -> str:
     body_lines = _build_evaluation_body_lines(summary)
     return "".join(
-        f'<p class="{"muted" if index else ""}">{line}</p>'
-        for index, line in enumerate(body_lines)
+        f'<p class="{"muted" if index else ""}">{line}</p>' for index, line in enumerate(body_lines)
     )
 
 
@@ -2698,16 +2665,12 @@ def _build_evaluation_body_lines(summary: dict[str, Any]) -> list[str]:
             f"受保护轮次={summary.get('policy_gate_guarded_turn_count', 0)}"
         ),
     ]
-    lines.extend(
-        _item_line(summary, *pairs) for pairs in _EVALUATION_BODY_PRIMARY_LINE_SPECS
-    )
+    lines.extend(_item_line(summary, *pairs) for pairs in _EVALUATION_BODY_PRIMARY_LINE_SPECS)
     lines.extend(
         _build_evaluation_lifecycle_phase_line(summary, phase)
         for phase in _PROACTIVE_LIFECYCLE_PHASES
     )
-    lines.extend(
-        _item_line(summary, *pairs) for pairs in _EVALUATION_BODY_TRAILING_LINE_SPECS
-    )
+    lines.extend(_item_line(summary, *pairs) for pairs in _EVALUATION_BODY_TRAILING_LINE_SPECS)
     lines.append(
         f"安全 {_display_text(summary.get('avg_psychological_safety'))} · "
         f"固定 {summary.get('latest_memory_pinned_count', 0)} · "
@@ -2718,10 +2681,7 @@ def _build_evaluation_body_lines(summary: dict[str, Any]) -> list[str]:
 
 def _evaluation_sort_key(item: dict[str, Any]) -> tuple[object, ...]:
     return (
-        *(
-            int(item.get(field, 0))
-            for field in _EVALUATION_SORT_INT_FIELDS
-        ),
+        *(int(item.get(field, 0)) for field in _EVALUATION_SORT_INT_FIELDS),
         float(item.get("avg_psychological_safety") or 0.0),
     )
 
@@ -2740,9 +2700,7 @@ async def _render_evaluations_fragment(
     if not evaluations:
         return _empty_state(
             "暂无评测",
-            (
-                "当会话积累轮次后，评测管线将浮出风险和记忆信号。"
-            ),
+            ("当会话积累轮次后，评测管线将浮出风险和记忆信号。"),
         )
     preference_context = _build_evaluations_preference_context(preference_report)
     evaluation_cards_html = "".join(
@@ -2801,9 +2759,9 @@ async def _load_scenarios_fragment_context(
         ),
         reverse=True,
     )
-    visible_trends = [
-        trend for trend in trends if int(trend.get("total_runs") or 0) > 0
-    ] or trends[:LIST_LIMIT]
+    visible_trends = [trend for trend in trends if int(trend.get("total_runs") or 0) > 0] or trends[
+        :LIST_LIMIT
+    ]
     release_gate = dict(ship_readiness.get("release_gate") or {})
     report = dict(release_gate.get("report") or {})
     comparison: dict[str, Any] | None = None
@@ -2826,13 +2784,9 @@ async def _load_scenarios_fragment_context(
         "ship_readiness": ship_readiness,
         "readiness_summary": dict(ship_readiness.get("summary") or {}),
         "baseline_governance_report": baseline_governance_report,
-        "baseline_governance_summary": dict(
-            baseline_governance_report.get("summary") or {}
-        ),
+        "baseline_governance_summary": dict(baseline_governance_report.get("summary") or {}),
         "migration_readiness_report": migration_readiness_report,
-        "migration_readiness_summary": dict(
-            migration_readiness_report.get("summary") or {}
-        ),
+        "migration_readiness_summary": dict(migration_readiness_report.get("summary") or {}),
         "hardening_checklist": hardening_checklist,
         "hardening_summary": dict(hardening_checklist.get("summary") or {}),
         "release_dossier": release_dossier,
@@ -2971,18 +2925,14 @@ def _build_scenarios_release_cards(context: dict[str, Any]) -> dict[str, Any]:
             list(migration_readiness_report.get("actions", [])),
             status=migration_readiness_report.get("status"),
             empty_title="迁移就绪状态良好",
-            empty_detail=(
-                "近期投影器回放样本在当前注册表中一致。"
-            ),
+            empty_detail=("近期投影器回放样本在当前注册表中一致。"),
         )
     else:
         migration_readiness_cards = _build_scenarios_focus_cards(
             list(migration_readiness_report.get("focus_areas", [])),
             status=migration_readiness_report.get("status"),
             empty_title="迁移就绪状态良好",
-            empty_detail=(
-                "近期投影器回放样本在当前注册表中一致。"
-            ),
+            empty_detail=("近期投影器回放样本在当前注册表中一致。"),
         )
     return {
         "release_dossier_cards": _build_scenarios_action_cards(
@@ -3214,11 +3164,7 @@ async def _render_scenarios_fragment(
         *_build_scenarios_temporal_sections(context),
         *_build_scenarios_trend_sections(context, request),
     ]
-    return (
-        '<div class="fragment-stack">'
-        f"{''.join(sections)}"
-        "</div>"
-    )
+    return f'<div class="fragment-stack">{"".join(sections)}</div>'
 
 
 def _projector_buttons_html(
@@ -3242,9 +3188,7 @@ def _projector_buttons_html(
             version=version,
         )
         active_class = (
-            "tab active"
-            if (name, version) == (selected_name, selected_version)
-            else "tab"
+            "tab active" if (name, version) == (selected_name, selected_version) else "tab"
         )
         buttons.append(
             f'<button class="{active_class}" '
@@ -3280,8 +3224,8 @@ def _recent_trace_html(
             '<li class="trace-row">'
             f'<div class="trace-title">{_text(event.get("event_type"))}</div>'
             f'<div class="trace-meta">v{event.get("version")} · '
-            f'{_timestamp(event.get("occurred_at"))}</div>'
-            f'<pre>{escape(str(event.get("payload", {})))}</pre>'
+            f"{_timestamp(event.get('occurred_at'))}</div>"
+            f"<pre>{escape(str(event.get('payload', {})))}</pre>"
             "</li>"
         )
         for event in trace_events[-8:]
@@ -3319,8 +3263,8 @@ def _event_ledger_html(
             '<li class="trace-row">'
             f'<div class="trace-title">{_text(event.get("event_type"))}</div>'
             f'<div class="trace-meta">#{event.get("version")} · '
-            f'{_timestamp(event.get("occurred_at"))}</div>'
-            f'<p>{_shorten(summary, limit=200)}</p>'
+            f"{_timestamp(event.get('occurred_at'))}</div>"
+            f"<p>{_shorten(summary, limit=200)}</p>"
             "</li>"
         )
     return "".join(rows)
@@ -3431,33 +3375,38 @@ async def _render_session_detail_fragment(
         '<div class="section-header"><h2>回放快照</h2></div>'
         f'<div class="kv-grid">{replay_grid}</div>'
         "</section>"
-        f'{_build_session_detail_projection_section(
-            projector_buttons=projector_buttons,
-            projection_grid=projection_grid,
-            replay_preview=replay_preview,
-            replay_projection=replay.get("projection", {}),
-        )}'
-        f'{_build_session_detail_trace_section(
-            "最近对话记录",
-            "<ul class=\"trace-list\">"
-            + (
-                transcript_rows
-                or _empty_state("暂无对话记录", "此会话暂无消息。")
+        f"{
+            _build_session_detail_projection_section(
+                projector_buttons=projector_buttons,
+                projection_grid=projection_grid,
+                replay_preview=replay_preview,
+                replay_projection=replay.get('projection', {}),
             )
-            + "</ul>",
-        )}'
-        f'{_build_session_detail_trace_section(
-            "事件账本",
-            "<ul class=\"trace-list\">"
-            + _event_ledger_html(container=container, events=events)
-            + "</ul>",
-        )}'
-        f'{_build_session_detail_trace_section(
-            "最近追踪",
-            "<ul class=\"trace-list\">"
-            + _recent_trace_html(container=container, events=events)
-            + "</ul>",
-        )}'
+        }"
+        f"{
+            _build_session_detail_trace_section(
+                '最近对话记录',
+                '<ul class="trace-list">'
+                + (transcript_rows or _empty_state('暂无对话记录', '此会话暂无消息。'))
+                + '</ul>',
+            )
+        }"
+        f"{
+            _build_session_detail_trace_section(
+                '事件账本',
+                '<ul class="trace-list">'
+                + _event_ledger_html(container=container, events=events)
+                + '</ul>',
+            )
+        }"
+        f"{
+            _build_session_detail_trace_section(
+                '最近追踪',
+                '<ul class="trace-list">'
+                + _recent_trace_html(container=container, events=events)
+                + '</ul>',
+            )
+        }"
         "</div>"
     )
 
@@ -3562,9 +3511,7 @@ async def console_evaluations_fragment(
     request: Request,
     container: ContainerDep,
 ) -> HTMLResponse:
-    return HTMLResponse(
-        await _render_evaluations_fragment(request=request, container=container)
-    )
+    return HTMLResponse(await _render_evaluations_fragment(request=request, container=container))
 
 
 @router.get("/fragments/scenarios", response_class=HTMLResponse)
@@ -3572,9 +3519,7 @@ async def console_scenarios_fragment(
     request: Request,
     container: ContainerDep,
 ) -> HTMLResponse:
-    return HTMLResponse(
-        await _render_scenarios_fragment(request=request, container=container)
-    )
+    return HTMLResponse(await _render_scenarios_fragment(request=request, container=container))
 
 
 @router.get("/fragments/entity", response_class=HTMLResponse)

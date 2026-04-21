@@ -589,9 +589,7 @@ def _build_first_touch_guidance_override(
     guidance_low_pressure: bool,
 ) -> _LineControllerOverride | None:
     recenter_pressure = "repair_soft" if guidance_repair_soft else "gentle_resume"
-    autonomy_signal = (
-        "explicit_no_pressure" if guidance_low_pressure else "light_invitation"
-    )
+    autonomy_signal = "explicit_no_pressure" if guidance_low_pressure else "light_invitation"
     return _resolve_signal_gate_line_override(
         recenter_active=guidance_recenter_active,
         watch_active=guidance_watch_active,
@@ -630,9 +628,7 @@ def _build_first_touch_ritual_override(
     ritual_delivery_mode: str,
 ) -> _LineControllerOverride | None:
     recenter_pressure = "repair_soft" if ritual_low_pressure else "gentle_resume"
-    autonomy_signal = (
-        "explicit_no_pressure" if ritual_low_pressure else "light_invitation"
-    )
+    autonomy_signal = "explicit_no_pressure" if ritual_low_pressure else "light_invitation"
     return _resolve_signal_gate_line_override(
         recenter_active=ritual_recenter_active,
         watch_active=ritual_watch_active,
@@ -1011,8 +1007,7 @@ def _build_second_touch_close_ready_override(
         dispatch_feedback_assessment.changed
         or stage_controller_decision.changed
         or dispatch_gate_decision.decision == "defer"
-        or stage_replan_assessment.selected_pressure_mode
-        in {"gentle_resume", "repair_soft"}
+        or stage_replan_assessment.selected_pressure_mode in {"gentle_resume", "repair_soft"}
         or stage_replan_assessment.selected_autonomy_signal
         in {"explicit_no_pressure", "archive_light_thread"}
     ):

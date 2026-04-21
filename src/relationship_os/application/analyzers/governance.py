@@ -115,9 +115,7 @@ def build_runtime_quality_doctor_report(
         if signature:
             opening_counts[signature] = opening_counts.get(signature, 0) + 1
     repeated_opening_count = sum(count for count in opening_counts.values() if count > 1)
-    if repeated_opening_count >= int(
-        doctor_policy.get("repetitive_openings_threshold", 2)
-    ):
+    if repeated_opening_count >= int(doctor_policy.get("repetitive_openings_threshold", 2)):
         issues.append("repetitive_openings")
         recommended_repairs.append("vary openings and sentence framing across turns")
 
@@ -134,8 +132,7 @@ def build_runtime_quality_doctor_report(
         for content in assistant_window
         if "\n\n" in content
         or "  " in content
-        or content.count("...")
-        >= int(doctor_policy.get("format_noise_ellipsis_threshold", 2))
+        or content.count("...") >= int(doctor_policy.get("format_noise_ellipsis_threshold", 2))
     )
     if format_noise_count > 0:
         issues.append("format_noise")
@@ -143,8 +140,7 @@ def build_runtime_quality_doctor_report(
 
     contradiction_count = 0
     certainty_conflict = any(
-        _contains_forbidden_false_certainty_language(content)
-        for content in assistant_window
+        _contains_forbidden_false_certainty_language(content) for content in assistant_window
     ) and any(
         _contains_any(
             content,
@@ -156,8 +152,7 @@ def build_runtime_quality_doctor_report(
     if certainty_conflict:
         contradiction_count += 1
     boundary_conflict = any(
-        _contains_forbidden_dependency_language(content)
-        for content in assistant_window
+        _contains_forbidden_dependency_language(content) for content in assistant_window
     ) and any(
         _contains_any(
             content,
@@ -274,10 +269,7 @@ def _build_identity_prelude(
         if response_post_audit and response_post_audit.status == "revise":
             identity_trajectory_trigger = "response_post_audit_drift"
             identity_trajectory_notes.append("post_audit_revision_forced_identity_recenter")
-        elif (
-            runtime_quality_doctor_report
-            and runtime_quality_doctor_report.status == "revise"
-        ):
+        elif runtime_quality_doctor_report and runtime_quality_doctor_report.status == "revise":
             identity_trajectory_trigger = "runtime_quality_doctor_drift"
             identity_trajectory_notes.append("quality_doctor_revise_flagged_identity_slip")
         elif empowerment_audit.status == "revise":
@@ -291,10 +283,7 @@ def _build_identity_prelude(
         if response_normalization is not None and response_normalization.changed:
             identity_trajectory_trigger = "response_normalization_adjustment"
             identity_trajectory_notes.append("normalization_adjusted_identity_presentation")
-        elif (
-            runtime_quality_doctor_report
-            and runtime_quality_doctor_report.status == "watch"
-        ):
+        elif runtime_quality_doctor_report and runtime_quality_doctor_report.status == "watch":
             identity_trajectory_trigger = "runtime_quality_doctor_watch"
             identity_trajectory_notes.append("quality_doctor_watch_requires_identity_attention")
         else:
@@ -303,9 +292,7 @@ def _build_identity_prelude(
     else:
         identity_trajectory_status = "stable"
         identity_trajectory_trigger = "identity_consistent"
-        if identity_confidence >= float(
-            identity_policy.get("stable_confidence_threshold", 0.72)
-        ):
+        if identity_confidence >= float(identity_policy.get("stable_confidence_threshold", 0.72)):
             identity_trajectory_notes.append("identity_anchor_holding_steady")
 
     return {
@@ -344,14 +331,10 @@ def _build_emotional_debt_prelude(
         )
         debt_signals.append(f"repair_{repair_assessment.severity}")
     if relationship_state.turbulence_risk == "elevated":
-        emotional_debt_score += float(
-            debt_policy.get("turbulence_pressure_weight", 0.14)
-        )
+        emotional_debt_score += float(debt_policy.get("turbulence_pressure_weight", 0.14))
         debt_signals.append("turbulence_pressure")
     if relationship_state.dependency_risk == "elevated":
-        emotional_debt_score += float(
-            debt_policy.get("dependency_pressure_weight", 0.2)
-        )
+        emotional_debt_score += float(debt_policy.get("dependency_pressure_weight", 0.2))
         debt_signals.append("dependency_boundary_pressure")
     if response_post_audit is not None and response_post_audit.status in {"review", "revise"}:
         emotional_debt_score += float(
@@ -373,9 +356,7 @@ def _build_emotional_debt_prelude(
         )
         debt_signals.append(f"quality_doctor_{runtime_quality_doctor_report.status}")
     if response_normalization is not None and response_normalization.changed:
-        emotional_debt_score += float(
-            debt_policy.get("response_normalized_weight", 0.08)
-        )
+        emotional_debt_score += float(debt_policy.get("response_normalized_weight", 0.08))
         debt_signals.append("response_normalized")
     emotional_debt_score = round(min(emotional_debt_score, 1.0), 3)
     if emotional_debt_score >= float(status_thresholds.get("elevated", 0.56)):
@@ -395,8 +376,7 @@ def _build_emotional_debt_prelude(
                 "repair_pressure_and_debt_require_relational_decompression"
             )
         elif (
-            response_post_audit is not None
-            and response_post_audit.status in {"review", "revise"}
+            response_post_audit is not None and response_post_audit.status in {"review", "revise"}
         ) or (
             runtime_quality_doctor_report is not None
             and runtime_quality_doctor_report.status in {"watch", "revise"}
@@ -436,9 +416,7 @@ def _build_emotional_debt_prelude(
         emotional_debt_trajectory_status = "stable"
         emotional_debt_trajectory_target = "steady_low_debt"
         emotional_debt_trajectory_trigger = "debt_stable"
-        emotional_debt_trajectory_notes.append(
-            "relational_debt_line_is_holding_low_and_stable"
-        )
+        emotional_debt_trajectory_notes.append("relational_debt_line_is_holding_low_and_stable")
 
     return {
         "emotional_debt_status": emotional_debt_status,
@@ -467,15 +445,11 @@ def _build_growth_user_context(
 ) -> dict[str, object]:
     growth_policy = _governance_section("growth_user_context")
     forming_turn_threshold = int(growth_policy.get("forming_turn_threshold", 1))
-    stabilizing_turn_threshold = int(
-        growth_policy.get("stabilizing_turn_threshold", 3)
-    )
+    stabilizing_turn_threshold = int(growth_policy.get("stabilizing_turn_threshold", 3))
     deepening_safety_threshold = float(
         growth_policy.get("deepening_psychological_safety_threshold", 0.75)
     )
-    deepening_min_recall_count = int(
-        growth_policy.get("deepening_min_recall_count", 1)
-    )
+    deepening_min_recall_count = int(growth_policy.get("deepening_min_recall_count", 1))
     if emotional_debt_status == "elevated":
         growth_stage = "repairing"
         growth_signal = "emotional_debt_accumulating"
@@ -585,11 +559,10 @@ def _build_strategy_audit(
     ):
         strategy_fit = "partial"
         strategy_audit_notes.append("boundary_path_more_conservative_than_needed")
-    elif (
-        knowledge_boundary_decision.decision
-        == str(strategy_policy.get("boundary_support_decision", "support_with_boundary"))
-        and policy_gate.red_line_status
-        != str(strategy_policy.get("required_boundary_gate", "boundary_sensitive"))
+    elif knowledge_boundary_decision.decision == str(
+        strategy_policy.get("boundary_support_decision", "support_with_boundary")
+    ) and policy_gate.red_line_status != str(
+        strategy_policy.get("required_boundary_gate", "boundary_sensitive")
     ):
         strategy_fit = "partial"
         strategy_audit_notes.append("boundary_support_without_boundary_sensitive_gate")
@@ -604,16 +577,13 @@ def _build_strategy_audit(
         "watch",
         "revise",
     }:
-        strategy_audit_notes.append(
-            f"quality_doctor_{runtime_quality_doctor_report.status}"
-        )
+        strategy_audit_notes.append(f"quality_doctor_{runtime_quality_doctor_report.status}")
 
     if (
         empowerment_audit.status in revise_statuses.get("empowerment", {"revise"})
         or (
             response_post_audit
-            and response_post_audit.status
-            in revise_statuses.get("post_audit", {"revise"})
+            and response_post_audit.status in revise_statuses.get("post_audit", {"revise"})
         )
         or (
             runtime_quality_doctor_report
@@ -624,13 +594,11 @@ def _build_strategy_audit(
     ):
         strategy_audit_status = "revise"
     elif (
-        rehearsal_result.projected_risk_level
-        in watch_statuses.get("rehearsal_risk", {"high"})
+        rehearsal_result.projected_risk_level in watch_statuses.get("rehearsal_risk", {"high"})
         or empowerment_audit.status in watch_statuses.get("empowerment", {"caution"})
         or (
             response_post_audit
-            and response_post_audit.status
-            in watch_statuses.get("post_audit", {"review"})
+            and response_post_audit.status in watch_statuses.get("post_audit", {"review"})
         )
         or (
             runtime_quality_doctor_report
@@ -681,10 +649,7 @@ def _build_strategy_audit_trajectory(
             strategy_audit_trajectory_notes.append(
                 "empowerment_revision_keeps_strategy_audit_line_corrective"
             )
-        elif (
-            runtime_quality_doctor_report
-            and runtime_quality_doctor_report.status == "revise"
-        ):
+        elif runtime_quality_doctor_report and runtime_quality_doctor_report.status == "revise":
             strategy_audit_trajectory_target = "quality_safe_correction"
             strategy_audit_trajectory_trigger = "quality_correction_required"
             strategy_audit_trajectory_notes.append(
@@ -716,10 +681,7 @@ def _build_strategy_audit_trajectory(
             strategy_audit_trajectory_notes.append(
                 "post_audit_review_keeps_strategy_audit_line_under_watch"
             )
-        elif (
-            runtime_quality_doctor_report
-            and runtime_quality_doctor_report.status == "watch"
-        ):
+        elif runtime_quality_doctor_report and runtime_quality_doctor_report.status == "watch":
             strategy_audit_trajectory_target = "quality_guarded_strategy"
             strategy_audit_trajectory_trigger = "quality_watch_active"
             strategy_audit_trajectory_notes.append(
@@ -736,9 +698,7 @@ def _build_strategy_audit_trajectory(
         strategy_audit_trajectory_target = "aligned_strategy_path"
         strategy_audit_trajectory_trigger = "strategy_line_stable"
         if strategy_fit == "aligned":
-            strategy_audit_trajectory_notes.append(
-                "strategy_audit_line_is_holding_stable"
-            )
+            strategy_audit_trajectory_notes.append("strategy_audit_line_is_holding_stable")
 
     return {
         "strategy_audit_trajectory_status": strategy_audit_trajectory_status,
@@ -769,10 +729,10 @@ def _build_strategy_supervision(
         strategy_supervision_mode = "repair_override_supervision"
         strategy_supervision_trigger = "repair_pressure_override"
         strategy_supervision_notes.append("repair_load_requires_supervised_strategy_override")
-    elif (
-        strategy_audit_status == "revise"
-        and policy_gate.red_line_status in {"boundary_sensitive", "blocked"}
-    ):
+    elif strategy_audit_status == "revise" and policy_gate.red_line_status in {
+        "boundary_sensitive",
+        "blocked",
+    }:
         strategy_supervision_status = "revise"
         strategy_supervision_mode = "boundary_lock_supervision"
         strategy_supervision_trigger = "policy_gate_boundary_lock"
@@ -784,24 +744,16 @@ def _build_strategy_supervision(
         strategy_supervision_mode = "corrective_supervision"
         if empowerment_audit.status == "revise":
             strategy_supervision_trigger = "empowerment_revision_required"
-            strategy_supervision_notes.append(
-                "empowerment_revision_requires_strategy_correction"
-            )
+            strategy_supervision_notes.append("empowerment_revision_requires_strategy_correction")
         elif response_post_audit and response_post_audit.status == "revise":
             strategy_supervision_trigger = "post_audit_revision_required"
-            strategy_supervision_notes.append(
-                "post_audit_revision_requires_strategy_correction"
-            )
+            strategy_supervision_notes.append("post_audit_revision_requires_strategy_correction")
         elif rehearsal_result.projected_risk_level == "high":
             strategy_supervision_trigger = "rehearsal_risk_detected"
-            strategy_supervision_notes.append(
-                "high_rehearsal_risk_requires_strategy_correction"
-            )
+            strategy_supervision_notes.append("high_rehearsal_risk_requires_strategy_correction")
         else:
             strategy_supervision_trigger = "strategy_mismatch_requires_correction"
-            strategy_supervision_notes.append(
-                "strategy_fit_mismatch_requires_explicit_supervision"
-            )
+            strategy_supervision_notes.append("strategy_fit_mismatch_requires_explicit_supervision")
     elif (
         strategy_audit_status == "watch"
         or policy_gate.red_line_status == "boundary_sensitive"
@@ -831,9 +783,7 @@ def _build_strategy_supervision(
         strategy_supervision_mode = "steady_supervision"
         strategy_supervision_trigger = "strategy_stable"
         if strategy_fit == "aligned":
-            strategy_supervision_notes.append(
-                "strategy_shape_is_stable_under_current_constraints"
-            )
+            strategy_supervision_notes.append("strategy_shape_is_stable_under_current_constraints")
 
     return {
         "strategy_supervision_status": strategy_supervision_status,
@@ -899,23 +849,13 @@ def _build_strategy_supervision_trajectory(
         strategy_supervision_trajectory_status = "stable"
         strategy_supervision_trajectory_target = "steady_supervision"
         strategy_supervision_trajectory_trigger = "strategy_supervision_stable"
-        strategy_supervision_trajectory_notes.append(
-            "strategy_supervision_line_is_holding_steady"
-        )
+        strategy_supervision_trajectory_notes.append("strategy_supervision_line_is_holding_steady")
 
     return {
-        "strategy_supervision_trajectory_status": (
-            strategy_supervision_trajectory_status
-        ),
-        "strategy_supervision_trajectory_target": (
-            strategy_supervision_trajectory_target
-        ),
-        "strategy_supervision_trajectory_trigger": (
-            strategy_supervision_trajectory_trigger
-        ),
-        "strategy_supervision_trajectory_notes": (
-            strategy_supervision_trajectory_notes
-        ),
+        "strategy_supervision_trajectory_status": (strategy_supervision_trajectory_status),
+        "strategy_supervision_trajectory_target": (strategy_supervision_trajectory_target),
+        "strategy_supervision_trajectory_trigger": (strategy_supervision_trajectory_trigger),
+        "strategy_supervision_trajectory_notes": (strategy_supervision_trajectory_notes),
     }
 
 
@@ -1069,9 +1009,7 @@ def _build_moral_prelude(
         elif moral_conflict == "truth_vs_comfort":
             moral_trajectory_target = "truthful_limit_clarity"
             moral_trajectory_trigger = "comfort_truth_balance_watch"
-            moral_trajectory_notes.append(
-                "truth_comfort_tension_is_present_but_not_yet_off_center"
-            )
+            moral_trajectory_notes.append("truth_comfort_tension_is_present_but_not_yet_off_center")
         elif empowerment_audit.status == "caution":
             moral_trajectory_target = "empowerment_safe_care"
             moral_trajectory_trigger = "empowerment_caution_detected"
@@ -1081,9 +1019,7 @@ def _build_moral_prelude(
         else:
             moral_trajectory_target = "steady_progress_care"
             moral_trajectory_trigger = "moral_tension_watch"
-            moral_trajectory_notes.append(
-                "moral_tension_is_present_without_full_recentering"
-            )
+            moral_trajectory_notes.append("moral_tension_is_present_without_full_recentering")
     else:
         moral_trajectory_status = "stable"
         moral_trajectory_target = "steady_progress_care"
@@ -1134,8 +1070,7 @@ def _build_user_model_prelude(
         user_model_revision_mode = "repair_reframing"
         user_model_evolution_notes.append("repair_signal_requires_user_model_softening")
     elif (
-        context_frame.attention in {"focused", "high"}
-        and "low_cognitive_load" in user_preferences
+        context_frame.attention in {"focused", "high"} and "low_cognitive_load" in user_preferences
     ):
         user_model_shift_signal = "delivery_preference_reinforced"
         user_model_revision_mode = "delivery_preference_refinement"
@@ -1158,13 +1093,10 @@ def _build_user_model_prelude(
     if "low_cognitive_load" in user_preferences and not remembered_low_load and recall_count > 0:
         user_model_evolution_notes.append("delivery_preference_not_yet_persisted")
 
-    if (
-        filtered_recall_count > 0
-        or (
-            recall_count > 0
-            and len(user_model_evolution_notes) >= 2
-            and user_model_shift_signal != "delivery_preference_reinforced"
-        )
+    if filtered_recall_count > 0 or (
+        recall_count > 0
+        and len(user_model_evolution_notes) >= 2
+        and user_model_shift_signal != "delivery_preference_reinforced"
     ):
         user_model_evolution_status = "revise"
     elif (
@@ -1186,9 +1118,7 @@ def _build_user_model_prelude(
         elif user_model_shift_signal == "repair_pressure":
             user_model_trajectory_target = "repair_sensitive_model"
             user_model_trajectory_trigger = "repair_pressure_detected"
-            user_model_trajectory_notes.append(
-                "repair_pressure_requires_relational_model_reframe"
-            )
+            user_model_trajectory_notes.append("repair_pressure_requires_relational_model_reframe")
         elif user_model_shift_signal == "underfit_memory":
             user_model_trajectory_target = "memory_grounded_model"
             user_model_trajectory_trigger = "underfit_memory_detected"
@@ -1204,9 +1134,7 @@ def _build_user_model_prelude(
         if user_model_shift_signal == "delivery_preference_reinforced":
             user_model_trajectory_target = "delivery_preference_refinement"
             user_model_trajectory_trigger = "delivery_preference_reinforced"
-            user_model_trajectory_notes.append(
-                "delivery_preference_is_shifting_but_still_stable"
-            )
+            user_model_trajectory_notes.append("delivery_preference_is_shifting_but_still_stable")
         elif user_model_shift_signal == "repair_pressure":
             user_model_trajectory_target = "repair_sensitive_model"
             user_model_trajectory_trigger = "repair_pressure_watch"
@@ -1214,17 +1142,13 @@ def _build_user_model_prelude(
         else:
             user_model_trajectory_target = "steady_refinement"
             user_model_trajectory_trigger = "soft_model_drift"
-            user_model_trajectory_notes.append(
-                "user_model_is_shifting_without_full_recenter"
-            )
+            user_model_trajectory_notes.append("user_model_is_shifting_without_full_recenter")
     else:
         user_model_trajectory_status = "stable"
         user_model_trajectory_target = "steady_refinement"
         user_model_trajectory_trigger = "model_stable"
         if user_model_confidence >= 0.58:
-            user_model_trajectory_notes.append(
-                "user_model_is_holding_stable_across_turns"
-            )
+            user_model_trajectory_notes.append("user_model_is_holding_stable_across_turns")
 
     return {
         "user_model_evolution_status": user_model_evolution_status,
@@ -1264,36 +1188,20 @@ def _build_expectation_calibration_prelude(
         trigger=expectation_calibration_trigger,
         target=expectation_calibration_target,
     )
-    expectation_calibration_trajectory_status = str(
-        expectation_trajectory["trajectory_status"]
-    )
-    expectation_calibration_trajectory_target = str(
-        expectation_trajectory["trajectory_target"]
-    )
-    expectation_calibration_trajectory_trigger = str(
-        expectation_trajectory["trajectory_trigger"]
-    )
-    expectation_calibration_trajectory_notes = list(
-        expectation_trajectory["trajectory_notes"]
-    )
+    expectation_calibration_trajectory_status = str(expectation_trajectory["trajectory_status"])
+    expectation_calibration_trajectory_target = str(expectation_trajectory["trajectory_target"])
+    expectation_calibration_trajectory_trigger = str(expectation_trajectory["trajectory_trigger"])
+    expectation_calibration_trajectory_notes = list(expectation_trajectory["trajectory_notes"])
 
     return {
         "expectation_calibration_status": expectation_calibration_status,
         "expectation_calibration_target": expectation_calibration_target,
         "expectation_calibration_trigger": expectation_calibration_trigger,
         "expectation_calibration_notes": expectation_calibration_notes,
-        "expectation_calibration_trajectory_status": (
-            expectation_calibration_trajectory_status
-        ),
-        "expectation_calibration_trajectory_target": (
-            expectation_calibration_trajectory_target
-        ),
-        "expectation_calibration_trajectory_trigger": (
-            expectation_calibration_trajectory_trigger
-        ),
-        "expectation_calibration_trajectory_notes": (
-            expectation_calibration_trajectory_notes
-        ),
+        "expectation_calibration_trajectory_status": (expectation_calibration_trajectory_status),
+        "expectation_calibration_trajectory_target": (expectation_calibration_trajectory_target),
+        "expectation_calibration_trajectory_trigger": (expectation_calibration_trajectory_trigger),
+        "expectation_calibration_trajectory_notes": (expectation_calibration_trajectory_notes),
     }
 
 
@@ -1312,17 +1220,13 @@ def _build_expectation_calibration_state(
                 "status": "revise",
                 "target": "bounded_relational_support",
                 "trigger": "relational_boundary_required",
-                "notes": [
-                    "dependency_pressure_requires_relational_expectation_reset"
-                ],
+                "notes": ["dependency_pressure_requires_relational_expectation_reset"],
             }
         return {
             "status": "revise",
             "target": "agency_preserving_support",
             "trigger": "dependency_pressure_detected",
-            "notes": [
-                "dependency_pressure_requires_agency_preserving_expectation_reset"
-            ],
+            "notes": ["dependency_pressure_requires_agency_preserving_expectation_reset"],
         }
     if knowledge_boundary_decision.decision == "answer_with_uncertainty":
         if confidence_assessment.level == "low":
@@ -1350,14 +1254,9 @@ def _build_expectation_calibration_state(
             "status": "watch",
             "target": "low_pressure_repair_support",
             "trigger": "repair_pressure_requires_soft_expectation",
-            "notes": [
-                "repair_pressure_requires_lower_pressure_relational_expectation"
-            ],
+            "notes": ["repair_pressure_requires_lower_pressure_relational_expectation"],
         }
-    if (
-        response_sequence_plan is not None
-        and response_sequence_plan.mode == "two_part_sequence"
-    ):
+    if response_sequence_plan is not None and response_sequence_plan.mode == "two_part_sequence":
         return {
             "status": "watch",
             "target": "segmented_progress_expectation",
@@ -1384,27 +1283,21 @@ def _build_expectation_calibration_trajectory(
                 "trajectory_status": "reset",
                 "trajectory_target": "bounded_relational_support",
                 "trajectory_trigger": "relational_boundary_expectation_reset",
-                "trajectory_notes": [
-                    "relational_boundary_keeps_expectation_line_in_reset_mode"
-                ],
+                "trajectory_notes": ["relational_boundary_keeps_expectation_line_in_reset_mode"],
             }
         if trigger == "dependency_pressure_detected":
             return {
                 "trajectory_status": "reset",
                 "trajectory_target": "agency_preserving_support",
                 "trajectory_trigger": "dependency_expectation_reset",
-                "trajectory_notes": [
-                    "dependency_pressure_keeps_expectation_line_in_reset_mode"
-                ],
+                "trajectory_notes": ["dependency_pressure_keeps_expectation_line_in_reset_mode"],
             }
         if trigger == "certainty_request_requires_reset":
             return {
                 "trajectory_status": "reset",
                 "trajectory_target": "uncertainty_honest_support",
                 "trajectory_trigger": "uncertainty_expectation_reset",
-                "trajectory_notes": [
-                    "certainty_request_keeps_expectation_line_in_reset_mode"
-                ],
+                "trajectory_notes": ["certainty_request_keeps_expectation_line_in_reset_mode"],
             }
         return {
             "trajectory_status": "reset",
@@ -1418,44 +1311,34 @@ def _build_expectation_calibration_trajectory(
                 "trajectory_status": "watch",
                 "trajectory_target": "uncertainty_honest_support",
                 "trajectory_trigger": "uncertainty_expectation_watch",
-                "trajectory_notes": [
-                    "uncertainty_disclosure_keeps_expectation_line_under_watch"
-                ],
+                "trajectory_notes": ["uncertainty_disclosure_keeps_expectation_line_under_watch"],
             }
         if trigger == "clarification_required":
             return {
                 "trajectory_status": "watch",
                 "trajectory_target": "context_before_commitment",
                 "trajectory_trigger": "clarification_expectation_watch",
-                "trajectory_notes": [
-                    "clarification_need_keeps_expectation_line_under_watch"
-                ],
+                "trajectory_notes": ["clarification_need_keeps_expectation_line_under_watch"],
             }
         if trigger == "repair_pressure_requires_soft_expectation":
             return {
                 "trajectory_status": "watch",
                 "trajectory_target": "low_pressure_repair_support",
                 "trajectory_trigger": "repair_expectation_watch",
-                "trajectory_notes": [
-                    "repair_pressure_keeps_expectation_line_under_watch"
-                ],
+                "trajectory_notes": ["repair_pressure_keeps_expectation_line_under_watch"],
             }
         if trigger == "segmented_delivery_active":
             return {
                 "trajectory_status": "watch",
                 "trajectory_target": "segmented_progress_expectation",
                 "trajectory_trigger": "segmented_expectation_watch",
-                "trajectory_notes": [
-                    "segmented_delivery_keeps_expectation_line_under_watch"
-                ],
+                "trajectory_notes": ["segmented_delivery_keeps_expectation_line_under_watch"],
             }
         return {
             "trajectory_status": "watch",
             "trajectory_target": "bounded_progress_expectation",
             "trajectory_trigger": "expectation_watch_active",
-            "trajectory_notes": [
-                "expectation_line_is_shifting_without_full_reset"
-            ],
+            "trajectory_notes": ["expectation_line_is_shifting_without_full_reset"],
         }
     return {
         "trajectory_status": "stable",
@@ -1513,33 +1396,17 @@ def _build_system3_prelude(
         emotional_debt_status=str(emotional_debt["emotional_debt_status"]),
         emotional_debt_score=float(emotional_debt["emotional_debt_score"]),
         debt_signals=list(emotional_debt["debt_signals"]),
-        emotional_debt_trajectory_status=str(
-            emotional_debt["emotional_debt_trajectory_status"]
-        ),
-        emotional_debt_trajectory_target=str(
-            emotional_debt["emotional_debt_trajectory_target"]
-        ),
-        emotional_debt_trajectory_trigger=str(
-            emotional_debt["emotional_debt_trajectory_trigger"]
-        ),
-        emotional_debt_trajectory_notes=list(
-            emotional_debt["emotional_debt_trajectory_notes"]
-        ),
+        emotional_debt_trajectory_status=str(emotional_debt["emotional_debt_trajectory_status"]),
+        emotional_debt_trajectory_target=str(emotional_debt["emotional_debt_trajectory_target"]),
+        emotional_debt_trajectory_trigger=str(emotional_debt["emotional_debt_trajectory_trigger"]),
+        emotional_debt_trajectory_notes=list(emotional_debt["emotional_debt_trajectory_notes"]),
         strategy_audit_status=str(strategy["strategy_audit_status"]),
         strategy_fit=str(strategy["strategy_fit"]),
         strategy_audit_notes=list(strategy["strategy_audit_notes"]),
-        strategy_audit_trajectory_status=str(
-            strategy["strategy_audit_trajectory_status"]
-        ),
-        strategy_audit_trajectory_target=str(
-            strategy["strategy_audit_trajectory_target"]
-        ),
-        strategy_audit_trajectory_trigger=str(
-            strategy["strategy_audit_trajectory_trigger"]
-        ),
-        strategy_audit_trajectory_notes=list(
-            strategy["strategy_audit_trajectory_notes"]
-        ),
+        strategy_audit_trajectory_status=str(strategy["strategy_audit_trajectory_status"]),
+        strategy_audit_trajectory_target=str(strategy["strategy_audit_trajectory_target"]),
+        strategy_audit_trajectory_trigger=str(strategy["strategy_audit_trajectory_trigger"]),
+        strategy_audit_trajectory_notes=list(strategy["strategy_audit_trajectory_notes"]),
         strategy_supervision_status=str(strategy["strategy_supervision_status"]),
         strategy_supervision_mode=str(strategy["strategy_supervision_mode"]),
         strategy_supervision_trigger=str(strategy["strategy_supervision_trigger"]),
@@ -1573,18 +1440,10 @@ def _build_system3_prelude(
         user_model_trajectory_target=str(user_model["user_model_trajectory_target"]),
         user_model_trajectory_trigger=str(user_model["user_model_trajectory_trigger"]),
         user_model_trajectory_notes=list(user_model["user_model_trajectory_notes"]),
-        expectation_calibration_status=str(
-            expectation["expectation_calibration_status"]
-        ),
-        expectation_calibration_target=str(
-            expectation["expectation_calibration_target"]
-        ),
-        expectation_calibration_trigger=str(
-            expectation["expectation_calibration_trigger"]
-        ),
-        expectation_calibration_notes=list(
-            expectation["expectation_calibration_notes"]
-        ),
+        expectation_calibration_status=str(expectation["expectation_calibration_status"]),
+        expectation_calibration_target=str(expectation["expectation_calibration_target"]),
+        expectation_calibration_trigger=str(expectation["expectation_calibration_trigger"]),
+        expectation_calibration_notes=list(expectation["expectation_calibration_notes"]),
         expectation_calibration_trajectory_status=str(
             expectation["expectation_calibration_trajectory_status"]
         ),

@@ -1398,8 +1398,7 @@ class EntityService:
             str(token) for token in list(inference_policy.get("deadline_tokens") or [])
         ]
         important_contact_tokens = [
-            str(token)
-            for token in list(inference_policy.get("important_contact_tokens") or [])
+            str(token) for token in list(inference_policy.get("important_contact_tokens") or [])
         ]
         focus_tokens = dict(inference_policy.get("focus_tokens") or {})
         surface_tokens = dict(inference_policy.get("device_surface_tokens") or {})
@@ -1419,13 +1418,7 @@ class EntityService:
         inferred_pending_replies = current_pending_replies + (
             1 if any(token in lowered for token in reply_tokens) else 0
         )
-        inferred_due_soon = len(
-            [
-                token
-                for token in deadline_tokens
-                if token in lowered
-            ]
-        )
+        inferred_due_soon = len([token for token in deadline_tokens if token in lowered])
         important_contact_count = len(
             [token for token in important_contact_tokens if token in lowered]
         )
@@ -1457,7 +1450,9 @@ class EntityService:
             "focus": (
                 "protective"
                 if conscience_assessment.mode in {"withhold", "hint"}
-                else focus if focus != "steady" else "outward"
+                else focus
+                if focus != "steady"
+                else "outward"
             ),
             "dominant_surface": inferred_surface,
             "pending_reply_pressure": round(min(1.0, inferred_pending_replies * 0.18), 3),
@@ -1501,9 +1496,7 @@ class EntityService:
                     important_contact_count,
                 ),
                 "last_channel": (
-                    inferred_surface
-                    if inferred_surface in {"mail", "chat", "mobile"}
-                    else "chat"
+                    inferred_surface if inferred_surface in {"mail", "chat", "mobile"} else "chat"
                 ),
             },
             "tasks": {
@@ -1582,9 +1575,7 @@ class EntityService:
         priority_boost = float(
             consolidation_policy.get("priority_boost_recommended_action", 0.12) or 0.12
         )
-        stale_decay = float(
-            consolidation_policy.get("stale_goal_priority_decay", 0.05) or 0.05
-        )
+        stale_decay = float(consolidation_policy.get("stale_goal_priority_decay", 0.05) or 0.05)
         recommended_norm = {item.strip().casefold() for item in recommended_actions if item.strip()}
         matched_recommendation = False
         for goal in active_goals:

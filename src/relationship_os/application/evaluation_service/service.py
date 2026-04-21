@@ -598,20 +598,14 @@ class EvaluationService:
         if any(is_legacy_lifecycle_event_type(event.event_type) for event in events):
             raise LegacyLifecycleStreamUnsupportedError(stream_id=session_id)
         started_event = next(
-            (
-                event
-                for event in events
-                if event.event_type == SESSION_STARTED
-            ),
+            (event for event in events if event.event_type == SESSION_STARTED),
             None,
         )
         turn_records = self._build_turn_records(events)
         started_at = started_event.payload.get("created_at") if started_event else None
         last_event_at = events[-1].occurred_at.isoformat() if events else None
         started_metadata = (
-            dict(started_event.payload.get("metadata", {}))
-            if started_event is not None
-            else {}
+            dict(started_event.payload.get("metadata", {})) if started_event is not None else {}
         )
         summary = build_summary(
             session_id=session_id,
@@ -656,9 +650,7 @@ class EvaluationService:
         records = [self._build_strategy_preference_record(summary) for summary in summaries]
         filtered_records = [record for record in records if not record.quality_floor_pass]
         noisy_records = [record for record in records if record.noise_penalty > 0]
-        strategy_totals, strata_totals = self._accumulate_strategy_preference_totals(
-            records
-        )
+        strategy_totals, strata_totals = self._accumulate_strategy_preference_totals(records)
         strategies = self._build_strategy_preference_strategies(strategy_totals)
         strata = self._build_strategy_preference_strata(strata_totals)
 
@@ -676,8 +668,7 @@ class EvaluationService:
                     "Prefer session duration and relational quality over raw turn count."
                 ),
                 "noise_control": (
-                    "Penalize fast churn sessions where turn count grows without "
-                    "real dwell time."
+                    "Penalize fast churn sessions where turn count grows without real dwell time."
                 ),
             },
             "context_strata": strata,
@@ -736,9 +727,7 @@ class EvaluationService:
             strategy_entry["session_count"] += 1
             if record.quality_floor_pass:
                 strategy_entry["kept_session_count"] += 1
-                strategy_entry["denoised_scores"].append(
-                    record.denoised_preference_score
-                )
+                strategy_entry["denoised_scores"].append(record.denoised_preference_score)
             else:
                 strategy_entry["filtered_session_count"] += 1
             strategy_entry["quality_floor_scores"].append(record.quality_floor_score)
@@ -748,9 +737,7 @@ class EvaluationService:
             strategy_entry["strata"][record.context_stratum] = (
                 strategy_entry["strata"].get(record.context_stratum, 0) + 1
             )
-            strata_totals[record.context_stratum] = (
-                strata_totals.get(record.context_stratum, 0) + 1
-            )
+            strata_totals[record.context_stratum] = strata_totals.get(record.context_stratum, 0) + 1
         return strategy_totals, strata_totals
 
     def _build_strategy_preference_strategies(
@@ -767,9 +754,7 @@ class EvaluationService:
                     "session_count": item["session_count"],
                     "kept_session_count": item["kept_session_count"],
                     "filtered_session_count": item["filtered_session_count"],
-                    "avg_denoised_preference_score": (
-                        round(mean(kept), 3) if kept else None
-                    ),
+                    "avg_denoised_preference_score": (round(mean(kept), 3) if kept else None),
                     "avg_quality_floor_score": round(
                         mean(item["quality_floor_scores"]),
                         3,
@@ -801,10 +786,7 @@ class EvaluationService:
         self,
         strata_totals: dict[str, int],
     ) -> list[dict[str, Any]]:
-        strata = [
-            {"context_stratum": key, "count": value}
-            for key, value in strata_totals.items()
-        ]
+        strata = [{"context_stratum": key, "count": value} for key, value in strata_totals.items()]
         strata.sort(
             key=lambda item: (
                 int(item.get("count") or 0),
@@ -821,9 +803,7 @@ class EvaluationService:
         strategy_keys: list[str] | None = None,
     ) -> dict[str, Any]:
         requested_strategy_keys = {
-            str(item)
-            for item in list(strategy_keys or [])
-            if str(item or "").strip()
+            str(item) for item in list(strategy_keys or []) if str(item or "").strip()
         }
         summaries = [
             summary
@@ -832,13 +812,10 @@ class EvaluationService:
             and summary.get("latest_reengagement_strategy_key") != "hold"
             and (
                 not requested_strategy_keys
-                or str(summary.get("latest_reengagement_strategy_key"))
-                in requested_strategy_keys
+                or str(summary.get("latest_reengagement_strategy_key")) in requested_strategy_keys
             )
         ]
-        records = [
-            self._build_reengagement_preference_record(summary) for summary in summaries
-        ]
+        records = [self._build_reengagement_preference_record(summary) for summary in summaries]
         filtered_records = [record for record in records if not record.quality_floor_pass]
         noisy_records = [record for record in records if record.noise_penalty > 0]
         matching_context_records = [
@@ -930,9 +907,7 @@ class EvaluationService:
             strategy_entry["session_count"] += 1
             if record.quality_floor_pass:
                 strategy_entry["kept_session_count"] += 1
-                strategy_entry["learning_scores"].append(
-                    record.denoised_preference_score
-                )
+                strategy_entry["learning_scores"].append(record.denoised_preference_score)
                 if context_stratum and record.context_stratum == context_stratum:
                     strategy_entry["contextual_learning_scores"].append(
                         record.denoised_preference_score
@@ -947,9 +922,7 @@ class EvaluationService:
             strategy_entry["strata"][record.context_stratum] = (
                 strategy_entry["strata"].get(record.context_stratum, 0) + 1
             )
-            strata_totals[record.context_stratum] = (
-                strata_totals.get(record.context_stratum, 0) + 1
-            )
+            strata_totals[record.context_stratum] = strata_totals.get(record.context_stratum, 0) + 1
         return strategy_totals, strata_totals
 
     def _build_reengagement_learning_strategies(
@@ -959,8 +932,7 @@ class EvaluationService:
         strategies = []
         for item in strategy_totals.values():
             strata = [
-                {"context_stratum": key, "count": value}
-                for key, value in item["strata"].items()
+                {"context_stratum": key, "count": value} for key, value in item["strata"].items()
             ]
             strata.sort(
                 key=lambda entry: (
@@ -985,9 +957,7 @@ class EvaluationService:
                         if contextual_learning_scores
                         else None
                     ),
-                    "contextual_kept_session_count": item[
-                        "contextual_kept_session_count"
-                    ],
+                    "contextual_kept_session_count": item["contextual_kept_session_count"],
                     "avg_quality_floor_score": round(
                         mean(item["quality_floor_scores"]),
                         3,
@@ -1020,10 +990,7 @@ class EvaluationService:
         self,
         strata_totals: dict[str, int],
     ) -> list[dict[str, Any]]:
-        strata = [
-            {"context_stratum": key, "count": value}
-            for key, value in strata_totals.items()
-        ]
+        strata = [{"context_stratum": key, "count": value} for key, value in strata_totals.items()]
         strata.sort(
             key=lambda item: (
                 int(item.get("count") or 0),
@@ -1042,9 +1009,7 @@ class EvaluationService:
         learning_mode = "cold_start"
         if strategies:
             top_strategy = strategies[0]
-            if context_stratum and int(
-                top_strategy.get("contextual_kept_session_count") or 0
-            ) > 0:
+            if context_stratum and int(top_strategy.get("contextual_kept_session_count") or 0) > 0:
                 learning_mode = "contextual_reinforcement"
             elif int(top_strategy.get("kept_session_count") or 0) > 0:
                 learning_mode = "global_reinforcement"
@@ -1267,23 +1232,16 @@ class EvaluationService:
             int(summary.get("rupture_detected_count") or 0) > 0
             or str(summary.get("latest_system3_repair_governance_status") or "pass")
             in {"watch", "revise"}
-            or str(
-                summary.get("latest_system3_repair_governance_trajectory_status")
-                or "stable"
-            )
+            or str(summary.get("latest_system3_repair_governance_trajectory_status") or "stable")
             == "recenter"
-            or str(summary.get("latest_reengagement_pressure_mode") or "")
-            == "repair_soft"
+            or str(summary.get("latest_reengagement_pressure_mode") or "") == "repair_soft"
         ):
             flags.append("repair_pressure")
         if (
             int(summary.get("knowledge_boundary_intervention_count") or 0) > 0
             or str(summary.get("latest_system3_boundary_governance_status") or "pass")
             in {"watch", "revise"}
-            or str(
-                summary.get("latest_system3_boundary_governance_trajectory_status")
-                or "stable"
-            )
+            or str(summary.get("latest_system3_boundary_governance_trajectory_status") or "stable")
             == "recenter"
         ):
             flags.append("boundary_pressure")
@@ -1292,18 +1250,18 @@ class EvaluationService:
             or str(summary.get("latest_system3_dependency_governance_status") or "pass")
             in {"watch", "revise"}
             or str(
-                summary.get("latest_system3_dependency_governance_trajectory_status")
-                or "stable"
+                summary.get("latest_system3_dependency_governance_trajectory_status") or "stable"
             )
             == "recenter"
         ):
             flags.append("dependency_pressure")
-        if (
-            str(summary.get("latest_system3_pressure_governance_status") or "pass")
-            in {"watch", "revise"}
-            or str(summary.get("latest_system3_stability_governance_status") or "pass")
-            in {"watch", "revise"}
-        ):
+        if str(summary.get("latest_system3_pressure_governance_status") or "pass") in {
+            "watch",
+            "revise",
+        } or str(summary.get("latest_system3_stability_governance_status") or "pass") in {
+            "watch",
+            "revise",
+        }:
             flags.append("quality_watch")
         if not flags:
             flags.append("steady_progress")
@@ -1321,16 +1279,12 @@ class EvaluationService:
         non-scenario sessions and computes response_rate, positive_outcome_rate,
         and outcome_score per ``strategy_key x context_stratum`` combination.
         """
-        requested_keys = {
-            str(k) for k in (strategy_keys or []) if str(k or "").strip()
-        }
+        requested_keys = {str(k) for k in (strategy_keys or []) if str(k or "").strip()}
         session_ids = await self._stream_service.list_stream_ids()
         outcome_events: list[dict[str, Any]] = []
         for sid in session_ids:
             events = await self._stream_service.read_stream(stream_id=sid)
-            started = next(
-                (e for e in events if e.event_type == SESSION_STARTED), None
-            )
+            started = next((e for e in events if e.event_type == SESSION_STARTED), None)
             if started is None:
                 continue
             metadata = dict(started.payload.get("metadata", {}))
@@ -1345,10 +1299,7 @@ class EvaluationService:
                     continue
                 if requested_keys and sk not in requested_keys:
                     continue
-                if (
-                    context_stratum
-                    and str(payload.get("context_stratum") or "") != context_stratum
-                ):
+                if context_stratum and str(payload.get("context_stratum") or "") != context_stratum:
                     continue
                 outcome_events.append(payload)
 
@@ -1387,19 +1338,11 @@ class EvaluationService:
             responded = entry["responded"]
             negative = entry["negative_signal"]
             response_rate = responded / total if total else 0.0
-            positive_outcome_rate = (
-                (responded - negative) / total if total else 0.0
-            )
+            positive_outcome_rate = (responded - negative) / total if total else 0.0
             avg_quality = (
-                round(mean(entry["quality_signals"]), 3)
-                if entry["quality_signals"]
-                else None
+                round(mean(entry["quality_signals"]), 3) if entry["quality_signals"] else None
             )
-            avg_latency = (
-                round(mean(entry["latencies"]), 1)
-                if entry["latencies"]
-                else None
-            )
+            avg_latency = round(mean(entry["latencies"]), 1) if entry["latencies"] else None
             outcome_score = round(
                 response_rate * 0.5 + max(0.0, positive_outcome_rate) * 0.5,
                 3,
@@ -1455,9 +1398,7 @@ class EvaluationService:
 
         for sid in session_ids:
             events = await self._stream_service.read_stream(stream_id=sid)
-            started = next(
-                (e for e in events if e.event_type == SESSION_STARTED), None
-            )
+            started = next((e for e in events if e.event_type == SESSION_STARTED), None)
             if started is None:
                 continue
             metadata = dict(started.payload.get("metadata", {}))
@@ -1480,9 +1421,7 @@ class EvaluationService:
 
         stages: list[dict[str, Any]] = []
         for (stage_label, cs), outcomes in outcome_groups.items():
-            responded_outcomes = [
-                o for o in outcomes if str(o.get("outcome_type")) == "responded"
-            ]
+            responded_outcomes = [o for o in outcomes if str(o.get("outcome_type")) == "responded"]
             responded_count = len(responded_outcomes)
             sample_count = len(outcomes)
 

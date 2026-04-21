@@ -56,12 +56,8 @@ def render_official_edge_zh_recap(results: dict[str, Any]) -> str:
     lines.append("")
     benchmark_provider = _provider_label(results.get("benchmark_chat_provider", "unknown"))
     benchmark_model = results.get("benchmark_chat_model", "unknown")
-    lines.append(
-        f"- `Baseline`：{benchmark_provider} `{benchmark_model}` 原生聊天"
-    )
-    lines.append(
-        f"- `Mem0 OSS`：{benchmark_provider} `{benchmark_model}` + Mem0 本地记忆层"
-    )
+    lines.append(f"- `Baseline`：{benchmark_provider} `{benchmark_model}` 原生聊天")
+    lines.append(f"- `Mem0 OSS`：{benchmark_provider} `{benchmark_model}` + Mem0 本地记忆层")
     lines.append(
         f"- `RelationshipOS`：RelationshipOS "
         f"`{results.get('runtime_profile', 'default')}` + "

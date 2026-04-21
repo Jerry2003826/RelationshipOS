@@ -501,24 +501,22 @@ class ActionService:
             updated["tasks"]["pending_count"] = (
                 int(updated["tasks"].get("pending_count", 0) or 0) + task_increment
             )
-            updated["tasks"]["due_soon_count"] = (
-                int(updated["tasks"].get("due_soon_count", 0) or 0)
-                + len(
-                    [
-                        receipt
-                        for receipt in executed
-                        if str(receipt.result.get("action_type") or "")
-                        in {"create_reminder", "schedule_block"}
-                    ]
-                )
+            updated["tasks"]["due_soon_count"] = int(
+                updated["tasks"].get("due_soon_count", 0) or 0
+            ) + len(
+                [
+                    receipt
+                    for receipt in executed
+                    if str(receipt.result.get("action_type") or "")
+                    in {"create_reminder", "schedule_block"}
+                ]
             )
             updated["communication"]["outbox_count"] = (
                 int(updated["communication"].get("outbox_count", 0) or 0) + outbox_increment
             )
             updated["communication"]["pending_replies"] = max(
                 0,
-                int(updated["communication"].get("pending_replies", 0) or 0)
-                - outbox_increment,
+                int(updated["communication"].get("pending_replies", 0) or 0) - outbox_increment,
             )
             updated["communication"]["last_outbound_channel"] = (
                 "email"

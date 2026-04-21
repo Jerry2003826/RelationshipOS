@@ -76,14 +76,34 @@ DEEP_MEMORY_SCENARIOS: list[DeepMemoryScenario] = [
         probes=[
             MemoryProbe("What's my dog's name?", "Biscuit, a corgi", planted_at_turn=4),
             MemoryProbe("Where am I originally from?", "Denver, Colorado", planted_at_turn=3),
-            MemoryProbe("Who's my best friend and where does he work?", "Marcus, at Amazon in Seattle", planted_at_turn=16),
+            MemoryProbe(
+                "Who's my best friend and where does he work?",
+                "Marcus, at Amazon in Seattle",
+                planted_at_turn=16,
+            ),
             MemoryProbe("Who's my favorite artist/band?", "Iron & Wine", planted_at_turn=8),
-            MemoryProbe("What neighborhood do I live in and how much is my rent?", "Mission District, $2800/month", planted_at_turn=21),
+            MemoryProbe(
+                "What neighborhood do I live in and how much is my rent?",
+                "Mission District, $2800/month",
+                planted_at_turn=21,
+            ),
             MemoryProbe("What's my ex-girlfriend's name?", "Sarah", planted_at_turn=20),
-            MemoryProbe("What language am I learning and what's my current level?", "Japanese, N3 level, aiming for N2", planted_at_turn=10),
+            MemoryProbe(
+                "What language am I learning and what's my current level?",
+                "Japanese, N3 level, aiming for N2",
+                planted_at_turn=10,
+            ),
             MemoryProbe("What's my boss's name?", "David", planted_at_turn=13),
-            MemoryProbe("Where are we planning to travel for Thanksgiving?", "Hawaii, Maui specifically", planted_at_turn=19),
-            MemoryProbe("I'm trying to lose weight — what's my target?", "165 pounds (down from 185 to 175)", planted_at_turn=23),
+            MemoryProbe(
+                "Where are we planning to travel for Thanksgiving?",
+                "Hawaii, Maui specifically",
+                planted_at_turn=19,
+            ),
+            MemoryProbe(
+                "I'm trying to lose weight — what's my target?",
+                "165 pounds (down from 185 to 175)",
+                planted_at_turn=23,
+            ),
         ],
     ),
     DeepMemoryScenario(
@@ -128,14 +148,40 @@ DEEP_MEMORY_SCENARIOS: list[DeepMemoryScenario] = [
             "Nine revisions total... but Mike said I should put it in my portfolio.",
         ],
         probes=[
-            MemoryProbe("What's my boyfriend's name and what does he do?", "Jake, game designer at a gaming company", planted_at_turn=3),
-            MemoryProbe("What's my cat's name and breed?", "Mochi, British Shorthair", planted_at_turn=16),
-            MemoryProbe("What's my sister's name and where does she work?", "Sophie, lawyer in Boston", planted_at_turn=10),
-            MemoryProbe("How many revisions did that wedding project go through?", "Nine", planted_at_turn=30),
-            MemoryProbe("When is my mom's birthday and what do I want to get her?", "Next month on the 18th, a massage chair", planted_at_turn=26),
-            MemoryProbe("What restaurant does Jake want to take me to?", "Omakase House, a Japanese restaurant", planted_at_turn=24),
+            MemoryProbe(
+                "What's my boyfriend's name and what does he do?",
+                "Jake, game designer at a gaming company",
+                planted_at_turn=3,
+            ),
+            MemoryProbe(
+                "What's my cat's name and breed?", "Mochi, British Shorthair", planted_at_turn=16
+            ),
+            MemoryProbe(
+                "What's my sister's name and where does she work?",
+                "Sophie, lawyer in Boston",
+                planted_at_turn=10,
+            ),
+            MemoryProbe(
+                "How many revisions did that wedding project go through?",
+                "Nine",
+                planted_at_turn=30,
+            ),
+            MemoryProbe(
+                "When is my mom's birthday and what do I want to get her?",
+                "Next month on the 18th, a massage chair",
+                planted_at_turn=26,
+            ),
+            MemoryProbe(
+                "What restaurant does Jake want to take me to?",
+                "Omakase House, a Japanese restaurant",
+                planted_at_turn=24,
+            ),
             MemoryProbe("What's my team lead's name?", "Mike", planted_at_turn=13),
-            MemoryProbe("What promotion am I getting and how much is the raise?", "Senior Designer, about 30% raise", planted_at_turn=21),
+            MemoryProbe(
+                "What promotion am I getting and how much is the raise?",
+                "Senior Designer, about 30% raise",
+                planted_at_turn=21,
+            ),
         ],
     ),
     DeepMemoryScenario(
@@ -166,9 +212,15 @@ DEEP_MEMORY_SCENARIOS: list[DeepMemoryScenario] = [
         probes=[
             MemoryProbe("我的狗叫什么名字？", "团子，一只白色博美", planted_at_turn=2),
             MemoryProbe("我住在哪儿？", "广州天河", planted_at_turn=3),
-            MemoryProbe("我最近在准备什么？", "六月底的个人小展，主题是海边的夏天", planted_at_turn=4),
-            MemoryProbe("我最好的朋友叫什么，在做什么工作？", "安琪，在深圳做策展", planted_at_turn=5),
-            MemoryProbe("我妈妈生日是什么时候，我想送她什么？", "七月九号，咖啡机", planted_at_turn=9),
+            MemoryProbe(
+                "我最近在准备什么？", "六月底的个人小展，主题是海边的夏天", planted_at_turn=4
+            ),
+            MemoryProbe(
+                "我最好的朋友叫什么，在做什么工作？", "安琪，在深圳做策展", planted_at_turn=5
+            ),
+            MemoryProbe(
+                "我妈妈生日是什么时候，我想送她什么？", "七月九号，咖啡机", planted_at_turn=9
+            ),
         ],
         language="zh",
     ),

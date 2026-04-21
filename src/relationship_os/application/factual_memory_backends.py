@@ -177,9 +177,7 @@ def _is_factual_index_hit(hit: MemoryIndexHit) -> bool:
     if bool(metadata.get("factual_candidate", False)):
         return True
     semantic_aliases = {
-        str(alias)
-        for alias in list(metadata.get("semantic_aliases") or [])
-        if str(alias).strip()
+        str(alias) for alias in list(metadata.get("semantic_aliases") or []) if str(alias).strip()
     }
     return bool(semantic_aliases.intersection(_FACTUAL_ALIAS_KEYS))
 
@@ -227,10 +225,7 @@ class NativeFactualMemoryBackend:
             use_reranker=not prefer_fast,
         )
         factual_hits = [hit for hit in hits if _is_factual_index_hit(hit)]
-        return [
-            _fact_from_memory_index_hit(hit, backend=self.backend_name)
-            for hit in factual_hits
-        ]
+        return [_fact_from_memory_index_hit(hit, backend=self.backend_name) for hit in factual_hits]
 
     async def recall_user_facts(
         self,
@@ -250,10 +245,7 @@ class NativeFactualMemoryBackend:
             use_reranker=not prefer_fast,
         )
         factual_hits = [hit for hit in hits if _is_factual_index_hit(hit)]
-        return [
-            _fact_from_memory_index_hit(hit, backend=self.backend_name)
-            for hit in factual_hits
-        ]
+        return [_fact_from_memory_index_hit(hit, backend=self.backend_name) for hit in factual_hits]
 
 
 class Mem0FactualMemoryBackend:
@@ -465,8 +457,7 @@ class Mem0FactualMemoryBackend:
             memory_kind=str(metadata.get("memory_kind") or "persistent"),
             source_session_id=str(metadata.get("source_session_id") or item.get("run_id") or ""),
             source_user_id=(
-                str(metadata.get("source_user_id") or item.get("user_id") or "").strip()
-                or None
+                str(metadata.get("source_user_id") or item.get("user_id") or "").strip() or None
             ),
             source_version=source_version,
             occurred_at=item.get("created_at"),

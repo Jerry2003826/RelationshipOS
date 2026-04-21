@@ -344,12 +344,11 @@ def test_self_state_projector_preserves_fact_slots_across_longer_chat() -> None:
                 "session_id": "lin-s1",
                 "occurred_at": "2026-03-25T07:00:00+00:00",
                 "relationship_snapshot": {
-                        "user_state_markers": ["累"],
-                        "relationship_markers": ["还在"],
-                        "user_message_excerpt": (
-                            "其实我从小在苏州长大，我那只灰猫叫年糕，"
-                            "还总点榛子拿铁。"
-                        ),
+                    "user_state_markers": ["累"],
+                    "relationship_markers": ["还在"],
+                    "user_message_excerpt": (
+                        "其实我从小在苏州长大，我那只灰猫叫年糕，还总点榛子拿铁。"
+                    ),
                 },
             },
         ),

@@ -487,9 +487,7 @@ GOVERNANCE_STAGE_DELAY_SPECS: tuple[tuple[str, int, int], ...] = (
 # Format: (domain, recenter_high, recenter_low, watch_high, watch_low)
 # Used by dispatch_gate.py when deciding how long to defer a dispatch when
 # a governance domain is active.
-GOVERNANCE_GATE_DELAY_SPECS_BY_STAGE: dict[
-    str, tuple[tuple[str, int, int, int, int], ...]
-] = {
+GOVERNANCE_GATE_DELAY_SPECS_BY_STAGE: dict[str, tuple[tuple[str, int, int, int, int], ...]] = {
     "first_touch": (
         ("safety", 7200, 5400, 5400, 3600),
         ("autonomy", 6000, 4200, 4200, 3000),

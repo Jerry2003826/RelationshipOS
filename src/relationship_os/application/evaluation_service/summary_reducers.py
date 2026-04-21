@@ -167,8 +167,7 @@ def _compile_latest_output_specs() -> tuple[_CompiledLatestOutputSpec, ...]:
 
 def _compile_last_turn_assignments() -> tuple[tuple[str, Callable[[dict[str, Any]], Any]], ...]:
     return tuple(
-        (target, _compile_env_expr(expression))
-        for target, expression in LAST_TURN_ASSIGNMENTS
+        (target, _compile_env_expr(expression)) for target, expression in LAST_TURN_ASSIGNMENTS
     )
 
 
@@ -335,9 +334,7 @@ class OutputQualityAccumulator:
                 3,
             ),
             "latest_response_information_density": self.information_densities[-1],
-            "response_information_density_slope": _series_slope(
-                self.information_densities
-            ),
+            "response_information_density_slope": _series_slope(self.information_densities),
             "repeated_opening_turn_count": repeated_opening_turn_count,
             "output_quality_issue_count": len(issues),
             "output_quality_issues": issues,
@@ -380,10 +377,9 @@ class SessionSummaryAccumulator:
                 continue
             if not all(bool(filter_fn(source_value)) for filter_fn in spec.filter_fns):
                 continue
-            self.sum_totals[spec.output_key] = (
-                self.sum_totals.get(spec.output_key, 0)
-                + spec.term_fn(source_value)
-            )
+            self.sum_totals[spec.output_key] = self.sum_totals.get(
+                spec.output_key, 0
+            ) + spec.term_fn(source_value)
 
         for spec in _COUNT_OUTPUT_SPECS:
             if spec.mode != "inline_collection":
@@ -464,9 +460,7 @@ class SessionSummaryAccumulator:
         summary["response_information_density_slope"] = quality_summary[
             "response_information_density_slope"
         ]
-        summary["repeated_opening_turn_count"] = quality_summary[
-            "repeated_opening_turn_count"
-        ]
+        summary["repeated_opening_turn_count"] = quality_summary["repeated_opening_turn_count"]
         summary["output_quality_issue_count"] = quality_summary["output_quality_issue_count"]
         summary["output_quality_issues"] = quality_summary["output_quality_issues"]
         summary["output_quality_status"] = quality_summary["output_quality_status"]

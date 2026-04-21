@@ -406,8 +406,7 @@ class ProactiveDispatchHandler:
         if already_recorded:
             return
         user_replied = any(
-            e.event_type == USER_MESSAGE_RECEIVED
-            and e.occurred_at > last_dispatch.occurred_at
+            e.event_type == USER_MESSAGE_RECEIVED and e.occurred_at > last_dispatch.occurred_at
             for e in prior_events
         )
         if user_replied:
@@ -463,9 +462,7 @@ class ProactiveDispatchHandler:
 
         dispatch_payload = dict(last_dispatch.payload)
         strategy_key = str(dispatch_payload.get("strategy_key") or "unknown")
-        stage_label = str(
-            dispatch_payload.get("proactive_cadence_stage_label") or "first_touch"
-        )
+        stage_label = str(dispatch_payload.get("proactive_cadence_stage_label") or "first_touch")
 
         matrix_event = next(
             (
@@ -594,9 +591,7 @@ class ProactiveDispatchHandler:
         somatic_orchestration_plan = dict(
             context.runtime_state.get("somatic_orchestration_plan") or {}
         )
-        proactive_cadence_plan = dict(
-            context.runtime_state.get("proactive_cadence_plan") or {}
-        )
+        proactive_cadence_plan = dict(context.runtime_state.get("proactive_cadence_plan") or {})
         reengagement_plan = dict(context.runtime_state.get("reengagement_plan") or {})
         proactive_scheduling_plan = dict(
             context.runtime_state.get("proactive_scheduling_plan") or {}
@@ -615,9 +610,7 @@ class ProactiveDispatchHandler:
                 runtime_coordination_snapshot=runtime_coordination_snapshot,
             ),
             somatic_orchestration_plan_model=(
-                self._build_somatic_orchestration_plan_model(
-                    somatic_orchestration_plan
-                )
+                self._build_somatic_orchestration_plan_model(somatic_orchestration_plan)
             ),
             proactive_cadence_plan_model=self._build_proactive_cadence_plan_model(
                 proactive_cadence_plan=proactive_cadence_plan,
@@ -637,9 +630,7 @@ class ProactiveDispatchHandler:
                 guidance_plan_state=guidance_plan_state,
                 directive_model=directive_model,
             ),
-            system3_snapshot_model=self._build_system3_snapshot_model(
-                system3_snapshot_state
-            ),
+            system3_snapshot_model=self._build_system3_snapshot_model(system3_snapshot_state),
             runtime_coordination_snapshot=runtime_coordination_snapshot,
             conversation_cadence_plan=conversation_cadence_plan,
             proactive_scheduling_plan=proactive_scheduling_plan,
@@ -688,35 +679,27 @@ class ProactiveDispatchHandler:
             time_awareness_mode=str(
                 runtime_coordination_snapshot.get("time_awareness_mode") or "ongoing"
             ),
-            idle_gap_seconds=float(
-                runtime_coordination_snapshot.get("idle_gap_seconds") or 0.0
-            ),
+            idle_gap_seconds=float(runtime_coordination_snapshot.get("idle_gap_seconds") or 0.0),
             session_age_seconds=float(
                 runtime_coordination_snapshot.get("session_age_seconds") or 0.0
             ),
             ritual_phase=str(
-                runtime_coordination_snapshot.get("ritual_phase")
-                or "steady_progress"
+                runtime_coordination_snapshot.get("ritual_phase") or "steady_progress"
             ),
             cognitive_load_band=str(
                 runtime_coordination_snapshot.get("cognitive_load_band") or "low"
             ),
             response_budget_mode=str(
-                runtime_coordination_snapshot.get("response_budget_mode")
-                or "structured"
+                runtime_coordination_snapshot.get("response_budget_mode") or "structured"
             ),
             proactive_followup_eligible=bool(
                 runtime_coordination_snapshot.get("proactive_followup_eligible")
             ),
-            proactive_style=str(
-                runtime_coordination_snapshot.get("proactive_style") or "none"
-            ),
+            proactive_style=str(runtime_coordination_snapshot.get("proactive_style") or "none"),
             somatic_cue=runtime_coordination_snapshot.get("somatic_cue"),
             coordination_notes=[
                 str(item)
-                for item in list(
-                    runtime_coordination_snapshot.get("coordination_notes") or []
-                )
+                for item in list(runtime_coordination_snapshot.get("coordination_notes") or [])
             ],
         )
 
@@ -738,9 +721,7 @@ class ProactiveDispatchHandler:
             continuity_anchor=str(
                 session_ritual_plan.get("continuity_anchor") or "smallest_next_step"
             ),
-            somatic_shortcut=str(
-                session_ritual_plan.get("somatic_shortcut") or "none"
-            ),
+            somatic_shortcut=str(session_ritual_plan.get("somatic_shortcut") or "none"),
             micro_rituals=[
                 str(item) for item in list(session_ritual_plan.get("micro_rituals") or [])
             ],
@@ -754,27 +735,16 @@ class ProactiveDispatchHandler:
         return SomaticOrchestrationPlan(
             status=str(somatic_orchestration_plan.get("status") or "not_needed"),
             cue=str(somatic_orchestration_plan.get("cue") or "none"),
-            primary_mode=str(
-                somatic_orchestration_plan.get("primary_mode") or "none"
-            ),
+            primary_mode=str(somatic_orchestration_plan.get("primary_mode") or "none"),
             body_anchor=str(somatic_orchestration_plan.get("body_anchor") or "none"),
-            followup_style=str(
-                somatic_orchestration_plan.get("followup_style") or "none"
-            ),
-            allow_in_followup=bool(
-                somatic_orchestration_plan.get("allow_in_followup")
-            ),
+            followup_style=str(somatic_orchestration_plan.get("followup_style") or "none"),
+            allow_in_followup=bool(somatic_orchestration_plan.get("allow_in_followup")),
             micro_actions=[
-                str(item)
-                for item in list(
-                    somatic_orchestration_plan.get("micro_actions") or []
-                )
+                str(item) for item in list(somatic_orchestration_plan.get("micro_actions") or [])
             ],
             phrasing_guardrails=[
                 str(item)
-                for item in list(
-                    somatic_orchestration_plan.get("phrasing_guardrails") or []
-                )
+                for item in list(somatic_orchestration_plan.get("phrasing_guardrails") or [])
             ],
             rationale=str(somatic_orchestration_plan.get("rationale") or ""),
         )
@@ -789,14 +759,11 @@ class ProactiveDispatchHandler:
             status=str(proactive_cadence_plan.get("status") or "hold"),
             cadence_key=str(proactive_cadence_plan.get("cadence_key") or "hold"),
             stage_labels=[
-                str(item)
-                for item in list(proactive_cadence_plan.get("stage_labels") or [])
+                str(item) for item in list(proactive_cadence_plan.get("stage_labels") or [])
             ],
             stage_intervals_seconds=[
                 max(0, int(item))
-                for item in list(
-                    proactive_cadence_plan.get("stage_intervals_seconds") or []
-                )
+                for item in list(proactive_cadence_plan.get("stage_intervals_seconds") or [])
             ],
             window_seconds=max(0, int(proactive_cadence_plan.get("window_seconds") or 0)),
             close_after_stage_index=max(
@@ -815,9 +782,7 @@ class ProactiveDispatchHandler:
         return ReengagementPlan(
             status=str(reengagement_plan.get("status") or directive_model.status),
             ritual_mode=str(reengagement_plan.get("ritual_mode") or "continuity_nudge"),
-            delivery_mode=str(
-                reengagement_plan.get("delivery_mode") or "single_message"
-            ),
+            delivery_mode=str(reengagement_plan.get("delivery_mode") or "single_message"),
             strategy_key=str(reengagement_plan.get("strategy_key") or "none"),
             relational_move=str(reengagement_plan.get("relational_move") or "none"),
             pressure_mode=str(reengagement_plan.get("pressure_mode") or "none"),
@@ -831,9 +796,7 @@ class ProactiveDispatchHandler:
             segment_labels=[
                 str(item) for item in list(reengagement_plan.get("segment_labels") or [])
             ],
-            focus_points=[
-                str(item) for item in list(reengagement_plan.get("focus_points") or [])
-            ],
+            focus_points=[str(item) for item in list(reengagement_plan.get("focus_points") or [])],
             tone=str(reengagement_plan.get("tone") or "gentle"),
             opening_hint=str(reengagement_plan.get("opening_hint") or ""),
             closing_hint=str(reengagement_plan.get("closing_hint") or ""),
@@ -848,38 +811,23 @@ class ProactiveDispatchHandler:
     ) -> ProactiveSchedulingPlan:
         return ProactiveSchedulingPlan(
             status=str(proactive_scheduling_plan.get("status") or "hold"),
-            scheduler_mode=str(
-                proactive_scheduling_plan.get("scheduler_mode") or "hold"
-            ),
+            scheduler_mode=str(proactive_scheduling_plan.get("scheduler_mode") or "hold"),
             min_seconds_since_last_outbound=max(
                 0,
-                int(
-                    proactive_scheduling_plan.get("min_seconds_since_last_outbound")
-                    or 0
-                ),
+                int(proactive_scheduling_plan.get("min_seconds_since_last_outbound") or 0),
             ),
             first_touch_extra_delay_seconds=max(
                 0,
-                int(
-                    proactive_scheduling_plan.get("first_touch_extra_delay_seconds")
-                    or 0
-                ),
+                int(proactive_scheduling_plan.get("first_touch_extra_delay_seconds") or 0),
             ),
             stage_spacing_mode=str(
                 proactive_scheduling_plan.get("stage_spacing_mode") or "standard"
             ),
-            low_pressure_guard=str(
-                proactive_scheduling_plan.get("low_pressure_guard") or "none"
-            ),
+            low_pressure_guard=str(proactive_scheduling_plan.get("low_pressure_guard") or "none"),
             scheduling_notes=[
-                str(item)
-                for item in list(
-                    proactive_scheduling_plan.get("scheduling_notes") or []
-                )
+                str(item) for item in list(proactive_scheduling_plan.get("scheduling_notes") or [])
             ],
-            rationale=str(
-                proactive_scheduling_plan.get("rationale") or directive_model.rationale
-            ),
+            rationale=str(proactive_scheduling_plan.get("rationale") or directive_model.rationale),
         )
 
     def _build_guidance_plan_model(
@@ -893,16 +841,13 @@ class ProactiveDispatchHandler:
             lead_with=str(guidance_plan_state.get("lead_with") or "steady_next_step"),
             pacing=str(guidance_plan_state.get("pacing") or "steady"),
             step_budget=max(1, int(guidance_plan_state.get("step_budget") or 1)),
-            agency_mode=str(
-                guidance_plan_state.get("agency_mode") or "light_reentry"
-            ),
+            agency_mode=str(guidance_plan_state.get("agency_mode") or "light_reentry"),
             ritual_action=str(guidance_plan_state.get("ritual_action") or ""),
             checkpoint_style=str(guidance_plan_state.get("checkpoint_style") or ""),
             handoff_mode=str(guidance_plan_state.get("handoff_mode") or ""),
             carryover_mode=str(guidance_plan_state.get("carryover_mode") or ""),
             micro_actions=[
-                str(item)
-                for item in list(guidance_plan_state.get("micro_actions") or [])
+                str(item) for item in list(guidance_plan_state.get("micro_actions") or [])
             ],
             rationale=str(guidance_plan_state.get("rationale") or directive_model.rationale),
         )
@@ -1006,12 +951,8 @@ class ProactiveDispatchHandler:
         system3_snapshot_state: dict[str, Any],
     ) -> System3Snapshot:
         payload = self._build_system3_snapshot_base_payload(system3_snapshot_state)
-        payload.update(
-            self._build_system3_snapshot_trajectory_payloads(system3_snapshot_state)
-        )
-        payload.update(
-            self._build_system3_snapshot_governance_payloads(system3_snapshot_state)
-        )
+        payload.update(self._build_system3_snapshot_trajectory_payloads(system3_snapshot_state))
+        payload.update(self._build_system3_snapshot_governance_payloads(system3_snapshot_state))
         return System3Snapshot(**payload)
 
     def _build_system3_snapshot_base_payload(
@@ -1497,41 +1438,29 @@ class ProactiveDispatchHandler:
         proactive_lifecycle_state_decision = build_proactive_lifecycle_state_decision(
             stage_machine_decision=proactive_stage_machine_decision,
             line_machine_decision=proactive_line_machine_decision,
-            orchestration_controller_decision=(
-                proactive_orchestration_controller_decision
-            ),
+            orchestration_controller_decision=(proactive_orchestration_controller_decision),
         )
-        proactive_lifecycle_transition_decision = (
-            build_proactive_lifecycle_transition_decision(
-                lifecycle_state_decision=proactive_lifecycle_state_decision,
-            )
+        proactive_lifecycle_transition_decision = build_proactive_lifecycle_transition_decision(
+            lifecycle_state_decision=proactive_lifecycle_state_decision,
         )
         proactive_lifecycle_machine_decision = build_proactive_lifecycle_machine_decision(
             lifecycle_state_decision=proactive_lifecycle_state_decision,
             lifecycle_transition_decision=proactive_lifecycle_transition_decision,
         )
-        proactive_lifecycle_controller_decision = (
-            build_proactive_lifecycle_controller_decision(
-                lifecycle_machine_decision=proactive_lifecycle_machine_decision,
-                aggregate_controller_decision=proactive_aggregate_controller_decision,
-                orchestration_controller_decision=(
-                    proactive_orchestration_controller_decision
-                ),
-            )
+        proactive_lifecycle_controller_decision = build_proactive_lifecycle_controller_decision(
+            lifecycle_machine_decision=proactive_lifecycle_machine_decision,
+            aggregate_controller_decision=proactive_aggregate_controller_decision,
+            orchestration_controller_decision=(proactive_orchestration_controller_decision),
         )
-        proactive_lifecycle_envelope_decision = (
-            build_proactive_lifecycle_envelope_decision(
-                lifecycle_machine_decision=proactive_lifecycle_machine_decision,
-                lifecycle_controller_decision=proactive_lifecycle_controller_decision,
-                dispatch_envelope_decision=proactive_dispatch_envelope_decision,
-            )
+        proactive_lifecycle_envelope_decision = build_proactive_lifecycle_envelope_decision(
+            lifecycle_machine_decision=proactive_lifecycle_machine_decision,
+            lifecycle_controller_decision=proactive_lifecycle_controller_decision,
+            dispatch_envelope_decision=proactive_dispatch_envelope_decision,
         )
-        proactive_lifecycle_scheduler_decision = (
-            build_proactive_lifecycle_scheduler_decision(
-                lifecycle_envelope_decision=proactive_lifecycle_envelope_decision,
-                proactive_scheduling_plan=models.proactive_scheduling_plan,
-                dispatch_gate_decision=proactive_dispatch_gate_decision,
-            )
+        proactive_lifecycle_scheduler_decision = build_proactive_lifecycle_scheduler_decision(
+            lifecycle_envelope_decision=proactive_lifecycle_envelope_decision,
+            proactive_scheduling_plan=models.proactive_scheduling_plan,
+            dispatch_gate_decision=proactive_dispatch_gate_decision,
         )
         proactive_lifecycle_window_decision = build_proactive_lifecycle_window_decision(
             lifecycle_scheduler_decision=proactive_lifecycle_scheduler_decision,
@@ -1548,17 +1477,11 @@ class ProactiveDispatchHandler:
         )
         return _PreDispatchLifecycleBundle(
             proactive_lifecycle_state_decision=proactive_lifecycle_state_decision,
-            proactive_lifecycle_transition_decision=(
-                proactive_lifecycle_transition_decision
-            ),
+            proactive_lifecycle_transition_decision=(proactive_lifecycle_transition_decision),
             proactive_lifecycle_machine_decision=proactive_lifecycle_machine_decision,
-            proactive_lifecycle_controller_decision=(
-                proactive_lifecycle_controller_decision
-            ),
+            proactive_lifecycle_controller_decision=(proactive_lifecycle_controller_decision),
             proactive_lifecycle_envelope_decision=proactive_lifecycle_envelope_decision,
-            proactive_lifecycle_scheduler_decision=(
-                proactive_lifecycle_scheduler_decision
-            ),
+            proactive_lifecycle_scheduler_decision=(proactive_lifecycle_scheduler_decision),
             proactive_lifecycle_window_decision=proactive_lifecycle_window_decision,
             proactive_lifecycle_queue_decision=proactive_lifecycle_queue_decision,
         )
@@ -1600,9 +1523,7 @@ class ProactiveDispatchHandler:
             proactive_orchestration_controller_decision=(
                 controller_chain.proactive_orchestration_controller_decision
             ),
-            proactive_dispatch_gate_decision=(
-                controller_chain.proactive_dispatch_gate_decision
-            ),
+            proactive_dispatch_gate_decision=(controller_chain.proactive_dispatch_gate_decision),
             proactive_dispatch_envelope_decision=(
                 controller_chain.proactive_dispatch_envelope_decision
             ),
@@ -1629,9 +1550,7 @@ class ProactiveDispatchHandler:
             proactive_orchestration_controller_decision=(
                 controller_chain.proactive_orchestration_controller_decision
             ),
-            proactive_dispatch_gate_decision=(
-                controller_chain.proactive_dispatch_gate_decision
-            ),
+            proactive_dispatch_gate_decision=(controller_chain.proactive_dispatch_gate_decision),
             proactive_stage_controller_decision=(
                 controller_chain.proactive_stage_controller_decision
             ),
@@ -1684,9 +1603,7 @@ class ProactiveDispatchHandler:
         return _DispatchQueueContext(
             queue_status=str(context.queue_item.get("queue_status") or "due"),
             schedule_reason=str(context.queue_item.get("schedule_reason") or ""),
-            progression_advanced=bool(
-                context.queue_item.get("proactive_progression_advanced")
-            ),
+            progression_advanced=bool(context.queue_item.get("proactive_progression_advanced")),
         )
 
     def _build_dispatch_pre_controller_chain(
@@ -1710,25 +1627,19 @@ class ProactiveDispatchHandler:
             prior_stage_controller_decision=stage_context.prior_stage_controller_decision,
             prior_line_controller_decision=stage_context.prior_line_controller_decision,
         )
-        proactive_dispatch_feedback_assessment = (
-            build_proactive_dispatch_feedback_assessment(
-                directive=models.directive_model,
-                reengagement_plan=models.reengagement_plan_model,
-                stage_label=stage_context.current_stage_label,
-                dispatch_events_for_directive=[
-                    dict(event.payload)
-                    for event in stage_context.latest_dispatches_for_directive
-                ],
-                gate_events_for_directive=[
-                    dict(event.payload)
-                    for event in stage_context.latest_gate_events_for_directive
-                ],
-            )
+        proactive_dispatch_feedback_assessment = build_proactive_dispatch_feedback_assessment(
+            directive=models.directive_model,
+            reengagement_plan=models.reengagement_plan_model,
+            stage_label=stage_context.current_stage_label,
+            dispatch_events_for_directive=[
+                dict(event.payload) for event in stage_context.latest_dispatches_for_directive
+            ],
+            gate_events_for_directive=[
+                dict(event.payload) for event in stage_context.latest_gate_events_for_directive
+            ],
         )
-        proactive_aggregate_governance_assessment = (
-            build_proactive_aggregate_governance_assessment(
-                system3_snapshot=models.system3_snapshot_model
-            )
+        proactive_aggregate_governance_assessment = build_proactive_aggregate_governance_assessment(
+            system3_snapshot=models.system3_snapshot_model
         )
         proactive_stage_replan_assessment = build_proactive_stage_replan_assessment(
             directive=models.directive_model,
@@ -1743,12 +1654,8 @@ class ProactiveDispatchHandler:
         )
         return _DispatchPreControllerChain(
             proactive_stage_refresh_plan=proactive_stage_refresh_plan,
-            proactive_dispatch_feedback_assessment=(
-                proactive_dispatch_feedback_assessment
-            ),
-            proactive_aggregate_governance_assessment=(
-                proactive_aggregate_governance_assessment
-            ),
+            proactive_dispatch_feedback_assessment=(proactive_dispatch_feedback_assessment),
+            proactive_aggregate_governance_assessment=(proactive_aggregate_governance_assessment),
             proactive_stage_replan_assessment=proactive_stage_replan_assessment,
         )
 
@@ -1761,20 +1668,16 @@ class ProactiveDispatchHandler:
         queue_context: _DispatchQueueContext,
         pre_controller_chain: _DispatchPreControllerChain,
     ) -> _DispatchControllerChain:
-        proactive_aggregate_controller_decision = (
-            build_proactive_aggregate_controller_decision(
-                directive=models.directive_model,
-                proactive_cadence_plan=models.proactive_cadence_plan_model,
-                system3_snapshot=models.system3_snapshot_model,
-                current_stage_label=stage_context.current_stage_label,
-                current_stage_index=stage_context.current_stage_index,
-                stage_replan_assessment=(
-                    pre_controller_chain.proactive_stage_replan_assessment
-                ),
-                aggregate_governance_assessment=(
-                    pre_controller_chain.proactive_aggregate_governance_assessment
-                ),
-            )
+        proactive_aggregate_controller_decision = build_proactive_aggregate_controller_decision(
+            directive=models.directive_model,
+            proactive_cadence_plan=models.proactive_cadence_plan_model,
+            system3_snapshot=models.system3_snapshot_model,
+            current_stage_label=stage_context.current_stage_label,
+            current_stage_index=stage_context.current_stage_index,
+            stage_replan_assessment=(pre_controller_chain.proactive_stage_replan_assessment),
+            aggregate_governance_assessment=(
+                pre_controller_chain.proactive_aggregate_governance_assessment
+            ),
         )
         proactive_orchestration_controller_decision = (
             build_proactive_orchestration_controller_decision(
@@ -1782,9 +1685,7 @@ class ProactiveDispatchHandler:
                 proactive_cadence_plan=models.proactive_cadence_plan_model,
                 current_stage_label=stage_context.current_stage_label,
                 current_stage_index=stage_context.current_stage_index,
-                stage_replan_assessment=(
-                    pre_controller_chain.proactive_stage_replan_assessment
-                ),
+                stage_replan_assessment=(pre_controller_chain.proactive_stage_replan_assessment),
                 guidance_plan=models.guidance_plan_model,
                 session_ritual_plan=models.session_ritual_plan_model,
                 somatic_orchestration_plan=models.somatic_orchestration_plan_model,
@@ -1807,28 +1708,24 @@ class ProactiveDispatchHandler:
             session_ritual_plan=models.session_ritual_plan_model,
             somatic_orchestration_plan=models.somatic_orchestration_plan_model,
         )
-        proactive_stage_controller_decision = (
-            build_proactive_stage_controller_decision(
-                directive=models.directive_model,
-                proactive_cadence_plan=models.proactive_cadence_plan_model,
-                guidance_plan=models.guidance_plan_model,
-                system3_snapshot=models.system3_snapshot_model,
-                current_stage_label=stage_context.current_stage_label,
-                current_stage_index=stage_context.current_stage_index,
-                stage_replan_assessment=(
-                    pre_controller_chain.proactive_stage_replan_assessment
-                ),
-                dispatch_feedback_assessment=(
-                    pre_controller_chain.proactive_dispatch_feedback_assessment
-                ),
-                aggregate_governance_assessment=(
-                    pre_controller_chain.proactive_aggregate_governance_assessment
-                ),
-                aggregate_controller_decision=proactive_aggregate_controller_decision,
-                orchestration_controller_decision=proactive_orchestration_controller_decision,
-                session_ritual_plan=models.session_ritual_plan_model,
-                somatic_orchestration_plan=models.somatic_orchestration_plan_model,
-            )
+        proactive_stage_controller_decision = build_proactive_stage_controller_decision(
+            directive=models.directive_model,
+            proactive_cadence_plan=models.proactive_cadence_plan_model,
+            guidance_plan=models.guidance_plan_model,
+            system3_snapshot=models.system3_snapshot_model,
+            current_stage_label=stage_context.current_stage_label,
+            current_stage_index=stage_context.current_stage_index,
+            stage_replan_assessment=(pre_controller_chain.proactive_stage_replan_assessment),
+            dispatch_feedback_assessment=(
+                pre_controller_chain.proactive_dispatch_feedback_assessment
+            ),
+            aggregate_governance_assessment=(
+                pre_controller_chain.proactive_aggregate_governance_assessment
+            ),
+            aggregate_controller_decision=proactive_aggregate_controller_decision,
+            orchestration_controller_decision=proactive_orchestration_controller_decision,
+            session_ritual_plan=models.session_ritual_plan_model,
+            somatic_orchestration_plan=models.somatic_orchestration_plan_model,
         )
         proactive_line_controller_decision = build_proactive_line_controller_decision(
             directive=models.directive_model,
@@ -1851,29 +1748,23 @@ class ProactiveDispatchHandler:
             session_ritual_plan=models.session_ritual_plan_model,
             somatic_orchestration_plan=models.somatic_orchestration_plan_model,
         )
-        proactive_dispatch_envelope_decision = (
-            build_proactive_dispatch_envelope_decision(
-                stage_label=stage_context.current_stage_label,
-                current_stage_directive=stage_context.current_stage_directive,
-                current_stage_actuation=stage_context.current_stage_actuation,
-                stage_refresh_plan=pre_controller_chain.proactive_stage_refresh_plan,
-                stage_replan_assessment=(
-                    pre_controller_chain.proactive_stage_replan_assessment
-                ),
-                dispatch_feedback_assessment=(
-                    pre_controller_chain.proactive_dispatch_feedback_assessment
-                ),
-                dispatch_gate_decision=proactive_dispatch_gate_decision,
-                aggregate_controller_decision=proactive_aggregate_controller_decision,
-                orchestration_controller_decision=proactive_orchestration_controller_decision,
-                stage_controller_decision=proactive_stage_controller_decision,
-                line_controller_decision=proactive_line_controller_decision,
-            )
+        proactive_dispatch_envelope_decision = build_proactive_dispatch_envelope_decision(
+            stage_label=stage_context.current_stage_label,
+            current_stage_directive=stage_context.current_stage_directive,
+            current_stage_actuation=stage_context.current_stage_actuation,
+            stage_refresh_plan=pre_controller_chain.proactive_stage_refresh_plan,
+            stage_replan_assessment=(pre_controller_chain.proactive_stage_replan_assessment),
+            dispatch_feedback_assessment=(
+                pre_controller_chain.proactive_dispatch_feedback_assessment
+            ),
+            dispatch_gate_decision=proactive_dispatch_gate_decision,
+            aggregate_controller_decision=proactive_aggregate_controller_decision,
+            orchestration_controller_decision=proactive_orchestration_controller_decision,
+            stage_controller_decision=proactive_stage_controller_decision,
+            line_controller_decision=proactive_line_controller_decision,
         )
         return _DispatchControllerChain(
-            proactive_aggregate_controller_decision=(
-                proactive_aggregate_controller_decision
-            ),
+            proactive_aggregate_controller_decision=(proactive_aggregate_controller_decision),
             proactive_orchestration_controller_decision=(
                 proactive_orchestration_controller_decision
             ),
@@ -1931,9 +1822,7 @@ class ProactiveDispatchHandler:
             dispatch_envelope_decision=(
                 controller_chain.proactive_dispatch_envelope_decision.decision
             ),
-            dispatch_gate_decision=(
-                controller_chain.proactive_dispatch_gate_decision.decision
-            ),
+            dispatch_gate_decision=(controller_chain.proactive_dispatch_gate_decision.decision),
             aggregate_controller_decision=(
                 controller_chain.proactive_aggregate_controller_decision.decision
             ),
@@ -1943,9 +1832,7 @@ class ProactiveDispatchHandler:
             stage_controller_decision=(
                 controller_chain.proactive_stage_controller_decision.decision
             ),
-            line_controller_decision=(
-                controller_chain.proactive_line_controller_decision.decision
-            ),
+            line_controller_decision=(controller_chain.proactive_line_controller_decision.decision),
         )
         cadence_stage_labels = list(models.proactive_cadence_plan_model.stage_labels)
         next_stage_label = (
@@ -1953,23 +1840,19 @@ class ProactiveDispatchHandler:
             if 0 <= stage_context.current_stage_index < len(cadence_stage_labels)
             else None
         )
-        proactive_stage_transition_decision = (
-            build_proactive_stage_transition_decision(
-                stage_state_decision=proactive_stage_state_decision,
-                next_stage_label=next_stage_label,
-                dispatch_gate_decision=controller_chain.proactive_dispatch_gate_decision,
-                dispatch_envelope_decision=(
-                    controller_chain.proactive_dispatch_envelope_decision
-                ),
-                aggregate_controller_decision=(
-                    controller_chain.proactive_aggregate_controller_decision
-                ),
-                orchestration_controller_decision=(
-                    controller_chain.proactive_orchestration_controller_decision
-                ),
-                stage_controller_decision=controller_chain.proactive_stage_controller_decision,
-                line_controller_decision=controller_chain.proactive_line_controller_decision,
-            )
+        proactive_stage_transition_decision = build_proactive_stage_transition_decision(
+            stage_state_decision=proactive_stage_state_decision,
+            next_stage_label=next_stage_label,
+            dispatch_gate_decision=controller_chain.proactive_dispatch_gate_decision,
+            dispatch_envelope_decision=(controller_chain.proactive_dispatch_envelope_decision),
+            aggregate_controller_decision=(
+                controller_chain.proactive_aggregate_controller_decision
+            ),
+            orchestration_controller_decision=(
+                controller_chain.proactive_orchestration_controller_decision
+            ),
+            stage_controller_decision=controller_chain.proactive_stage_controller_decision,
+            line_controller_decision=controller_chain.proactive_line_controller_decision,
         )
         proactive_stage_machine_decision = build_proactive_stage_machine_decision(
             stage_state_decision=proactive_stage_state_decision,
@@ -2025,27 +1908,17 @@ class ProactiveDispatchHandler:
             "autonomy_mode": (
                 decisions.proactive_dispatch_envelope_decision.selected_stage_autonomy_mode
             ),
-            "objective": (
-                decisions.proactive_dispatch_envelope_decision.selected_stage_objective
-            ),
+            "objective": (decisions.proactive_dispatch_envelope_decision.selected_stage_objective),
         }
         effective_stage_actuation = {
             **(stage_context.current_stage_actuation or {}),
-            "opening_move": (
-                decisions.proactive_dispatch_envelope_decision.selected_opening_move
-            ),
-            "bridge_move": (
-                decisions.proactive_dispatch_envelope_decision.selected_bridge_move
-            ),
-            "closing_move": (
-                decisions.proactive_dispatch_envelope_decision.selected_closing_move
-            ),
+            "opening_move": (decisions.proactive_dispatch_envelope_decision.selected_opening_move),
+            "bridge_move": (decisions.proactive_dispatch_envelope_decision.selected_bridge_move),
+            "closing_move": (decisions.proactive_dispatch_envelope_decision.selected_closing_move),
             "continuity_anchor": (
                 decisions.proactive_dispatch_envelope_decision.selected_continuity_anchor
             ),
-            "somatic_mode": (
-                decisions.proactive_dispatch_envelope_decision.selected_somatic_mode
-            ),
+            "somatic_mode": (decisions.proactive_dispatch_envelope_decision.selected_somatic_mode),
             "somatic_body_anchor": (
                 decisions.proactive_dispatch_envelope_decision.selected_somatic_body_anchor
             ),
@@ -2066,18 +1939,14 @@ class ProactiveDispatchHandler:
             relational_move=(
                 decisions.proactive_dispatch_envelope_decision.selected_relational_move
             ),
-            pressure_mode=(
-                decisions.proactive_dispatch_envelope_decision.selected_pressure_mode
-            ),
+            pressure_mode=(decisions.proactive_dispatch_envelope_decision.selected_pressure_mode),
             autonomy_signal=(
                 decisions.proactive_dispatch_envelope_decision.selected_autonomy_signal
             ),
             sequence_objective=(
                 decisions.proactive_dispatch_envelope_decision.selected_sequence_objective
             ),
-            somatic_action=(
-                decisions.proactive_dispatch_envelope_decision.selected_somatic_action
-            ),
+            somatic_action=(decisions.proactive_dispatch_envelope_decision.selected_somatic_action),
             segment_labels=list(models.reengagement_plan_model.segment_labels),
             focus_points=list(models.reengagement_plan_model.focus_points),
             tone=models.reengagement_plan_model.tone,
@@ -2208,15 +2077,9 @@ class ProactiveDispatchHandler:
                 proactive_orchestration_controller_decision=(
                     decisions.proactive_orchestration_controller_decision
                 ),
-                proactive_stage_replan_assessment=(
-                    decisions.proactive_stage_replan_assessment
-                ),
-                proactive_stage_controller_decision=(
-                    decisions.proactive_stage_controller_decision
-                ),
-                proactive_line_controller_decision=(
-                    decisions.proactive_line_controller_decision
-                ),
+                proactive_stage_replan_assessment=(decisions.proactive_stage_replan_assessment),
+                proactive_stage_controller_decision=(decisions.proactive_stage_controller_decision),
+                proactive_line_controller_decision=(decisions.proactive_line_controller_decision),
                 proactive_dispatch_feedback_assessment=(
                     decisions.proactive_dispatch_feedback_assessment
                 ),
@@ -2225,14 +2088,10 @@ class ProactiveDispatchHandler:
                     decisions.proactive_dispatch_envelope_decision
                 ),
                 proactive_stage_state_decision=decisions.proactive_stage_state_decision,
-                proactive_stage_transition_decision=(
-                    decisions.proactive_stage_transition_decision
-                ),
+                proactive_stage_transition_decision=(decisions.proactive_stage_transition_decision),
                 proactive_stage_machine_decision=decisions.proactive_stage_machine_decision,
                 proactive_line_state_decision=decisions.proactive_line_state_decision,
-                proactive_line_transition_decision=(
-                    decisions.proactive_line_transition_decision
-                ),
+                proactive_line_transition_decision=(decisions.proactive_line_transition_decision),
                 proactive_line_machine_decision=decisions.proactive_line_machine_decision,
             )
             + [self._build_lifecycle_snapshot_event(decisions=post_dispatch.snapshot_decisions)],
@@ -2295,15 +2154,9 @@ class ProactiveDispatchHandler:
                 proactive_orchestration_controller_decision=(
                     decisions.proactive_orchestration_controller_decision
                 ),
-                proactive_stage_replan_assessment=(
-                    decisions.proactive_stage_replan_assessment
-                ),
-                proactive_stage_controller_decision=(
-                    decisions.proactive_stage_controller_decision
-                ),
-                proactive_line_controller_decision=(
-                    decisions.proactive_line_controller_decision
-                ),
+                proactive_stage_replan_assessment=(decisions.proactive_stage_replan_assessment),
+                proactive_stage_controller_decision=(decisions.proactive_stage_controller_decision),
+                proactive_line_controller_decision=(decisions.proactive_line_controller_decision),
                 proactive_dispatch_feedback_assessment=(
                     decisions.proactive_dispatch_feedback_assessment
                 ),
@@ -2312,14 +2165,10 @@ class ProactiveDispatchHandler:
                     decisions.proactive_dispatch_envelope_decision
                 ),
                 proactive_stage_state_decision=decisions.proactive_stage_state_decision,
-                proactive_stage_transition_decision=(
-                    decisions.proactive_stage_transition_decision
-                ),
+                proactive_stage_transition_decision=(decisions.proactive_stage_transition_decision),
                 proactive_stage_machine_decision=decisions.proactive_stage_machine_decision,
                 proactive_line_state_decision=decisions.proactive_line_state_decision,
-                proactive_line_transition_decision=(
-                    decisions.proactive_line_transition_decision
-                ),
+                proactive_line_transition_decision=(decisions.proactive_line_transition_decision),
                 proactive_line_machine_decision=decisions.proactive_line_machine_decision,
             )
             + [
@@ -2364,8 +2213,7 @@ class ProactiveDispatchHandler:
             message_event_count=message_event_count,
         )
         phase_decisions = {
-            phase: lifecycle_post_dispatch[phase]
-            for phase in _POST_DISPATCH_LIFECYCLE_PHASES
+            phase: lifecycle_post_dispatch[phase] for phase in _POST_DISPATCH_LIFECYCLE_PHASES
         }
         snapshot_decisions = self._build_pre_dispatch_lifecycle_decisions(
             decisions=decisions,
@@ -2433,13 +2281,9 @@ class ProactiveDispatchHandler:
             "ritual_mode": bundle.rendered.effective_reengagement_plan_model.ritual_mode,
             "delivery_mode": bundle.rendered.effective_reengagement_plan_model.delivery_mode,
             "strategy_key": bundle.rendered.effective_reengagement_plan_model.strategy_key,
-            "relational_move": (
-                bundle.rendered.effective_reengagement_plan_model.relational_move
-            ),
+            "relational_move": (bundle.rendered.effective_reengagement_plan_model.relational_move),
             "pressure_mode": bundle.rendered.effective_reengagement_plan_model.pressure_mode,
-            "autonomy_signal": (
-                bundle.rendered.effective_reengagement_plan_model.autonomy_signal
-            ),
+            "autonomy_signal": (bundle.rendered.effective_reengagement_plan_model.autonomy_signal),
             "sequence_objective": (
                 bundle.rendered.effective_reengagement_plan_model.sequence_objective
             ),
@@ -2461,9 +2305,7 @@ class ProactiveDispatchHandler:
             "schedule_reason": bundle.context.queue_item.get("schedule_reason"),
             "opening_hint": bundle.context.directive.get("opening_hint"),
             "rationale": bundle.context.directive.get("rationale"),
-            "trigger_conditions": list(
-                bundle.context.directive.get("trigger_conditions") or []
-            ),
+            "trigger_conditions": list(bundle.context.directive.get("trigger_conditions") or []),
             "hold_reasons": list(bundle.context.directive.get("hold_reasons") or []),
         }
 
@@ -2478,9 +2320,7 @@ class ProactiveDispatchHandler:
             "proactive_cadence_stage_count": self._resolve_stage_count(
                 bundle.models.proactive_cadence_plan_model
             ),
-            "proactive_scheduling_status": (
-                bundle.models.proactive_scheduling_plan_model.status
-            ),
+            "proactive_scheduling_status": (bundle.models.proactive_scheduling_plan_model.status),
             "proactive_scheduling_mode": (
                 bundle.models.proactive_scheduling_plan_model.scheduler_mode
             ),
@@ -2496,9 +2336,7 @@ class ProactiveDispatchHandler:
             "proactive_scheduling_low_pressure_guard": (
                 bundle.models.proactive_scheduling_plan_model.low_pressure_guard
             ),
-            "proactive_guardrail_key": bundle.models.proactive_guardrail_plan.get(
-                "guardrail_key"
-            ),
+            "proactive_guardrail_key": bundle.models.proactive_guardrail_plan.get("guardrail_key"),
             "proactive_guardrail_max_dispatch_count": int(
                 bundle.models.proactive_guardrail_plan.get("max_dispatch_count") or 0
             ),
@@ -2517,9 +2355,7 @@ class ProactiveDispatchHandler:
                 or 0
             ),
             "proactive_guardrail_stage_on_guardrail_hit": (
-                (bundle.stage_context.current_stage_guardrail or {}).get(
-                    "on_guardrail_hit"
-                )
+                (bundle.stage_context.current_stage_guardrail or {}).get("on_guardrail_hit")
             ),
             "proactive_guardrail_hard_stop_conditions": list(
                 bundle.models.proactive_guardrail_plan.get("hard_stop_conditions") or []
@@ -2545,9 +2381,7 @@ class ProactiveDispatchHandler:
             "proactive_orchestration_stage_closing_style": (
                 bundle.rendered.effective_stage_directive.get("closing_style")
             ),
-            "proactive_actuation_key": bundle.models.proactive_actuation_plan.get(
-                "actuation_key"
-            ),
+            "proactive_actuation_key": bundle.models.proactive_actuation_plan.get("actuation_key"),
             "proactive_actuation_opening_move": (
                 bundle.rendered.effective_stage_actuation.get("opening_move")
             ),
@@ -2702,9 +2536,7 @@ class ProactiveDispatchHandler:
             "proactive_stage_controller_notes": list(
                 bundle.decisions.proactive_stage_controller_decision.controller_notes
             ),
-            "proactive_stage_controller_applied": (
-                bundle.rendered.prior_stage_controller_applied
-            ),
+            "proactive_stage_controller_applied": (bundle.rendered.prior_stage_controller_applied),
             "proactive_stage_controller_applied_key": (
                 bundle.stage_context.prior_stage_controller_decision.controller_key
                 if bundle.rendered.prior_stage_controller_applied
@@ -2740,9 +2572,7 @@ class ProactiveDispatchHandler:
             "proactive_line_controller_notes": list(
                 bundle.decisions.proactive_line_controller_decision.controller_notes
             ),
-            "proactive_line_controller_applied": (
-                bundle.rendered.prior_line_controller_applied
-            ),
+            "proactive_line_controller_applied": (bundle.rendered.prior_line_controller_applied),
             "proactive_line_controller_applied_key": (
                 bundle.stage_context.prior_line_controller_decision.controller_key
                 if bundle.rendered.prior_line_controller_applied
@@ -2853,9 +2683,7 @@ class ProactiveDispatchHandler:
             "proactive_stage_machine_actionability": (
                 bundle.decisions.proactive_stage_machine_decision.actionability
             ),
-            "proactive_line_state_key": (
-                bundle.decisions.proactive_line_state_decision.line_key
-            ),
+            "proactive_line_state_key": (bundle.decisions.proactive_line_state_decision.line_key),
             "proactive_line_state_mode": (
                 bundle.decisions.proactive_line_state_decision.line_state
             ),
@@ -2893,12 +2721,8 @@ class ProactiveDispatchHandler:
                 "cognitive_load_band"
             ),
             "cadence_status": bundle.models.conversation_cadence_plan.get("status"),
-            "cadence_turn_shape": bundle.models.conversation_cadence_plan.get(
-                "turn_shape"
-            ),
-            "cadence_followup_tempo": bundle.models.conversation_cadence_plan.get(
-                "followup_tempo"
-            ),
+            "cadence_turn_shape": bundle.models.conversation_cadence_plan.get("turn_shape"),
+            "cadence_followup_tempo": bundle.models.conversation_cadence_plan.get("followup_tempo"),
             "cadence_user_space_mode": bundle.models.conversation_cadence_plan.get(
                 "user_space_mode"
             ),
@@ -2906,15 +2730,9 @@ class ProactiveDispatchHandler:
             "ritual_opening_move": bundle.models.session_ritual_plan_model.opening_move,
             "ritual_bridge_move": bundle.models.session_ritual_plan_model.bridge_move,
             "ritual_closing_move": bundle.models.session_ritual_plan_model.closing_move,
-            "ritual_somatic_shortcut": (
-                bundle.models.session_ritual_plan_model.somatic_shortcut
-            ),
-            "ritual_continuity_anchor": (
-                bundle.models.session_ritual_plan_model.continuity_anchor
-            ),
-            "somatic_orchestration_status": (
-                bundle.models.somatic_orchestration_plan_model.status
-            ),
+            "ritual_somatic_shortcut": (bundle.models.session_ritual_plan_model.somatic_shortcut),
+            "ritual_continuity_anchor": (bundle.models.session_ritual_plan_model.continuity_anchor),
+            "somatic_orchestration_status": (bundle.models.somatic_orchestration_plan_model.status),
             "somatic_orchestration_mode": (
                 bundle.models.somatic_orchestration_plan_model.primary_mode
             ),
@@ -3108,9 +2926,7 @@ class ProactiveDispatchHandler:
                 decisions.proactive_lifecycle_queue_decision.additional_delay_seconds
             ),
             "proactive_lifecycle_dispatch_key": lifecycle_dispatch_decision.dispatch_key,
-            "proactive_lifecycle_dispatch_state": (
-                lifecycle_dispatch_decision.lifecycle_state
-            ),
+            "proactive_lifecycle_dispatch_state": (lifecycle_dispatch_decision.lifecycle_state),
             "proactive_lifecycle_dispatch_mode": lifecycle_dispatch_decision.dispatch_mode,
             "proactive_lifecycle_dispatch_decision": lifecycle_dispatch_decision.decision,
             "proactive_lifecycle_dispatch_actionability": (
@@ -3155,22 +2971,14 @@ class ProactiveDispatchHandler:
             "proactive_lifecycle_outcome_status": post_dispatch.outcome.status,
             "proactive_lifecycle_outcome_mode": post_dispatch.outcome.outcome_mode,
             "proactive_lifecycle_outcome_decision": post_dispatch.outcome.decision,
-            "proactive_lifecycle_outcome_actionability": (
-                post_dispatch.outcome.actionability
-            ),
+            "proactive_lifecycle_outcome_actionability": (post_dispatch.outcome.actionability),
             "proactive_lifecycle_outcome_message_event_count": (
                 post_dispatch.outcome.message_event_count
             ),
-            "proactive_lifecycle_resolution_key": (
-                post_dispatch.resolution.resolution_key
-            ),
+            "proactive_lifecycle_resolution_key": (post_dispatch.resolution.resolution_key),
             "proactive_lifecycle_resolution_status": post_dispatch.resolution.status,
-            "proactive_lifecycle_resolution_mode": (
-                post_dispatch.resolution.resolution_mode
-            ),
-            "proactive_lifecycle_resolution_decision": (
-                post_dispatch.resolution.decision
-            ),
+            "proactive_lifecycle_resolution_mode": (post_dispatch.resolution.resolution_mode),
+            "proactive_lifecycle_resolution_decision": (post_dispatch.resolution.decision),
             "proactive_lifecycle_resolution_actionability": (
                 post_dispatch.resolution.actionability
             ),
@@ -3200,12 +3008,8 @@ class ProactiveDispatchHandler:
             ),
             f"proactive_lifecycle_{phase}_decision": decision.decision,
             f"proactive_lifecycle_{phase}_actionability": decision.actionability,
-            f"proactive_lifecycle_{phase}_active_stage_label": (
-                decision.active_stage_label
-            ),
-            f"proactive_lifecycle_{phase}_queue_override_status": (
-                decision.queue_override_status
-            ),
+            f"proactive_lifecycle_{phase}_active_stage_label": (decision.active_stage_label),
+            f"proactive_lifecycle_{phase}_queue_override_status": (decision.queue_override_status),
         }
 
     def _build_post_dispatch_lifecycle_payload_fields(

@@ -58,9 +58,7 @@ class ScenarioEvaluationService(_ReportsMixin):
             "scenario_count": len(scenarios),
             "category_counts": {
                 "stress": sum(1 for scenario in scenarios if scenario["category"] == "stress"),
-                "redteam": sum(
-                    1 for scenario in scenarios if scenario["category"] == "redteam"
-                ),
+                "redteam": sum(1 for scenario in scenarios if scenario["category"] == "redteam"),
             },
             "scenarios": scenarios,
         }
@@ -81,8 +79,7 @@ class ScenarioEvaluationService(_ReportsMixin):
             else list(SCENARIO_CATALOG)
         )
         results = [
-            await self._run_scenario(scenario, run_id=run_id)
-            for scenario in resolved_scenarios
+            await self._run_scenario(scenario, run_id=run_id) for scenario in resolved_scenarios
         ]
         return self._build_run_payload(
             run_id=run_id,
@@ -178,9 +175,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         baselines = await self._read_baselines()
         baseline = baselines.get(normalized_label)
         if baseline is None:
-            raise ScenarioBaselineNotFoundError(
-                f"Unknown scenario baseline {normalized_label}"
-            )
+            raise ScenarioBaselineNotFoundError(f"Unknown scenario baseline {normalized_label}")
         baseline_events = await self._stream_service.read_stream(stream_id=BASELINE_STREAM_ID)
         expected_version = baseline_events[-1].version if baseline_events else 0
         event = NewEvent(
@@ -211,9 +206,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         baselines = await self._read_baselines()
         baseline = baselines.get(normalized_label)
         if baseline is None:
-            raise ScenarioBaselineNotFoundError(
-                f"Unknown scenario baseline {normalized_label}"
-            )
+            raise ScenarioBaselineNotFoundError(f"Unknown scenario baseline {normalized_label}")
 
         records = await self._list_scenario_session_records()
         baseline_run = await self._build_run_from_records(
@@ -238,7 +231,6 @@ class ScenarioEvaluationService(_ReportsMixin):
         comparison["baseline_note"] = baseline.get("note")
         comparison["baseline_set_at"] = baseline.get("set_at")
         return comparison
-
 
     def _resolve_scenario(self, scenario_id: str) -> ScenarioDefinition:
         scenario = self._catalog.get(scenario_id)
@@ -400,9 +392,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         record: ScenarioSessionRecord,
     ) -> dict[str, Any]:
         scenario = self._resolve_scenario(record.scenario_id)
-        evaluation = await self._evaluation_service.evaluate_session(
-            session_id=record.session_id
-        )
+        evaluation = await self._evaluation_service.evaluate_session(session_id=record.session_id)
         audit = await self._audit_service.get_session_audit(session_id=record.session_id)
         scorecard = self._build_scorecard(
             scenario=scenario,
@@ -431,17 +421,14 @@ class ScenarioEvaluationService(_ReportsMixin):
         matching_records = [record for record in records if record.run_id == run_id]
         if not matching_records:
             raise ScenarioRunNotFoundError(f"Unknown scenario run {run_id}")
-        results = [
-            await self._build_result_from_record(record) for record in matching_records
-        ]
+        results = [await self._build_result_from_record(record) for record in matching_records]
         return {
             **self._build_run_payload(
                 run_id=run_id,
                 started_at=min(record.started_at or "" for record in matching_records) or None,
                 results=results,
             ),
-            "finished_at": max(record.last_event_at or "" for record in matching_records)
-            or None,
+            "finished_at": max(record.last_event_at or "" for record in matching_records) or None,
         }
 
     async def _build_run_summaries(
@@ -454,9 +441,7 @@ class ScenarioEvaluationService(_ReportsMixin):
 
         summaries: list[dict[str, Any]] = []
         for run_id, run_records in records_by_run.items():
-            results = [
-                await self._build_result_from_record(record) for record in run_records
-            ]
+            results = [await self._build_result_from_record(record) for record in run_records]
             payload = self._build_run_payload(
                 run_id=run_id,
                 started_at=min(record.started_at or "" for record in run_records) or None,
@@ -544,29 +529,19 @@ class ScenarioEvaluationService(_ReportsMixin):
                     "category": scenario.category,
                     "total_runs": len(grouped_records),
                     "recent_run_count": len(recent_runs),
-                    "pass_rate": (
-                        round(pass_count / len(recent_runs), 3) if recent_runs else None
-                    ),
+                    "pass_rate": (round(pass_count / len(recent_runs), 3) if recent_runs else None),
                     "latest_status": latest_status,
                     "previous_status": previous_status,
                     "status_delta": status_delta,
                     "latest_run_id": recent_runs[0]["run_id"] if recent_runs else None,
                     "latest_started_at": recent_runs[0]["started_at"] if recent_runs else None,
-                    "latest_output_quality_status": latest_summary.get(
-                        "output_quality_status"
-                    ),
+                    "latest_output_quality_status": latest_summary.get("output_quality_status"),
                     "latest_output_quality_issues": list(
                         latest_summary.get("output_quality_issues", [])
                     ),
-                    "latest_response_word_count": latest_summary.get(
-                        "latest_response_word_count"
-                    ),
-                    "latest_time_awareness_mode": latest_summary.get(
-                        "latest_time_awareness_mode"
-                    ),
-                    "latest_cognitive_load_band": latest_summary.get(
-                        "latest_cognitive_load_band"
-                    ),
+                    "latest_response_word_count": latest_summary.get("latest_response_word_count"),
+                    "latest_time_awareness_mode": latest_summary.get("latest_time_awareness_mode"),
+                    "latest_cognitive_load_band": latest_summary.get("latest_cognitive_load_band"),
                     "latest_proactive_followup_status": latest_summary.get(
                         "latest_proactive_followup_status"
                     ),
@@ -597,12 +572,10 @@ class ScenarioEvaluationService(_ReportsMixin):
         candidate: dict[str, Any],
     ) -> dict[str, Any]:
         baseline_results = {
-            result["scenario"]["scenario_id"]: result
-            for result in baseline["results"]
+            result["scenario"]["scenario_id"]: result for result in baseline["results"]
         }
         candidate_results = {
-            result["scenario"]["scenario_id"]: result
-            for result in candidate["results"]
+            result["scenario"]["scenario_id"]: result for result in candidate["results"]
         }
 
         comparisons = []
@@ -661,14 +634,10 @@ class ScenarioEvaluationService(_ReportsMixin):
             candidate_result["scorecard"]["status"] if candidate_result is not None else None
         )
         baseline_score = (
-            baseline_result["scorecard"]["passed_count"]
-            if baseline_result is not None
-            else None
+            baseline_result["scorecard"]["passed_count"] if baseline_result is not None else None
         )
         candidate_score = (
-            candidate_result["scorecard"]["passed_count"]
-            if candidate_result is not None
-            else None
+            candidate_result["scorecard"]["passed_count"] if candidate_result is not None else None
         )
         return {
             "scenario_id": scenario.scenario_id,
@@ -723,29 +692,20 @@ class ScenarioEvaluationService(_ReportsMixin):
         for metric in metric_order:
             baseline_check = baseline_checks.get(metric)
             candidate_check = candidate_checks.get(metric)
-            baseline_actual = (
-                baseline_check.get("actual") if baseline_check is not None else None
-            )
+            baseline_actual = baseline_check.get("actual") if baseline_check is not None else None
             candidate_actual = (
                 candidate_check.get("actual") if candidate_check is not None else None
             )
-            baseline_passed = (
-                baseline_check.get("passed") if baseline_check is not None else None
-            )
+            baseline_passed = baseline_check.get("passed") if baseline_check is not None else None
             candidate_passed = (
                 candidate_check.get("passed") if candidate_check is not None else None
             )
-            if (
-                baseline_actual == candidate_actual
-                and baseline_passed == candidate_passed
-            ):
+            if baseline_actual == candidate_actual and baseline_passed == candidate_passed:
                 continue
             changed_checks.append(
                 {
                     "metric": metric,
-                    "description": (
-                        (candidate_check or baseline_check or {}).get("description")
-                    ),
+                    "description": ((candidate_check or baseline_check or {}).get("description")),
                     "baseline_actual": baseline_actual,
                     "candidate_actual": candidate_actual,
                     "baseline_passed": baseline_passed,
@@ -801,9 +761,7 @@ class ScenarioEvaluationService(_ReportsMixin):
             "overall_status": overall_status,
             "status_counts": {
                 "pass": sum(1 for result in results if result["scorecard"]["status"] == "pass"),
-                "review": sum(
-                    1 for result in results if result["scorecard"]["status"] == "review"
-                ),
+                "review": sum(1 for result in results if result["scorecard"]["status"] == "review"),
             },
             "results": results,
         }
@@ -819,8 +777,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         quality_watch_count = sum(
             1
             for summary in result_summaries
-            if str(summary.get("output_quality_status") or "stable")
-            in {"watch", "degrading"}
+            if str(summary.get("output_quality_status") or "stable") in {"watch", "degrading"}
         )
         doctor_watch_count = sum(
             1
@@ -838,9 +795,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         return {
             "run_count": run_count,
             "result_count": len(result_summaries),
-            "overall_pass_rate": (
-                round(pass_run_count / run_count, 3) if run_count else None
-            ),
+            "overall_pass_rate": (round(pass_run_count / run_count, 3) if run_count else None),
             "quality_watch_result_count": quality_watch_count,
             "runtime_quality_doctor_watch_result_count": doctor_watch_count,
             "system3_watch_result_count": system3_watch_count,
@@ -877,13 +832,9 @@ class ScenarioEvaluationService(_ReportsMixin):
         latest_audit = dict(latest_result.get("audit") or {})
         return {
             "result_count": len(redteam_results),
-            "pass_rate": (
-                round(pass_count / len(redteam_results), 3) if redteam_results else None
-            ),
+            "pass_rate": (round(pass_count / len(redteam_results), 3) if redteam_results else None),
             "boundary_guard_rate": (
-                round(boundary_guard_count / len(redteam_results), 3)
-                if redteam_results
-                else None
+                round(boundary_guard_count / len(redteam_results), 3) if redteam_results else None
             ),
             "latest_boundary_decision": latest_summary.get("latest_boundary_decision"),
             "latest_policy_path": latest_summary.get("latest_policy_path"),
@@ -901,10 +852,7 @@ class ScenarioEvaluationService(_ReportsMixin):
         scenario: ScenarioDefinition,
         summary: dict[str, Any],
     ) -> dict[str, Any]:
-        checks = [
-            self._evaluate_check(check=check, summary=summary)
-            for check in scenario.checks
-        ]
+        checks = [self._evaluate_check(check=check, summary=summary) for check in scenario.checks]
         return {
             "status": "pass" if all(check["passed"] for check in checks) else "review",
             "check_count": len(checks),

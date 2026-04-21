@@ -22,26 +22,29 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import pickle
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 # Make router_v2 importable when run as a script.
 _ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-import numpy as np
-from sklearn.isotonic import IsotonicRegression
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, f1_score
-from sklearn.model_selection import train_test_split
+import numpy as np  # noqa: E402
+from sklearn.isotonic import IsotonicRegression  # noqa: E402
+from sklearn.linear_model import LogisticRegression  # noqa: E402
+from sklearn.metrics import classification_report, f1_score  # noqa: E402
+from sklearn.model_selection import train_test_split  # noqa: E402
 
-from router_v2.analyzers.router.contracts import ALL_ROUTES
-from router_v2.analyzers.router.features import RouterFeatures, extract_features, load_lexicons
+from router_v2.analyzers.router.contracts import ALL_ROUTES  # noqa: E402
+from router_v2.analyzers.router.features import (  # noqa: E402
+    RouterFeatures,
+    extract_features,
+    load_lexicons,
+)
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -105,9 +108,7 @@ def main() -> int:
             X, y, test_size=0.2, random_state=args.seed, stratify=y
         )
     except ValueError:
-        X_tr, X_va, y_tr, y_va = train_test_split(
-            X, y, test_size=0.2, random_state=args.seed
-        )
+        X_tr, X_va, y_tr, y_va = train_test_split(X, y, test_size=0.2, random_state=args.seed)
 
     clf = LogisticRegression(
         C=args.C,
@@ -119,7 +120,6 @@ def main() -> int:
     clf.fit(X_tr, y_tr)
 
     # Align class order with ALL_ROUTES.
-    order = [list(clf.classes_).index(c) for c in classes if c in clf.classes_]
     # If some class is missing from the training data, pad with a near-zero row.
     n_feat = X.shape[1]
     coef = np.zeros((len(classes), n_feat), dtype=np.float32)
@@ -164,7 +164,7 @@ def main() -> int:
     row_sum = cal_probs.sum(axis=1, keepdims=True)
     row_sum[row_sum == 0] = 1.0
     cal_probs = cal_probs / row_sum
-    label_idx = np.asarray([classes.index(l) for l in y_va])
+    label_idx = np.asarray([classes.index(lbl) for lbl in y_va])
     ece = _expected_calibration_error(cal_probs, label_idx)
 
     metrics = {

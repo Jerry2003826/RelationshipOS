@@ -229,9 +229,7 @@ async def _forward_runtime_updates(
                 container.stream_service.serialize_event(event)
                 for event in events
                 if event.event_type == SESSION_ARCHIVED
-                and (
-                    subscription.stream_id is None or event.stream_id == subscription.stream_id
-                )
+                and (subscription.stream_id is None or event.stream_id == subscription.stream_id)
             ]
             for archive_event in archive_events:
                 await websocket.send_json(

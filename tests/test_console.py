@@ -283,8 +283,7 @@ def test_console_evaluations_fragment_surfaces_runtime_quality_doctor_status() -
             return LLMResponse(
                 model=request.model,
                 output_text=(
-                    "I hear you, and I want to keep this grounded. "
-                    "The next step is to keep moving."
+                    "I hear you, and I want to keep this grounded. The next step is to keep moving."
                 ),
             )
 

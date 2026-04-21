@@ -49,9 +49,7 @@ class WorldStateProjector(Projector[dict[str, Any]]):
                 "communication": dict(world.get("communication") or {}),
                 "tasks": dict(world.get("tasks") or {}),
                 "action_surface": dict(world.get("action_surface") or {}),
-                "environment_appraisal": dict(
-                    world.get("environment_appraisal") or {}
-                ),
+                "environment_appraisal": dict(world.get("environment_appraisal") or {}),
                 "updated_at": payload.get("seeded_at"),
                 "source": "seed",
             }
@@ -64,14 +62,10 @@ class WorldStateProjector(Projector[dict[str, Any]]):
                         "circadian_phase",
                         state["circadian_phase"],
                     ),
-                    "sleep_pressure": float(
-                        payload.get("sleep_pressure", state["sleep_pressure"])
-                    ),
+                    "sleep_pressure": float(payload.get("sleep_pressure", state["sleep_pressure"])),
                     "device": dict(payload.get("device") or state.get("device") or {}),
                     "communication": dict(
-                        payload.get("communication")
-                        or state.get("communication")
-                        or {}
+                        payload.get("communication") or state.get("communication") or {}
                     ),
                     "tasks": dict(payload.get("tasks") or state.get("tasks") or {}),
                     "updated_at": payload.get("occurred_at"),
@@ -82,9 +76,7 @@ class WorldStateProjector(Projector[dict[str, Any]]):
             return {
                 **state,
                 "action_surface": dict(
-                    payload.get("action_surface")
-                    or state.get("action_surface")
-                    or {}
+                    payload.get("action_surface") or state.get("action_surface") or {}
                 ),
                 "updated_at": payload.get("occurred_at"),
                 "source": payload.get("source", "action"),
@@ -93,12 +85,9 @@ class WorldStateProjector(Projector[dict[str, Any]]):
             return {
                 **state,
                 "environment_appraisal": dict(
-                    payload.get("environment_appraisal")
-                    or state.get("environment_appraisal")
-                    or {}
+                    payload.get("environment_appraisal") or state.get("environment_appraisal") or {}
                 ),
                 "updated_at": payload.get("occurred_at"),
                 "source": payload.get("source", "runtime"),
             }
         return state
-

@@ -139,8 +139,7 @@ class MemoryIndexHit:
 
 
 class TextEmbedder(Protocol):
-    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        ...
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]: ...
 
 
 class MultimodalEmbedder(Protocol):
@@ -149,11 +148,9 @@ class MultimodalEmbedder(Protocol):
         *,
         text: str,
         attachments: list[MemoryMediaAttachment],
-    ) -> list[float]:
-        ...
+    ) -> list[float]: ...
 
-    async def embed_record(self, record: MemoryIndexRecord) -> list[float]:
-        ...
+    async def embed_record(self, record: MemoryIndexRecord) -> list[float]: ...
 
 
 class HashTextEmbedder:
@@ -334,9 +331,7 @@ class AliyunTextEmbedder:
                     "url": url,
                     "dimensions": len(vectors[0]),
                 }
-                return [
-                    _normalize_vector([float(value) for value in vector]) for vector in vectors
-                ]
+                return [_normalize_vector([float(value) for value in vector]) for vector in vectors]
             except Exception as exc:
                 last_error = exc
                 if "provider_unavailable" in str(exc) and unavailable_error is None:
@@ -375,9 +370,7 @@ class AliyunTextEmbedder:
         vectors: list[list[float]] = []
         async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
             for batch_start in range(0, len(texts), _ALIYUN_TEXT_EMBEDDING_MAX_BATCH):
-                batch = texts[
-                    batch_start : batch_start + _ALIYUN_TEXT_EMBEDDING_MAX_BATCH
-                ]
+                batch = texts[batch_start : batch_start + _ALIYUN_TEXT_EMBEDDING_MAX_BATCH]
                 payload: dict[str, Any] = {
                     "model": self._model,
                     "input": {"texts": batch},
@@ -394,9 +387,7 @@ class AliyunTextEmbedder:
                     item.get("embedding", [])
                     for item in sorted(
                         embeddings,
-                        key=lambda item: int(
-                            item.get("text_index", item.get("index", 0))
-                        ),
+                        key=lambda item: int(item.get("text_index", item.get("index", 0))),
                     )
                 )
         return vectors
@@ -585,7 +576,9 @@ class GoogleMultimodalEmbedder:
     ) -> None:
         self._model = model
         self._api_key = api_key or ""
-        self._api_base = (api_base or "https://generativelanguage.googleapis.com/v1beta").rstrip("/")
+        self._api_base = (api_base or "https://generativelanguage.googleapis.com/v1beta").rstrip(
+            "/"
+        )
         self._fallback = fallback or HashTextEmbedder()
         self._timeout_seconds = timeout_seconds
         self._status: dict[str, Any] = {
@@ -794,8 +787,7 @@ class MemoryIndex(Protocol):
         scope_id: str,
         text_records: list[MemoryIndexRecord],
         multimodal_records: list[MemoryIndexRecord] | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
     async def search(
         self,
@@ -805,11 +797,9 @@ class MemoryIndex(Protocol):
         limit: int,
         attachments: list[MemoryMediaAttachment] | None = None,
         use_reranker: bool = True,
-    ) -> list[MemoryIndexHit]:
-        ...
+    ) -> list[MemoryIndexHit]: ...
 
-    async def delete_user(self, *, scope_id: str) -> None:
-        ...
+    async def delete_user(self, *, scope_id: str) -> None: ...
 
     async def rebuild_user(
         self,
@@ -817,8 +807,7 @@ class MemoryIndex(Protocol):
         scope_id: str,
         text_records: list[MemoryIndexRecord],
         multimodal_records: list[MemoryIndexRecord] | None = None,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class NullMemoryIndex:
@@ -863,8 +852,7 @@ class MemoryReranker(Protocol):
         query: str,
         hits: list[MemoryIndexHit],
         limit: int,
-    ) -> list[MemoryIndexHit]:
-        ...
+    ) -> list[MemoryIndexHit]: ...
 
 
 class NullMemoryReranker:
@@ -927,7 +915,7 @@ class OpenAICompatibleMemoryReranker:
         system_prompt = (
             "Rank memory candidates for a relationship assistant. "
             "Prefer factual relevance, persistence, and consistency. "
-            "Return strict JSON: {\"ordered_ids\": [\"...\"]}."
+            'Return strict JSON: {"ordered_ids": ["..."]}.'
         )
         user_payload = {
             "query": query,
@@ -969,10 +957,7 @@ class OpenAICompatibleMemoryReranker:
                     )
                     _raise_for_proxy_response(response)
                 content = (
-                    response.json()
-                    .get("choices", [{}])[0]
-                    .get("message", {})
-                    .get("content", "{}")
+                    response.json().get("choices", [{}])[0].get("message", {}).get("content", "{}")
                 )
                 ordered_ids = list(json.loads(content).get("ordered_ids", []))
                 order_map = {record_id: index for index, record_id in enumerate(ordered_ids)}
@@ -1095,9 +1080,7 @@ class AliyunNativeMemoryReranker:
                 results = body.get("output", {}).get("results", [])
                 if not isinstance(results, list):
                     raise ValueError("Aliyun reranker returned invalid results")
-                order_map = {
-                    int(item.get("index", 0)): rank for rank, item in enumerate(results)
-                }
+                order_map = {int(item.get("index", 0)): rank for rank, item in enumerate(results)}
                 reranked = sorted(
                     candidates,
                     key=lambda hit: (
@@ -1194,12 +1177,9 @@ class FileBackedMemoryIndex:
         payload = {
             "scope_id": scope_id,
             "updated_at": _utc_iso_now(),
-            "text_records": [
-                existing_text_entries[key] for key in sorted(existing_text_entries)
-            ],
+            "text_records": [existing_text_entries[key] for key in sorted(existing_text_entries)],
             "multimodal_records": [
-                existing_multimodal_entries[key]
-                for key in sorted(existing_multimodal_entries)
+                existing_multimodal_entries[key] for key in sorted(existing_multimodal_entries)
             ],
         }
         if multimodal_records and self._multimodal_embedder is not None:
@@ -1217,8 +1197,7 @@ class FileBackedMemoryIndex:
                     "vector": vector,
                 }
             payload["multimodal_records"] = [
-                existing_multimodal_entries[key]
-                for key in sorted(existing_multimodal_entries)
+                existing_multimodal_entries[key] for key in sorted(existing_multimodal_entries)
             ]
         await asyncio.to_thread(self._write_scope_payload, scope_id, payload)
         self._remember_cache(

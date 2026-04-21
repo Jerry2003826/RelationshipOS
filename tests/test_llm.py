@@ -71,9 +71,7 @@ def test_minimax_client_maps_success_response() -> None:
         "usage": {"prompt_tokens": 12, "completion_tokens": 8, "total_tokens": 20},
     }
 
-    response = __import__("asyncio").run(
-        client.complete(LLMRequest(messages=[], model="M2-her"))
-    )
+    response = __import__("asyncio").run(client.complete(LLMRequest(messages=[], model="M2-her")))
 
     assert isinstance(response, LLMResponse)
     assert response.output_text == "hello from minimax"
@@ -125,9 +123,7 @@ def test_minimax_client_maps_text_block_content_response() -> None:
         "usage": {"prompt_tokens": 12, "completion_tokens": 8, "total_tokens": 20},
     }
 
-    response = __import__("asyncio").run(
-        client.complete(LLMRequest(messages=[], model="M2-her"))
-    )
+    response = __import__("asyncio").run(client.complete(LLMRequest(messages=[], model="M2-her")))
 
     assert isinstance(response, LLMResponse)
     assert response.output_text == "hello from minimax"
@@ -770,8 +766,7 @@ def test_litellm_client_friend_chat_structured_probe_render_accepts_social_claus
     assert parsed.diagnostics["sanitization_mode"] == "structured_probe_clean"
 
 
-def test_litellm_client_friend_chat_structured_probe_render_accepts_persona_clause_fields(
-) -> None:
+def test_litellm_client_friend_chat_structured_probe_render_accepts_persona_clause_fields() -> None:
     client = LiteLLMClient(model="openai/qwen3-8b")
     response = {
         "model": "openai/qwen3-8b",
@@ -820,15 +815,13 @@ def test_litellm_client_friend_chat_structured_probe_render_accepts_persona_clau
         latency_ms=10,
     )
 
-    assert (
-        parsed.output_text
-        == "说话会有点没力气。 也不太想把话说太满。 但还是像平时聊天。"
-    )
+    assert parsed.output_text == "说话会有点没力气。 也不太想把话说太满。 但还是像平时聊天。"
     assert parsed.diagnostics["sanitization_mode"] == "structured_probe_clean"
 
 
-def test_litellm_client_friend_chat_structured_probe_render_marks_missing_items_noncompliant(
-) -> None:
+def test_litellm_client_friend_chat_structured_probe_render_marks_missing_items_noncompliant() -> (
+    None
+):
     client = LiteLLMClient(model="openai/qwen3-8b")
     response = {
         "model": "openai/qwen3-8b",
@@ -878,8 +871,7 @@ def test_litellm_client_friend_chat_structured_probe_render_marks_missing_items_
     assert parsed.diagnostics["structured_probe_model_reported_fact_tokens"] == ["阿宁"]
 
 
-def test_litellm_client_friend_chat_structured_probe_ignores_model_reported_coverage(
-) -> None:
+def test_litellm_client_friend_chat_structured_probe_ignores_model_reported_coverage() -> None:
     client = LiteLLMClient(model="openai/qwen3-8b")
     response = {
         "model": "openai/qwen3-8b",
@@ -988,8 +980,9 @@ def test_litellm_client_friend_chat_structured_probe_persona_traits_drive_compli
     assert "friend_chat_exposed_under_grounded" not in parsed.diagnostics
 
 
-def test_litellm_client_friend_chat_structured_probe_persona_slot_coverage_beats_surface_keywords(
-) -> None:
+def test_litellm_client_friend_chat_structured_probe_persona_slot_coverage_beats_surface_keywords() -> (  # noqa: E501
+    None
+):
     client = LiteLLMClient(model="openai/qwen3-8b")
     response = {
         "model": "openai/qwen3-8b",
@@ -1046,8 +1039,9 @@ def test_litellm_client_friend_chat_structured_probe_persona_slot_coverage_beats
     ]
 
 
-def test_litellm_client_friend_chat_structured_probe_social_slot_posture_drives_compliance(
-) -> None:
+def test_litellm_client_friend_chat_structured_probe_social_slot_posture_drives_compliance() -> (
+    None
+):
     client = LiteLLMClient(model="openai/qwen3-8b")
     response = {
         "model": "openai/qwen3-8b",
@@ -1100,8 +1094,7 @@ def test_litellm_client_friend_chat_structured_probe_social_slot_posture_drives_
     assert parsed.diagnostics["sanitization_mode"] == "structured_probe_clean"
     assert parsed.diagnostics["structured_probe_slot_covered_fact_tokens"] == ["阿宁", "海盐"]
     assert (
-        parsed.diagnostics["structured_probe_slot_covered_disclosure_posture"]
-        == "partial_withhold"
+        parsed.diagnostics["structured_probe_slot_covered_disclosure_posture"] == "partial_withhold"
     )
 
 
@@ -1510,8 +1503,7 @@ def test_litellm_client_forces_grounded_factual_fallback_for_prompt_leakage() ->
                     },
                     {
                         "value": (
-                            "I have a golden retriever named Maple and I usually sketch "
-                            "on trains."
+                            "I have a golden retriever named Maple and I usually sketch on trains."
                         ),
                         "scope": "self_user",
                         "source_user_id": "nora",
@@ -1741,29 +1733,29 @@ def test_litellm_client_uses_conscience_hint_fallback_for_meta_reasoning() -> No
                 )
             ],
             model="openai/qwen3-8b",
-                metadata={
-                    "rendering_mode": "supportive_progress",
-                    "entity_conscience_mode": "hint",
-                    "entity_source_user_ids": ["rowan"],
-                    "fallback_memory_items": [
-                        {
-                            "value": "Alice said Maple is her dog.",
-                            "scope": "other_user",
-                            "source_user_id": "alice",
-                            "subject_user_id": "alice",
-                            "attribution_guard": "attribution_required",
-                            "attribution_confidence": 0.91,
-                            "final_rank_score": 0.95,
-                        },
-                        {
-                            "value": "Jules keeps circling that same wound.",
-                            "scope": "other_user",
-                            "source_user_id": "rowan",
-                            "subject_user_id": "jules",
+            metadata={
+                "rendering_mode": "supportive_progress",
+                "entity_conscience_mode": "hint",
+                "entity_source_user_ids": ["rowan"],
+                "fallback_memory_items": [
+                    {
+                        "value": "Alice said Maple is her dog.",
+                        "scope": "other_user",
+                        "source_user_id": "alice",
+                        "subject_user_id": "alice",
+                        "attribution_guard": "attribution_required",
+                        "attribution_confidence": 0.91,
+                        "final_rank_score": 0.95,
+                    },
+                    {
+                        "value": "Jules keeps circling that same wound.",
+                        "scope": "other_user",
+                        "source_user_id": "rowan",
+                        "subject_user_id": "jules",
                         "attribution_guard": "attribution_required",
                         "attribution_confidence": 0.84,
                         "final_rank_score": 0.9,
-                    }
+                    },
                 ],
             },
         ),

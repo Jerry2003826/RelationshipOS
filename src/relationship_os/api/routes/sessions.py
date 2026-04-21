@@ -187,15 +187,12 @@ async def process_turn(
         "response_diagnostics": dict(result.response_diagnostics or {}),
         "assistant_response_mode": (
             (
-                (result.runtime_projection.get("state", {}) or {}).get(
-                    "response_sequence_plan"
-                )
+                (result.runtime_projection.get("state", {}) or {}).get("response_sequence_plan")
                 or {}
             ).get("mode")
         ),
         "events": [
-            container.stream_service.serialize_event(event)
-            for event in result.stored_events
+            container.stream_service.serialize_event(event) for event in result.stored_events
         ],
         "projection": result.runtime_projection,
         "turn_stage_timing": dict(result.turn_stage_timing or {}),

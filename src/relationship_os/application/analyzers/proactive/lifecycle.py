@@ -279,9 +279,7 @@ def _resolve_lifecycle_envelope_shape(
         )
     return _LifecycleEnvelopeShape(
         status=(
-            lifecycle_controller_decision.status
-            or lifecycle_machine_decision.status
-            or "active"
+            lifecycle_controller_decision.status or lifecycle_machine_decision.status or "active"
         ),
         lifecycle_state=(
             lifecycle_controller_decision.lifecycle_state
@@ -396,10 +394,10 @@ def _resolve_lifecycle_dispatch_shape(
             primary_source=primary_source,
             note=None,
         )
-    if (
-        queue_decision in {"dispatch_lifecycle_queue", "overdue_lifecycle_queue"}
-        or queue_status in {"due", "overdue"}
-    ):
+    if queue_decision in {
+        "dispatch_lifecycle_queue",
+        "overdue_lifecycle_queue",
+    } or queue_status in {"due", "overdue"}:
         return _LifecycleDispatchShape(
             status="active",
             decision="dispatch_lifecycle_now",
@@ -1066,9 +1064,7 @@ def build_proactive_lifecycle_envelope_decision(
     if controller_decision not in {None, "", "dispatch", "follow_local_controllers"}:
         envelope_notes.append(f"controller:{controller_decision}")
 
-    envelope_key = (
-        f"{current_stage_label}_{shape.decision}_{selected_strategy_key or 'none'}"
-    )
+    envelope_key = f"{current_stage_label}_{shape.decision}_{selected_strategy_key or 'none'}"
     if not shape.changed and shape.decision == "continue_lifecycle_shape":
         envelope_key = f"{current_stage_label}_continue_lifecycle_shape"
 
@@ -1882,9 +1878,7 @@ def build_proactive_lifecycle_dispatch_decision(
     if shape.note:
         dispatch_notes.append(shape.note)
 
-    dispatch_key = (
-        f"{current_stage_label}_{shape.decision}_{selected_strategy_key or 'none'}"
-    )
+    dispatch_key = f"{current_stage_label}_{shape.decision}_{selected_strategy_key or 'none'}"
 
     return ProactiveLifecycleDispatchDecision(
         status=shape.status,

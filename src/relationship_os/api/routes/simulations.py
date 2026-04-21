@@ -144,9 +144,7 @@ async def run_simulation(
         }
 
     result = await container.longitudinal_simulation_service.run_simulation(cfg)
-    report = container.longitudinal_simulation_service.build_simulation_report(
-        result.simulation_id
-    )
+    report = container.longitudinal_simulation_service.build_simulation_report(result.simulation_id)
     return {
         "simulation_id": result.simulation_id,
         "status": "completed",

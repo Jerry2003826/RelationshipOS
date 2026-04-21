@@ -28,4 +28,3 @@ def configure_logging(log_level: str) -> None:
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)
-

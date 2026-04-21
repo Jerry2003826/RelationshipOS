@@ -47,9 +47,7 @@ class ProactiveFollowupService:
         )
         followups = [item for item in items if item is not None]
         if not include_hold:
-            followups = [
-                item for item in followups if item.get("queue_status") != "hold"
-            ]
+            followups = [item for item in followups if item.get("queue_status") != "hold"]
         followups.sort(key=sort_key)
         if limit is not None:
             followups = followups[:limit]
@@ -71,8 +69,7 @@ class ProactiveFollowupService:
             (
                 item
                 for item in followups
-                if item.get("queue_status")
-                in {"waiting", "scheduled", "due", "overdue"}
+                if item.get("queue_status") in {"waiting", "scheduled", "due", "overdue"}
                 and item.get("due_at")
             ),
             None,

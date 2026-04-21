@@ -14,10 +14,10 @@ from __future__ import annotations
 import threading
 import time
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class BreakerState(str, Enum):
+class BreakerState(StrEnum):
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"
@@ -29,8 +29,8 @@ class BreakerOpenError(RuntimeError):
 
 @dataclass
 class CircuitBreaker:
-    failure_threshold: int = 3      # consecutive failures to trip
-    cooldown_sec: float = 30.0      # time in OPEN before a probe attempt
+    failure_threshold: int = 3  # consecutive failures to trip
+    cooldown_sec: float = 30.0  # time in OPEN before a probe attempt
     _state: BreakerState = BreakerState.CLOSED
     _failures: int = 0
     _opened_at: float = 0.0
@@ -66,9 +66,6 @@ class CircuitBreaker:
     def on_failure(self) -> None:
         with self._lock:
             self._failures += 1
-            if (
-                self._state is BreakerState.HALF_OPEN
-                or self._failures >= self.failure_threshold
-            ):
+            if self._state is BreakerState.HALF_OPEN or self._failures >= self.failure_threshold:
                 self._state = BreakerState.OPEN
                 self._opened_at = time.time()

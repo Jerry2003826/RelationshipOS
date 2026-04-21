@@ -39,18 +39,12 @@ class EntityDriveProjector(Projector[dict[str, Any]]):
                 "entity_id": payload.get("entity_id"),
                 "entity_name": payload.get("entity_name"),
                 "drives": dict(payload.get("drive_state") or state["drives"]),
-                "latent_drives": list(
-                    (payload.get("goal_state") or {}).get("latent_drives") or []
-                ),
-                "active_goals": list(
-                    (payload.get("goal_state") or {}).get("active_goals") or []
-                ),
+                "latent_drives": list((payload.get("goal_state") or {}).get("latent_drives") or []),
+                "active_goals": list((payload.get("goal_state") or {}).get("active_goals") or []),
                 "unresolved_tensions": list(
                     (payload.get("goal_state") or {}).get("unresolved_tensions") or []
                 ),
-                "goal_digest": str(
-                    (payload.get("goal_state") or {}).get("goal_digest") or ""
-                ),
+                "goal_digest": str((payload.get("goal_state") or {}).get("goal_digest") or ""),
                 "updated_at": payload.get("seeded_at"),
                 "source": "seed",
             }
@@ -75,4 +69,3 @@ class EntityDriveProjector(Projector[dict[str, Any]]):
             }
 
         return state
-

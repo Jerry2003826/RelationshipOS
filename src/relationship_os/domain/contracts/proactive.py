@@ -146,9 +146,7 @@ class ProactiveProgressionPlan:
     status: str
     progression_key: str
     close_loop_stage: str
-    stage_progressions: list[ProactiveStageProgressionDirective] = field(
-        default_factory=list
-    )
+    stage_progressions: list[ProactiveStageProgressionDirective] = field(default_factory=list)
     rationale: str = ""
 
 

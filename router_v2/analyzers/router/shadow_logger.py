@@ -65,4 +65,4 @@ class JsonlShadowLogger:
 
 def _mk_turn_id() -> str:
     # ~62 bits of entropy, compact.
-    return f"{int(time.time()*1e6):x}{os.getpid():x}{random.randint(0, 0xFFFF):x}"
+    return f"{int(time.time() * 1e6):x}{os.getpid():x}{random.randint(0, 0xFFFF):x}"

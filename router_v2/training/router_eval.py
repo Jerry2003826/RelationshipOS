@@ -29,8 +29,8 @@ _ROOT = Path(__file__).resolve().parents[2]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
-from router_v2.analyzers.router.contracts import ALL_ROUTES
-from router_v2.analyzers.router.vanguard_router_v2 import VanguardRouterV2
+from router_v2.analyzers.router.contracts import ALL_ROUTES  # noqa: E402
+from router_v2.analyzers.router.vanguard_router_v2 import VanguardRouterV2  # noqa: E402
 
 
 def _load_jsonl(path: Path) -> list[dict]:
@@ -64,7 +64,8 @@ def main() -> int:
     ap.add_argument("--data", type=Path, required=True)
     ap.add_argument("--dump-csv", type=Path, default=None)
     ap.add_argument(
-        "--mock-llm", action="store_true",
+        "--mock-llm",
+        action="store_true",
         help="Attach a deterministic mock arbiter to exercise Tier 3.",
     )
     args = ap.parse_args()
@@ -73,6 +74,7 @@ def main() -> int:
 
     call_llm = None
     if args.mock_llm:
+
         def call_llm(prompt: str, timeout: float) -> str:  # noqa: ARG001
             # Deterministic: pick LIGHT_RECALL with confidence 0.55.
             return json.dumps(
@@ -103,16 +105,18 @@ def main() -> int:
         if d.should_shadow_log:
             shadow_logged += 1
         tier2_ece_buckets.append((d.confidence, int(label == d.route_type)))
-        decisions.append({
-            "text": r["text"],
-            "gold": label,
-            "pred": d.route_type,
-            "decided_by": d.decided_by,
-            "conf": round(d.confidence, 3),
-            "margin": round(d.margin, 3),
-            "latency_ms": round(d.latency_ms, 3),
-            "rule_hits": list(d.rule_hits),
-        })
+        decisions.append(
+            {
+                "text": r["text"],
+                "gold": label,
+                "pred": d.route_type,
+                "decided_by": d.decided_by,
+                "conf": round(d.confidence, 3),
+                "margin": round(d.margin, 3),
+                "latency_ms": round(d.latency_ms, 3),
+                "rule_hits": list(d.rule_hits),
+            }
+        )
     wall = time.perf_counter() - t_start
 
     # Per-class metrics.
@@ -145,7 +149,10 @@ def main() -> int:
     print(f"  {'class':<14s} {'P':>6s} {'R':>6s} {'F1':>6s} {'n':>5s}")
     for c in ALL_ROUTES:
         m = class_metrics[c]
-        print(f"  {c:<14s} {m['precision']:6.3f} {m['recall']:6.3f} {m['f1']:6.3f} {int(m['support']):>5d}")
+        print(
+            f"  {c:<14s} {m['precision']:6.3f} {m['recall']:6.3f} "
+            f"{m['f1']:6.3f} {int(m['support']):>5d}"
+        )
     print()
     print("Confusion matrix (rows=gold, cols=pred):")
     header = "          " + "".join(f" {c:>12s}" for c in ALL_ROUTES)
@@ -159,7 +166,11 @@ def main() -> int:
         print(f"  {tier:<12s} {n:>4d} ({n / len(rows) * 100:5.1f}%)")
     print()
     print("Latency:")
-    print(f"  p50={_quantile(latencies, 0.5):.2f}ms  p95={_quantile(latencies, 0.95):.2f}ms  p99={_quantile(latencies, 0.99):.2f}ms")
+    print(
+        f"  p50={_quantile(latencies, 0.5):.2f}ms  "
+        f"p95={_quantile(latencies, 0.95):.2f}ms  "
+        f"p99={_quantile(latencies, 0.99):.2f}ms"
+    )
     print(f"Shadow-logged turns: {shadow_logged} ({shadow_logged / len(rows) * 100:.1f}%)")
 
     # Pareto point.
@@ -169,6 +180,7 @@ def main() -> int:
 
     if args.dump_csv:
         import csv
+
         args.dump_csv.parent.mkdir(parents=True, exist_ok=True)
         with args.dump_csv.open("w", encoding="utf-8", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(decisions[0].keys()))

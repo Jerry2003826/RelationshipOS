@@ -309,9 +309,7 @@ class MemoryService:
                 continue
             alias = str(item.get("alias") or "").strip()
             patterns = tuple(
-                str(pattern)
-                for pattern in list(item.get("patterns") or [])
-                if str(pattern).strip()
+                str(pattern) for pattern in list(item.get("patterns") or []) if str(pattern).strip()
             )
             if alias and patterns:
                 compiled.append((alias, patterns))
@@ -630,10 +628,8 @@ class MemoryService:
         confidence_score = self._compute_confidence_score(candidate)
         if (
             candidate.get("pinned")
-            or mention_count
-            >= int(self._memory_threshold("persistent_mention_count", default=2))
-            or confidence_score
-            >= self._memory_threshold("persistent_confidence", default=0.82)
+            or mention_count >= int(self._memory_threshold("persistent_mention_count", default=2))
+            or confidence_score >= self._memory_threshold("persistent_confidence", default=0.82)
         ):
             return "persistent"
         return "soft"
@@ -672,9 +668,7 @@ class MemoryService:
 
     def _normalize_compare_text(self, value: str) -> str:
         return " ".join(
-            token
-            for token in re.findall(r"[a-z0-9\u4e00-\u9fff']+", value.casefold())
-            if token
+            token for token in re.findall(r"[a-z0-9\u4e00-\u9fff']+", value.casefold()) if token
         )
 
     def _looks_like_query_echo(self, *, query: str | None, value: str) -> bool:
@@ -687,9 +681,8 @@ class MemoryService:
         query_tokens = normalized_query.split()
         if len(query_tokens) < 5:
             return False
-        return (
-            normalized_value.startswith(normalized_query)
-            or normalized_query.startswith(normalized_value)
+        return normalized_value.startswith(normalized_query) or normalized_query.startswith(
+            normalized_value
         )
 
     def _filter_query_echo_candidates(
@@ -711,10 +704,7 @@ class MemoryService:
 
     def _is_low_signal_entity_memory_value(self, value: str) -> bool:
         normalized = value.casefold().strip()
-        return any(
-            normalized.startswith(prefix)
-            for prefix in self._low_signal_entity_prefixes()
-        )
+        return any(normalized.startswith(prefix) for prefix in self._low_signal_entity_prefixes())
 
     def _prefer_contentful_entity_candidates(
         self,
@@ -724,9 +714,7 @@ class MemoryService:
         contentful = [
             candidate
             for candidate in candidates
-            if not self._is_low_signal_entity_memory_value(
-                str(candidate.get("value", ""))
-            )
+            if not self._is_low_signal_entity_memory_value(str(candidate.get("value", "")))
         ]
         return contentful or candidates
 
@@ -899,30 +887,20 @@ class MemoryService:
     ) -> str:
         if scope in {"session", "self_user", "global_entity"}:
             return "direct_ok"
-        if (
-            attribution_confidence
-            < self._memory_threshold(
-                "attribution_hint_only_confidence",
-                default=0.58,
-            )
-            or disclosure_risk
-            >= self._memory_threshold(
-                "attribution_hint_only_disclosure_risk",
-                default=0.82,
-            )
+        if attribution_confidence < self._memory_threshold(
+            "attribution_hint_only_confidence",
+            default=0.58,
+        ) or disclosure_risk >= self._memory_threshold(
+            "attribution_hint_only_disclosure_risk",
+            default=0.82,
         ):
             return "hint_only"
-        if (
-            attribution_confidence
-            < self._memory_threshold(
-                "attribution_attribution_required_confidence",
-                default=0.74,
-            )
-            or disclosure_risk
-            >= self._memory_threshold(
-                "attribution_attribution_required_disclosure_risk",
-                default=0.68,
-            )
+        if attribution_confidence < self._memory_threshold(
+            "attribution_attribution_required_confidence",
+            default=0.74,
+        ) or disclosure_risk >= self._memory_threshold(
+            "attribution_attribution_required_disclosure_risk",
+            default=0.68,
         ):
             return "attribution_required"
         return "direct_ok"
@@ -1001,9 +979,7 @@ class MemoryService:
                 current_user_id=current_user_id,
             ),
             "memory_kind": memory_kind,
-            "contradiction_key": self._extract_contradiction_key(
-                str(candidate.get("value", ""))
-            ),
+            "contradiction_key": self._extract_contradiction_key(str(candidate.get("value", ""))),
             "symbolic_score": round(symbolic_score, 3),
             "vector_score": round(vector_score, 3),
             "recency_score": recency_score,
@@ -1017,7 +993,8 @@ class MemoryService:
             "final_rank_score": final_rank_score,
             "score": round(max(symbolic_score, final_rank_score), 3),
             "provenance": self._build_provenance(candidate),
-            "integrity": integrity or {
+            "integrity": integrity
+            or {
                 "status": "accepted",
                 "score": confidence_score,
                 "flags": [],
@@ -1397,18 +1374,14 @@ class MemoryService:
                 session_facts: dict[str, list[FactualMemoryCandidate]] = {}
                 for candidate_session_id in session_ids:
                     try:
-                        projection = await self.get_session_memory(
-                            session_id=candidate_session_id
-                        )
+                        projection = await self.get_session_memory(session_id=candidate_session_id)
                     except Exception:
                         continue
-                    session_facts[candidate_session_id] = (
-                        self._extract_stable_factual_candidates(
-                            state=dict(projection.get("state") or {}),
-                            source_session_id=candidate_session_id,
-                            source_user_id=user_id,
-                            backend="mem0",
-                        )
+                    session_facts[candidate_session_id] = self._extract_stable_factual_candidates(
+                        state=dict(projection.get("state") or {}),
+                        source_session_id=candidate_session_id,
+                        source_user_id=user_id,
+                        backend="mem0",
                     )
                 if user_id and session_facts:
                     await mem0_backend.refresh_user_facts(
@@ -1456,12 +1429,13 @@ class MemoryService:
             multimodal_records=multimodal_records,
         )
         if entity_id:
-            entity_text_records, entity_multimodal_records = (
-                await self._build_scope_index_records_for_sources(
-                    sources=[(user_id, session_id)],
-                    scope_id=f"entity:{entity_id}",
-                    compact=compact,
-                )
+            (
+                entity_text_records,
+                entity_multimodal_records,
+            ) = await self._build_scope_index_records_for_sources(
+                sources=[(user_id, session_id)],
+                scope_id=f"entity:{entity_id}",
+                compact=compact,
             )
             await self._memory_index.write_many(
                 scope_id=f"entity:{entity_id}",
@@ -2159,8 +2133,7 @@ class MemoryService:
         )
 
         accepted = (
-            total_score
-            >= self._memory_threshold("integrity_acceptance", default=0.62)
+            total_score >= self._memory_threshold("integrity_acceptance", default=0.62)
             and not blocking_mismatch
         )
         if not accepted:
@@ -2239,9 +2212,7 @@ class MemoryService:
 
     def _tokenize(self, value: str) -> list[str]:
         surface_tokens = [
-            token
-            for token in re.findall(r"[\w\u4e00-\u9fff:.-]+", value.lower())
-            if token
+            token for token in re.findall(r"[\w\u4e00-\u9fff:.-]+", value.lower()) if token
         ]
         semantic_aliases = self._extract_semantic_aliases(value)
         merged = [*surface_tokens, *semantic_aliases]
@@ -2319,12 +2290,8 @@ class MemoryService:
             reflective_memory=accepted_bundle["reflective_memory"],
         )
         write_guard = {
-            "accepted_bundle": {
-                layer: list(values) for layer, values in accepted_bundle.items()
-            },
-            "accepted_count": sum(
-                len(values) for values in accepted_bundle.values()
-            ),
+            "accepted_bundle": {layer: list(values) for layer, values in accepted_bundle.items()},
+            "accepted_count": sum(len(values) for values in accepted_bundle.values()),
             "blocked_count": len(blocked_items),
             "blocked_items": blocked_items,
             "rules_triggered": sorted(rules_triggered),
@@ -2469,8 +2436,7 @@ class MemoryService:
         retention_score = round(max(0.0, min(1.0, score)), 3)
         return {
             "value": cleaned,
-            "pinned": retention_score
-            >= self._memory_threshold("pin", default=PIN_THRESHOLD),
+            "pinned": retention_score >= self._memory_threshold("pin", default=PIN_THRESHOLD),
             "retention_score": retention_score,
             "retention_reason": reason,
             "signals": sorted(set(signals)),
@@ -2566,9 +2532,7 @@ class MemoryService:
             ),
         }
 
-        evicted_count = sum(
-            int(layer["evicted_count"]) for layer in predicted_layers.values()
-        )
+        evicted_count = sum(int(layer["evicted_count"]) for layer in predicted_layers.values())
         return {
             "evicted_count": evicted_count,
             "layers": predicted_layers,
@@ -2601,9 +2565,7 @@ class MemoryService:
                             for item in decisions
                             if item.get("pinned")
                         ),
-                        str(
-                            decisions[0].get("retention_reason", "transient_context")
-                        ),
+                        str(decisions[0].get("retention_reason", "transient_context")),
                     ),
                 }
             )
@@ -2630,9 +2592,11 @@ class MemoryService:
         retention_lookup: dict[str, dict[str, object]],
         limit: int,
     ) -> dict[str, object]:
-        existing_entries = [
-            dict(item) for item in existing if isinstance(item, dict)
-        ] if isinstance(existing, list) else []
+        existing_entries = (
+            [dict(item) for item in existing if isinstance(item, dict)]
+            if isinstance(existing, list)
+            else []
+        )
         next_entries = [dict(item) for item in existing_entries]
         index_by_value = {
             str(item.get("value", "")): index
@@ -2709,9 +2673,7 @@ class MemoryService:
         """
         from relationship_os.application.projectors.user_profile import build_user_profile
 
-        profile = await build_user_profile(
-            user_id=user_id, stream_service=self._stream_service
-        )
+        profile = await build_user_profile(user_id=user_id, stream_service=self._stream_service)
         session_ids: list[str] = profile.get("session_ids") or []
         if not session_ids:
             return {
@@ -2748,9 +2710,7 @@ class MemoryService:
                     "_user_level": True,
                     "source_user_id": user_id,
                     "source_session_id": session_id,
-                    "normalized_key": self._normalize_memory_key(
-                        str(candidate.get("value", ""))
-                    ),
+                    "normalized_key": self._normalize_memory_key(str(candidate.get("value", ""))),
                 }
                 for candidate in candidates
             ]
@@ -2765,12 +2725,10 @@ class MemoryService:
             all_bridges.extend(bridges)
 
         # Score and rank
-        matched_labels: set[str] = {
-            str(n.get("label", "")).lower() for n in all_matched_nodes
+        matched_labels: set[str] = {str(n.get("label", "")).lower() for n in all_matched_nodes}
+        bridge_lbls: set[str] = {str(b.get("source_label", "")).lower() for b in all_bridges} | {
+            str(b.get("target_label", "")).lower() for b in all_bridges
         }
-        bridge_lbls: set[str] = {
-            str(b.get("source_label", "")).lower() for b in all_bridges
-        } | {str(b.get("target_label", "")).lower() for b in all_bridges}
         all_candidates = self._filter_query_echo_candidates(
             candidates=all_candidates,
             query=query,
@@ -3252,24 +3210,19 @@ class MemoryService:
             "integrity_summary": {
                 **dict(session_recall.get("integrity_summary", {})),
                 "user_symbolic_hit_count": int(
-                    user_recall.get("integrity_summary", {}).get("symbolic_hit_count", 0)
-                    or 0
+                    user_recall.get("integrity_summary", {}).get("symbolic_hit_count", 0) or 0
                 ),
                 "user_vector_hit_count": int(
-                    user_recall.get("integrity_summary", {}).get("vector_hit_count", 0)
-                    or 0
+                    user_recall.get("integrity_summary", {}).get("vector_hit_count", 0) or 0
                 ),
                 "entity_symbolic_hit_count": int(
-                    entity_recall.get("integrity_summary", {}).get("symbolic_hit_count", 0)
-                    or 0
+                    entity_recall.get("integrity_summary", {}).get("symbolic_hit_count", 0) or 0
                 ),
                 "entity_vector_hit_count": int(
-                    entity_recall.get("integrity_summary", {}).get("vector_hit_count", 0)
-                    or 0
+                    entity_recall.get("integrity_summary", {}).get("vector_hit_count", 0) or 0
                 ),
                 "entity_cross_user_hit_count": int(
-                    entity_recall.get("integrity_summary", {}).get("cross_user_hit_count", 0)
-                    or 0
+                    entity_recall.get("integrity_summary", {}).get("cross_user_hit_count", 0) or 0
                 ),
             },
             "memory_turn_count": session_recall.get("memory_turn_count", 0),
@@ -3278,13 +3231,9 @@ class MemoryService:
                 "source_user_count": int(entity_recall.get("source_user_count", 0) or 0),
             },
             "factual_backend_mode": self._factual_backend_mode,
-            "native_factual_hit_count": int(
-                session_recall.get("native_factual_hit_count", 0) or 0
-            )
+            "native_factual_hit_count": int(session_recall.get("native_factual_hit_count", 0) or 0)
             + int(user_recall.get("native_factual_hit_count", 0) or 0),
-            "mem0_factual_hit_count": int(
-                session_recall.get("mem0_factual_hit_count", 0) or 0
-            )
+            "mem0_factual_hit_count": int(session_recall.get("mem0_factual_hit_count", 0) or 0)
             + int(user_recall.get("mem0_factual_hit_count", 0) or 0),
             "selected_factual_backend": self._resolve_selected_factual_backend(
                 native_count=int(session_recall.get("native_factual_hit_count", 0) or 0)

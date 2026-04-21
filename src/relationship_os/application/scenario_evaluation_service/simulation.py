@@ -440,15 +440,11 @@ class LongitudinalSimulationService:
                     week_result.turn_count += day_cfg.turn_count_per_session
                     strategy_keys_seen.update(session_strategies)
                 except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "Simulation session %s failed: %s", session_id, exc
-                    )
+                    logger.warning("Simulation session %s failed: %s", session_id, exc)
                     week_result.notes.append(f"session_error:day{day_index}")
 
         if strategy_keys_seen:
-            week_result.strategy_diversity = round(
-                min(1.0, len(strategy_keys_seen) / 5.0), 3
-            )
+            week_result.strategy_diversity = round(min(1.0, len(strategy_keys_seen) / 5.0), 3)
         week_result.notes.append(f"week:{week_cfg.label}")
         return week_result
 

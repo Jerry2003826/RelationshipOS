@@ -44,11 +44,7 @@ def _render_reengagement_autonomy_line(
     use_chinese: bool,
 ) -> str:
     if reengagement_plan.autonomy_signal == "explicit_opt_out":
-        return (
-            "不需要现在就回复。"
-            if use_chinese
-            else "No need to reply right away."
-        )
+        return "不需要现在就回复。" if use_chinese else "No need to reply right away."
     if reengagement_plan.autonomy_signal == "no_reply_required":
         return (
             "如果现在不想接也完全没关系。"
@@ -83,9 +79,7 @@ def _render_reengagement_somatic_line(
 ) -> str:
     if reengagement_plan.somatic_action == "take_one_slower_breath":
         return (
-            "先让呼吸慢一格也可以。"
-            if use_chinese
-            else "You can let one breath slow down first."
+            "先让呼吸慢一格也可以。" if use_chinese else "You can let one breath slow down first."
         )
     if reengagement_plan.somatic_action == "drop_shoulders_and_exhale":
         return (
@@ -111,9 +105,7 @@ def _render_somatic_orchestration_line(
         return ""
     if somatic_orchestration_plan.body_anchor == "one_slower_breath":
         return (
-            "先让一口气慢下来就可以。"
-            if use_chinese
-            else "You can let one breath slow down first."
+            "先让一口气慢下来就可以。" if use_chinese else "You can let one breath slow down first."
         )
     if somatic_orchestration_plan.body_anchor == "drop_shoulders_and_exhale":
         return (
@@ -164,11 +156,7 @@ def _render_session_ritual_opening_line(
             else "Let me frame the one missing detail first."
         )
     if session_ritual_plan.opening_move == "regulate_first":
-        return (
-            "我先帮我们把节奏放慢一点。"
-            if use_chinese
-            else "Let me slow the pace down first."
-        )
+        return "我先帮我们把节奏放慢一点。" if use_chinese else "Let me slow the pace down first."
     if session_ritual_plan.opening_move == "reflective_restate":
         return (
             "我先把你现在的位置轻轻照一下。"
@@ -349,10 +337,7 @@ def build_proactive_followup_message(
     if _contains_chinese(recent_user_text):
         if style == "progress_nudge":
             if question_mode == "statement_only":
-                return (
-                    "我来轻轻跟进一下这条线。"
-                    "如果现在有一点推进空间，只做一个最小动作就够。"
-                )
+                return "我来轻轻跟进一下这条线。如果现在有一点推进空间，只做一个最小动作就够。"
             return (
                 "我来轻轻跟进一下：上次那一步现在有一点推进空间了吗？"
                 "如果还没开始，也只需要先做一个最小动作就够。"
@@ -430,8 +415,7 @@ def _build_reengagement_render_context(
 ) -> _ReengagementRenderContext:
     use_chinese = _contains_chinese(recent_user_text)
     is_final_touch = (
-        cadence_stage_label == "final_soft_close"
-        or cadence_stage_index >= cadence_stage_count
+        cadence_stage_label == "final_soft_close" or cadence_stage_index >= cadence_stage_count
     )
     effective_delivery_mode = str(
         (stage_directive or {}).get("delivery_mode") or reengagement_plan.delivery_mode
@@ -446,16 +430,13 @@ def _build_reengagement_render_context(
     effective_session_ritual_plan = SessionRitualPlan(
         phase=session_ritual_plan.phase,
         opening_move=str(
-            (stage_actuation or {}).get("opening_move")
-            or session_ritual_plan.opening_move
+            (stage_actuation or {}).get("opening_move") or session_ritual_plan.opening_move
         ),
         bridge_move=str(
-            (stage_actuation or {}).get("bridge_move")
-            or session_ritual_plan.bridge_move
+            (stage_actuation or {}).get("bridge_move") or session_ritual_plan.bridge_move
         ),
         closing_move=str(
-            (stage_actuation or {}).get("closing_move")
-            or session_ritual_plan.closing_move
+            (stage_actuation or {}).get("closing_move") or session_ritual_plan.closing_move
         ),
         continuity_anchor=str(
             (stage_actuation or {}).get("continuity_anchor")
@@ -471,11 +452,7 @@ def _build_reengagement_render_context(
     )
     effective_somatic_mode = str(
         (stage_actuation or {}).get("somatic_mode")
-        or (
-            somatic_orchestration_plan.primary_mode
-            if allow_somatic_carryover
-            else "none"
-        )
+        or (somatic_orchestration_plan.primary_mode if allow_somatic_carryover else "none")
     )
     effective_somatic_orchestration_plan = SomaticOrchestrationPlan(
         status=(
@@ -491,19 +468,11 @@ def _build_reengagement_render_context(
         primary_mode=effective_somatic_mode,
         body_anchor=str(
             (stage_actuation or {}).get("somatic_body_anchor")
-            or (
-                somatic_orchestration_plan.body_anchor
-                if allow_somatic_carryover
-                else "none"
-            )
+            or (somatic_orchestration_plan.body_anchor if allow_somatic_carryover else "none")
         ),
         followup_style=str(
             (stage_actuation or {}).get("followup_style")
-            or (
-                somatic_orchestration_plan.followup_style
-                if allow_somatic_carryover
-                else "none"
-            )
+            or (somatic_orchestration_plan.followup_style if allow_somatic_carryover else "none")
         ),
         allow_in_followup=allow_somatic_carryover,
         micro_actions=(
@@ -624,17 +593,11 @@ def _build_single_sequence_output(
     allow_somatic_carryover: bool,
     lines: _ReengagementRenderLines,
 ) -> list[dict[str, str]]:
-    label = (
-        reengagement_plan.segment_labels[0]
-        if reengagement_plan.segment_labels
-        else "check_in"
-    )
+    label = reengagement_plan.segment_labels[0] if reengagement_plan.segment_labels else "check_in"
     stage_prefix = ""
     if cadence_stage_label == "second_touch":
         stage_prefix = (
-            "我再轻轻碰一下这条线。"
-            if use_chinese
-            else "One more light touch on the thread."
+            "我再轻轻碰一下这条线。" if use_chinese else "One more light touch on the thread."
         )
     content_parts = [part for part in [stage_prefix, lines.base_message] if part]
     if lines.ritual_opening_line and lines.ritual_opening_line not in lines.base_message:
@@ -682,8 +645,7 @@ def _build_two_part_chinese_output(
                 "label": "reconnect",
                 "content": (
                     (
-                        f"{lines.ritual_opening_line} "
-                        f"{lines.ritual_bridge_line} {reconnect_line}"
+                        f"{lines.ritual_opening_line} {lines.ritual_bridge_line} {reconnect_line}"
                     ).strip()
                     if reengagement_plan.strategy_key != "resume_progress_bridge"
                     else (
@@ -788,8 +750,7 @@ def _build_two_part_english_output(
                 "label": "reconnect",
                 "content": (
                     (
-                        f"{lines.ritual_opening_line} "
-                        f"{lines.ritual_bridge_line} {reconnect_line}"
+                        f"{lines.ritual_opening_line} {lines.ritual_bridge_line} {reconnect_line}"
                     ).strip()
                     if reengagement_plan.strategy_key != "resume_progress_bridge"
                     else (
