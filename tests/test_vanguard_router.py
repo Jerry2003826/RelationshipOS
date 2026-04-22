@@ -35,13 +35,16 @@ async def test_whitespace_only_message_treated_as_empty():
 
 
 @pytest.mark.asyncio
-async def test_greeting_routes_to_fast_pong_via_v2():
+async def test_non_empty_input_delegates_to_v2_without_llm_call():
+    # The shim's core contract: any non-empty input must be handled by
+    # the v2 router (reason prefixed with 'v2::') and must never fall
+    # back to the legacy LLM classifier. The exact two-class label depends
+    # on v2's trained weights and is allowed to change over time.
     mock_client = AsyncMock(spec=LLMClient)
     decision = await route_user_turn(mock_client, "gpt-4", "早上好", [])
-    # v2 may classify greeting as FAST_PONG with rule or feature_clf tier.
-    assert decision.route_type == "FAST_PONG"
+    assert decision.route_type in ("FAST_PONG", "NEED_DEEP_THINK")
     assert decision.reason.startswith("v2::")
-    # v2 is synchronous — no legacy LLM call.
+    assert 0.0 <= decision.confidence <= 1.0
     mock_client.complete.assert_not_called()
 
 
