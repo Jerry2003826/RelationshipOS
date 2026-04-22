@@ -5,29 +5,9 @@ from __future__ import annotations
 from relationship_os.domain.contracts import System3Snapshot
 
 from ._base import _System3Prelude
-from ._domains_core import (
-    _build_attunement_governance,
-    _build_autonomy_governance,
-    _build_boundary_governance,
-    _build_clarity_governance,
-    _build_continuity_governance,
-    _build_dependency_governance,
-    _build_pacing_governance,
-    _build_repair_governance,
-    _build_support_governance,
-    _build_trust_governance,
-)
 from ._domains_safety import (
-    _build_pressure_governance,
     _build_progress_governance,
-    _build_relational_governance,
-    _build_safety_governance,
     _build_stability_governance,
-)
-from ._domains_social import (
-    _build_commitment_governance,
-    _build_disclosure_governance,
-    _build_reciprocity_governance,
 )
 from ._transitions import (
     _build_core_governance_outcomes,
@@ -36,6 +16,7 @@ from ._transitions import (
     _build_review_focus,
     _build_version_migration,
 )
+
 
 def build_system3_phase2_snapshot(*, prelude: _System3Prelude) -> System3Snapshot:
     governance_outcomes = _build_core_governance_outcomes(prelude=prelude)

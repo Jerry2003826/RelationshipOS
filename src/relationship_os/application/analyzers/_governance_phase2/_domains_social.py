@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from relationship_os.application.analyzers._utils import _clamp, _compact
-
 from ._base import (
     _GovernanceOutcome,
-    _System3Prelude,
     _phase2_branch,
-    _phase2_governance_line,
-    _phase2_section,
+    _System3Prelude,
 )
+
 
 def _build_commitment_governance(
     *,

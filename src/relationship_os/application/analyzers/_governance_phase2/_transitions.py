@@ -1,4 +1,4 @@
-"""Phase 2 governance – review focus, core outcomes, growth/version transitions, snapshot assembly."""
+"""Phase 2 governance – review focus, outcomes, growth/version transitions, snapshot."""
 
 from __future__ import annotations
 
@@ -6,15 +6,13 @@ from relationship_os.application.analyzers._utils import _clamp, _compact
 from relationship_os.domain.contracts import System3Snapshot
 
 from ._base import (
-    _GovernanceOutcome,
-    _GrowthTransitionOutcome,
-    _System3Prelude,
-    _VersionMigrationOutcome,
     _SYSTEM3_GOVERNANCE_DOMAIN_ORDER,
     _governance_kwargs,
-    _phase2_branch,
-    _phase2_governance_line,
+    _GovernanceOutcome,
+    _GrowthTransitionOutcome,
     _phase2_section,
+    _System3Prelude,
+    _VersionMigrationOutcome,
 )
 from ._domains_core import (
     _build_attunement_governance,
@@ -28,17 +26,16 @@ from ._domains_core import (
     _build_support_governance,
     _build_trust_governance,
 )
-from ._domains_social import (
-    _build_commitment_governance,
-    _build_disclosure_governance,
-    _build_reciprocity_governance,
-)
 from ._domains_safety import (
     _build_pressure_governance,
     _build_relational_governance,
     _build_safety_governance,
 )
-
+from ._domains_social import (
+    _build_commitment_governance,
+    _build_disclosure_governance,
+    _build_reciprocity_governance,
+)
 
 
 def _build_review_focus(
@@ -713,5 +710,3 @@ def _build_phase2_snapshot(
         ),
         review_focus=review_focus,
     )
-
-

@@ -1,16 +1,13 @@
-"""Phase 2 governance – safety domain outcomes (pressure, relational, safety, progress, stability)."""
+"""Phase 2 governance – safety outcomes (pressure/relational/safety/progress/stability)."""
 
 from __future__ import annotations
 
-from relationship_os.application.analyzers._utils import _clamp, _compact
-
 from ._base import (
     _GovernanceOutcome,
-    _System3Prelude,
     _phase2_branch,
-    _phase2_governance_line,
-    _phase2_section,
+    _System3Prelude,
 )
+
 
 def _build_pressure_governance(
     *,
@@ -1418,4 +1415,3 @@ def _build_stability_governance_trajectory(
         "trajectory_trigger": branch.get("trigger", "stability_governance_stable"),
         "trajectory_notes": [branch.get("note", "stability_line_is_holding_steady_and_bounded")],
     }
-

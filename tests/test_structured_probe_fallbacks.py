@@ -4,7 +4,7 @@ import asyncio
 from types import SimpleNamespace
 
 from benchmarks.chat_backends import BenchmarkChatBackend, ChatBackendConfig
-from relationship_os.application.llm import LLMMessage, LLMRequest, LiteLLMClient
+from relationship_os.application.llm import LiteLLMClient, LLMMessage, LLMRequest
 from relationship_os.application.runtime_service import RuntimeService
 
 

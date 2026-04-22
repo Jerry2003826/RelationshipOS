@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from relationship_os.application.analyzers._utils import _clamp, _compact
-from relationship_os.application.policy_registry import get_default_compiled_policy_set
+from relationship_os.application.analyzers._utils import _compact
 from relationship_os.domain.contracts import (
     ConfidenceAssessment,
     KnowledgeBoundaryDecision,
@@ -15,7 +14,6 @@ from relationship_os.domain.contracts import (
     ResponsePostAudit,
     ResponseSequencePlan,
     RuntimeQualityDoctorReport,
-    System3Snapshot,
 )
 
 _SYSTEM3_GOVERNANCE_DOMAIN_ORDER = (

@@ -15,15 +15,15 @@ from relationship_os.application.policy_registry import get_default_compiled_pol
 
 from ._base import (
     _SYSTEM3_GOVERNANCE_DOMAIN_ORDER,
+    _governance_kwargs,
     _GovernanceOutcome,
     _GrowthTransitionOutcome,
-    _System3Prelude,
-    _VersionMigrationOutcome,
-    _governance_kwargs,
     _phase2_branch,
     _phase2_governance_line,
     _phase2_policy,
     _phase2_section,
+    _System3Prelude,
+    _VersionMigrationOutcome,
 )
 from ._domains_core import (
     _build_attunement_governance,
@@ -63,6 +63,7 @@ from ._domains_social import (
     _build_reciprocity_governance_state,
     _build_reciprocity_governance_trajectory,
 )
+from ._public import build_system3_phase2_snapshot
 from ._transitions import (
     _build_base_snapshot_fields,
     _build_core_governance_outcomes,
@@ -73,7 +74,6 @@ from ._transitions import (
     _build_review_focus,
     _build_version_migration,
 )
-from ._public import build_system3_phase2_snapshot
 
 __all__ = [
     "get_default_compiled_policy_set",
