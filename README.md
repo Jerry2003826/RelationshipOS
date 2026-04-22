@@ -274,7 +274,19 @@ uv run pytest tests/test_emotion_ab_eval.py -q   # 单文件
 ├──────────────────────────────────────────────┤
 │  Raw Memory / Event Stream                    │
 └──────────────────────────────────────────────┘
+
+        ↓  事实槽位可选挂到↓
+
+┌── Mem0 事实层(可替换,默认 shadow 双写)──────┐
+│  向量索引:Qdrant 本地模式(storage.sqlite)    │
+│  历史:history.db                                │
+│  嵌入:multilingual-e5-small(离线)              │
+│  切换:RELATIONSHIP_OS_FACT_MEMORY_BACKEND        │
+│      native / mem0_shadow / mem0_primary          │
+└───────────────────────────────────────────┘
 ```
+
+上半部分是 RelationshipOS 自己的记忆分层、prompt 守则、幻觉审计(`audit_unsupported_recall` v1/v2),与后端无关。Mem0 只在选用时给事实槽位加一层向量索引/召回,详细配置见[下面「Mem0 事实层」一节](#mem0-事实层可选)。
 
 ---
 
@@ -305,6 +317,50 @@ ROUTER_PRELABEL_MODEL=deepseek-chat     # W2 银标用的模型
 ROUTER_MEMORY_MODEL=deepseek-chat       # W3 夜间压缩
 ROUTER_NARRATIVE_MODEL=deepseek-reasoner # W3 周报(R1 一次/周)
 ```
+
+### Mem0 事实层(可选)
+
+RelationshipOS 自带一套原生的事实/摘要记忆,**用不用 Mem0 都能跑**。Mem0 挂上来之后,事实槽位会多一份向量索引,跨 session 召回会更好(W5.4 500 轮压测即在此模式下跑,[reports/stress_500_20260422.md](reports/stress_500_20260422.md))。
+
+**三种模式**,通过 `RELATIONSHIP_OS_FACT_MEMORY_BACKEND` 切换:
+
+| 模式 | 含义 | 适合 |
+|:---|:---|:---|
+| `native` | 只用自带事实层,Mem0 完全不加载 | 最小依赖,本地跑通先用这个 |
+| `mem0_shadow` | 双写:native 主用,Mem0 同步写一份,读仍走 native | 默认值,安全灰度 |
+| `mem0_primary` | 双写,但事实槽位**优先从 Mem0 召回** | 跨 session 记忆主力场景,压测用这个 |
+
+**配置示例**(在 `.env` 里加):
+
+```bash
+# 事实层模式(默认 mem0_shadow)
+RELATIONSHIP_OS_FACT_MEMORY_BACKEND=mem0_primary
+
+# Mem0 本地存储路径(都是相对仓库根目录的默认值)
+RELATIONSHIP_OS_MEM0_QDRANT_PATH=.relationship_os/mem0/qdrant
+RELATIONSHIP_OS_MEM0_HISTORY_DB_PATH=.relationship_os/mem0/history.db
+
+# 嵌入模型(离线可跑的 multilingual-e5-small,不需要 API key)
+RELATIONSHIP_OS_MEM0_EMBED_MODEL=intfloat/multilingual-e5-small
+RELATIONSHIP_OS_MEM0_RETRIEVAL_LIMIT=12
+```
+
+Mem0 依赖已经写进 `pyproject.toml`(`mem0ai>=1.0.7`),`uv sync --extra dev` 会一起装;存储后端用 **Qdrant 本地文件 + SQLite** 两份落盘文件,首次跑会自动创建,**不需要独立起 Qdrant 服务**。
+
+**目录结构**(跑起来之后):
+
+```
+.relationship_os/
+└── mem0/
+    ├── qdrant/
+    │   └── storage.sqlite           # Qdrant 向量,本地模式走 SQLite
+    └── history.db                    # Mem0 自己的操作历史
+```
+
+**注意不要搞混的两件事**:
+
+- 这里说的 Mem0 是 RelationshipOS 挂来做**事实层存储**的底座——和 Benchmark 成绩里那一行 `glm-5 + Mem0 OSS`(作为 baseline 跑出 2.4 分的那条)**不是同一个角色**。那一条是「裸 Mem0 直接给 glm-5 做记忆」的对照组,目的是看 RelationshipOS 相对于 Mem0 OSS 独自工作有没有叠加价值(W5.3 手工评审:8.2 vs 2.4)。
+- Mem0 在 RelationshipOS 里是**可替换依赖**,不是系统核心。记忆分层(事实槽位 / 叙事摘要 / 关系摘要 / 夜间压缩)、prompt 守则、`audit_unsupported_recall` v1/v2 幻觉审计全在 RelationshipOS 自己,Mem0 只负责事实层向量召回这一小块。
 
 ---
 
