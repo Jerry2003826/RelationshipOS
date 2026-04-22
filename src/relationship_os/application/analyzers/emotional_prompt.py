@@ -318,3 +318,225 @@ def _token_grounded(token: str, surface: str) -> bool:
         if gram in surface:
             return True
     return False
+
+
+# ---------------------------------------------------------------------------
+# W5.4 Binding-mismatch audit (v2)
+# ---------------------------------------------------------------------------
+#
+# 2026-04-22 500-round stress caught a *binding-mismatch* hallucination
+# that v1 cannot see:
+#     memory:   年糕 → entity_type=pet_name (a cat)
+#     response: "就像我记得你特别爱吃年糕一样"
+# v1 walks memory surface char-by-char and finds "年糕" → judged grounded.
+# v1 has no notion of *type* — it cannot tell that asserting
+# "爱吃 X" claims X ∈ food, which is incompatible with pet_name.
+#
+# v2 does exactly one new thing: it indexes memory cards by declared
+# entity type (pet_name / person / place / tool / brand / food / drink /
+# …) and, for a small handful of explicit type-assertion patterns in the
+# response, flags entities whose declared type is incompatible with the
+# asserted category.
+#
+# This is intentionally narrow: we do *not* run NER, we do *not* do
+# open-world reasoning, we only cover the shapes that have actually
+# surfaced in review.  Everything else stays v1's job.
+
+# Fields we accept on a memory card for type info. First non-empty wins.
+_ENTITY_NAME_FIELDS: tuple[str, ...] = ("entity", "name", "subject", "value")
+_ENTITY_TYPE_FIELDS: tuple[str, ...] = (
+    "entity_type",
+    "type",
+    "role",
+    "category",
+)
+
+# Type-assertion patterns. Each entry:
+#   (compiled_pattern, asserted_category, incompatible_types)
+# We detect things like "爱吃 X" which asserts X ∈ food; if memory
+# declares X ∈ {pet_name, person, place, tool, brand, ...}, flag.
+_INCOMPAT_WITH_FOOD: frozenset[str] = frozenset(
+    {
+        "pet_name",
+        "pet",
+        "cat",
+        "cat_name",
+        "dog",
+        "dog_name",
+        "person",
+        "person_name",
+        "friend",
+        "colleague",
+        "family",
+        "place",
+        "city",
+        "brand",
+        "tool",
+        "app",
+    }
+)
+_INCOMPAT_WITH_DRINK: frozenset[str] = _INCOMPAT_WITH_FOOD
+_INCOMPAT_WITH_PERSON: frozenset[str] = frozenset(
+    {"pet_name", "pet", "cat", "cat_name", "dog", "dog_name", "place", "city", "brand", "tool"}
+)
+_INCOMPAT_WITH_PLACE: frozenset[str] = frozenset(
+    {
+        "pet_name",
+        "pet",
+        "cat",
+        "cat_name",
+        "dog",
+        "dog_name",
+        "person",
+        "person_name",
+        "food",
+        "drink",
+        "tool",
+    }
+)
+
+_TYPE_ASSERTION_PATTERNS: tuple[tuple[re.Pattern[str], str, frozenset[str]], ...] = (
+    # "(特别/最)?(爱/喜欢)吃 X" → X is a food
+    (
+        re.compile(r"(?:特别|最|超|非常)?(?:爱|喜欢|想)吃\s*([\u4e00-\u9fa5A-Za-z]{1,10})"),
+        "food",
+        _INCOMPAT_WITH_FOOD,
+    ),
+    # "(特别/最)?(爱/喜欢)喝 X" → X is a drink
+    (
+        re.compile(r"(?:特别|最|超|非常)?(?:爱|喜欢|想)喝\s*([\u4e00-\u9fa5A-Za-z]{1,10})"),
+        "drink",
+        _INCOMPAT_WITH_DRINK,
+    ),
+    # "和 X 见面 / 约 X" → X is a person
+    (
+        re.compile(r"(?:和|跟|约)\s*([\u4e00-\u9fa5A-Za-z]{1,10})\s*(?:见面|吃饭|喝茶|约会)"),
+        "person",
+        _INCOMPAT_WITH_PERSON,
+    ),
+    # "去 X 玩 / 住在 X" → X is a place
+    (
+        re.compile(r"(?:去|住在|来自)\s*([\u4e00-\u9fa5A-Za-z]{1,10})\s*(?:玩|出差|旅游|定居)"),
+        "place",
+        _INCOMPAT_WITH_PLACE,
+    ),
+)
+
+
+def _build_entity_type_index(
+    records: Iterable[Mapping[str, object]] | None,
+) -> dict[str, set[str]]:
+    """Index {entity_name: {type1, type2, ...}} from memory cards.
+
+    Only cards that declare *both* an entity name and a type contribute.
+    Entity names are kept verbatim (including case for ASCII) and
+    compared as prefix matches against response tokens.
+    """
+    index: dict[str, set[str]] = {}
+    if not records:
+        return index
+    for rec in records:
+        name = ""
+        for fname in _ENTITY_NAME_FIELDS:
+            value = rec.get(fname)
+            if value:
+                name = str(value).strip()
+                if name:
+                    break
+        if not name:
+            continue
+        etype = ""
+        for tname in _ENTITY_TYPE_FIELDS:
+            value = rec.get(tname)
+            if value:
+                etype = str(value).strip().lower()
+                if etype:
+                    break
+        if not etype:
+            continue
+        index.setdefault(name, set()).add(etype)
+    return index
+
+
+def _match_known_entity(raw: str, entity_index: Mapping[str, set[str]]) -> str:
+    """Return the longest known entity that is a prefix of *raw* (or empty).
+
+    The response regex tends to over-capture (e.g. "年糕一样"); this peels
+    the real entity off the front. Longest-match avoids prefix collisions
+    like "年糕" vs "年糕奶".
+    """
+    if not raw or not entity_index:
+        return ""
+    best = ""
+    for entity in entity_index:
+        if raw.startswith(entity) and len(entity) > len(best):
+            best = entity
+    return best
+
+
+def audit_unsupported_recall_v2(
+    response: str,
+    memory_cards: Iterable[Mapping[str, object]] | None,
+) -> list[dict[str, str]]:
+    """Flag binding-mismatch hallucinations using memory card types.
+
+    Complements :func:`audit_unsupported_recall`:
+
+    * v1 — "did the model invent an entity not in memory at all?"
+    * v2 — "did the model assert a type for an entity that conflicts
+      with the type memory declares for it?"
+
+    Parameters
+    ----------
+    response:
+        Model reply text to audit.
+    memory_cards:
+        Iterable of memory card dicts. Cards contribute to the audit
+        only when they declare both an entity name (``entity`` / ``name``
+        / ``subject`` / ``value``) and a type (``entity_type`` / ``type``
+        / ``role`` / ``category``). Other cards are ignored.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        Each flag is a dict with keys ``entity``, ``asserted``,
+        ``declared``, ``phrase``. Empty list means clean.
+
+    Notes
+    -----
+    Like v1 this is a *soft* signal — callers should route the result
+    into audit events / diagnostics, not hard-block the reply. Patterns
+    are deliberately narrow (food / drink / person / place); the space
+    grows as review surfaces new shapes.
+    """
+    if not response:
+        return []
+    entity_index = _build_entity_type_index(memory_cards)
+    if not entity_index:
+        return []
+    flagged: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for pattern, asserted_type, incompatible in _TYPE_ASSERTION_PATTERNS:
+        for match in pattern.finditer(response):
+            raw = match.group(1)
+            entity = _match_known_entity(raw, entity_index)
+            if not entity:
+                continue
+            declared = entity_index[entity]
+            if asserted_type in declared:
+                continue
+            if not (declared & incompatible):
+                continue
+            key = (entity, asserted_type)
+            if key in seen:
+                continue
+            seen.add(key)
+            flagged.append(
+                {
+                    "entity": entity,
+                    "asserted": asserted_type,
+                    "declared": sorted(declared)[0],
+                    "phrase": match.group(0).strip(),
+                }
+            )
+    return flagged
