@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from relationship_os.domain.llm import LLMClient, LLMMessage, LLMRequest
@@ -38,14 +40,45 @@ class RouterDecision:
     confidence: float
 
 
+def _build_shadow_logger() -> Any | None:
+    """Create a JsonlShadowLogger if the env flag is set.
+
+    Enable by setting ``ROUTER_SHADOW_LOG_PATH=/path/to/shadow.jsonl``.
+    Sample rate can be tuned via ``ROUTER_SHADOW_SAMPLE_RATE`` (0..1).
+    Disabled by default so tests and local runs stay quiet.
+    """
+    path_env = os.environ.get("ROUTER_SHADOW_LOG_PATH")
+    if not path_env:
+        return None
+    try:
+        rate = float(os.environ.get("ROUTER_SHADOW_SAMPLE_RATE", "1.0"))
+    except ValueError:
+        rate = 1.0
+    try:
+        from router_v2.analyzers.router.shadow_logger import JsonlShadowLogger
+
+        return JsonlShadowLogger(path=Path(path_env), sample_rate=rate)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("shadow logger disabled: %s", exc)
+        return None
+
+
 def _get_v2_router() -> Any:
     """Build (or return cached) VanguardRouterV2 instance."""
     global _V2_ROUTER
     if _V2_ROUTER is None:
         from router_v2.analyzers.router.vanguard_router_v2 import VanguardRouterV2
 
-        _V2_ROUTER = VanguardRouterV2.from_default()
+        _V2_ROUTER = VanguardRouterV2.from_default(
+            shadow_logger=_build_shadow_logger()
+        )
     return _V2_ROUTER
+
+
+def reset_router_cache() -> None:
+    """Drop the cached router (tests / hot-reload)."""
+    global _V2_ROUTER
+    _V2_ROUTER = None
 
 
 # Conservative gate for the legacy contract. The v2 model is trained on
