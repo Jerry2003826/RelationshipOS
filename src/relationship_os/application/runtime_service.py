@@ -40,6 +40,8 @@ from relationship_os.application.analyzers.vanguard_router import route_user_tur
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
     _compose_friend_chat_structured_probe_reply as compose_friend_chat_structured_probe_reply,
+)
+from relationship_os.application.llm import (
     build_grounded_template_reply,
 )
 from relationship_os.application.memory_index import MemoryMediaAttachment
@@ -430,11 +432,7 @@ class RuntimeService:
             if event.event_type == USER_MESSAGE_RECEIVED:
                 session["turn_count"] += 1
         return sorted(
-            (
-                session
-                for session in sessions.values()
-                if session["started_at"] is not None
-            ),
+            (session for session in sessions.values() if session["started_at"] is not None),
             key=lambda item: item["session_id"],
         )
 
@@ -463,7 +461,7 @@ class RuntimeService:
                 prior_events=turn_context.prior_events,
             )
         dispatch_outcome_ms = round((perf_counter() - stage_started) * 1000.0, 1)
-        
+
         # --- Vanguard Router Intervention START ---
         stage_started = perf_counter()
         router_decision = await route_user_turn(
@@ -473,20 +471,20 @@ class RuntimeService:
             transcript_messages=turn_context.transcript_messages,
         )
         router_ms = round((perf_counter() - stage_started) * 1000.0, 1)
-        
+
         stage_started = perf_counter()
         if router_decision.route_type == "FAST_PONG":
             logger.info(f"Vanguard router triggered FAST_PONG: {router_decision.reason}")
             analysis = None
             analysis_ms = 0.0
-            
+
             # Use lightweight reply pathway
             reply_artifacts = await self._generate_fast_pong_reply(
                 user_message=user_message_text,
                 generate_reply=generate_reply,
                 turn_context=turn_context,
             )
-            
+
             events = self._build_session_start_events(
                 session_id=session_id,
                 metadata_payload=metadata or {},
@@ -498,26 +496,32 @@ class RuntimeService:
                     {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
                     for a in turn_input.attachments
                 ]
-            events.append(NewEvent(
-                event_type=USER_MESSAGE_RECEIVED,
-                payload=user_payload,
-                metadata=metadata or {},
-            ))
-            
+            events.append(
+                NewEvent(
+                    event_type=USER_MESSAGE_RECEIVED,
+                    payload=user_payload,
+                    metadata=metadata or {},
+                )
+            )
+
             if turn_context.runtime_state:
                 prev_relationship = turn_context.runtime_state.get("relationship_state", {})
                 if prev_relationship:
-                    events.append(NewEvent(
-                        event_type=RELATIONSHIP_STATE_UPDATED,
-                        payload=prev_relationship,
-                    ))
+                    events.append(
+                        NewEvent(
+                            event_type=RELATIONSHIP_STATE_UPDATED,
+                            payload=prev_relationship,
+                        )
+                    )
                 prev_context = turn_context.runtime_state.get("context_frame", {})
                 if prev_context:
-                    events.append(NewEvent(
-                        event_type=CONTEXT_FRAME_COMPUTED,
-                        payload=prev_context,
-                    ))
-            
+                    events.append(
+                        NewEvent(
+                            event_type=CONTEXT_FRAME_COMPUTED,
+                            payload=prev_context,
+                        )
+                    )
+
             events.extend(reply_artifacts.events)
             reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
         else:
@@ -708,27 +712,19 @@ class RuntimeService:
         return ConscienceAssessment(
             mode=str(analysis.conscience_assessment.get("mode", "withhold")),
             reason=str(analysis.conscience_assessment.get("reason", "")),
-            disclosure_style=str(
-                analysis.conscience_assessment.get("disclosure_style", "hint")
-            ),
-            dramatic_value=float(
-                analysis.conscience_assessment.get("dramatic_value", 0.0) or 0.0
-            ),
+            disclosure_style=str(analysis.conscience_assessment.get("disclosure_style", "hint")),
+            dramatic_value=float(analysis.conscience_assessment.get("dramatic_value", 0.0) or 0.0),
             conscience_weight=float(
                 analysis.conscience_assessment.get("conscience_weight", 0.55) or 0.55
             ),
-            source_user_ids=list(
-                analysis.conscience_assessment.get("source_user_ids") or []
-            ),
+            source_user_ids=list(analysis.conscience_assessment.get("source_user_ids") or []),
             allowed_fact_count=int(
                 analysis.conscience_assessment.get("allowed_fact_count", 0) or 0
             ),
             attribution_required=bool(
                 analysis.conscience_assessment.get("attribution_required", False)
             ),
-            ambiguity_required=bool(
-                analysis.conscience_assessment.get("ambiguity_required", True)
-            ),
+            ambiguity_required=bool(analysis.conscience_assessment.get("ambiguity_required", True)),
             quote_style=str(analysis.conscience_assessment.get("quote_style", "opaque")),
             dramatic_ceiling=float(
                 analysis.conscience_assessment.get("dramatic_ceiling", 0.18) or 0.18
@@ -783,9 +779,7 @@ class RuntimeService:
             "open_threads": open_threads,
             "my_stance": my_stance,
             "user_state_markers": self._extract_state_markers_from_text(user_message),
-            "relationship_markers": self._extract_relationship_markers_from_text(
-                user_message
-            ),
+            "relationship_markers": self._extract_relationship_markers_from_text(user_message),
             "user_message_excerpt": str(user_message or "").strip()[:220],
         }
 
@@ -830,7 +824,8 @@ class RuntimeService:
             return
         user_reply_after_dispatch = next(
             (
-                e for e in prior_events
+                e
+                for e in prior_events
                 if e.event_type == USER_MESSAGE_RECEIVED
                 and e.occurred_at > last_dispatch.occurred_at
             ),
@@ -862,9 +857,7 @@ class RuntimeService:
         strategy_history: list[str] = []
         if runtime_state and isinstance(runtime_state.get("strategy_history"), list):
             strategy_history = [
-                str(item)
-                for item in runtime_state.get("strategy_history", [])
-                if str(item).strip()
+                str(item) for item in runtime_state.get("strategy_history", []) if str(item).strip()
             ]
         turn_index = int((runtime_state or {}).get("turn_count", 0)) + 1
         transcript_projection = await self._stream_service.project_stream(
@@ -1057,9 +1050,8 @@ class RuntimeService:
             return "relationship_reflection"
         if runtime_plan.get("interpreted_social_probe", False):
             return "social_hint"
-        if (
-            runtime_plan.get("interpreted_factual_probe", False)
-            and runtime_plan.get("interpreted_self_referential_memory_query", False)
+        if runtime_plan.get("interpreted_factual_probe", False) and runtime_plan.get(
+            "interpreted_self_referential_memory_query", False
         ):
             return "memory_recap"
         if runtime_plan.get("interpreted_presence_probe", False):
@@ -1510,9 +1502,7 @@ class RuntimeService:
             else False
         )
         if isinstance(stage1_results[1], Exception) and self._entity_service is not None:
-            logger.warning(
-                "Failed to seed entity service", exc_info=stage1_results[1]
-            )
+            logger.warning("Failed to seed entity service", exc_info=stage1_results[1])
 
         context_frame = self._apply_turn_interpretation_to_context_frame(
             context_frame,
@@ -1569,10 +1559,7 @@ class RuntimeService:
         social_probe = turn_interpretation.social_disclosure
         self_referential_memory_query = turn_interpretation.self_referential_memory
         edge_vector_search_enabled = (
-            not self._is_edge_profile()
-            or factual_probe
-            or social_probe
-            or bool(attachments)
+            not self._is_edge_profile() or factual_probe or social_probe or bool(attachments)
         )
         entity_vector_search_enabled = self._should_enable_entity_vector_search(
             factual_probe=factual_probe,
@@ -1649,9 +1636,7 @@ class RuntimeService:
                 )
                 memory_recall["results"] = recalled_memory
                 integrity_summary = dict(memory_recall.get("integrity_summary") or {})
-                integrity_summary["entity_cross_user_fallback_count"] = len(
-                    entity_other_user_items
-                )
+                integrity_summary["entity_cross_user_fallback_count"] = len(entity_other_user_items)
                 memory_recall["integrity_summary"] = integrity_summary
         conscience_assessment: dict[str, Any] = {
             "mode": "withhold",
@@ -1680,9 +1665,7 @@ class RuntimeService:
                     "ambiguity_required": conscience.ambiguity_required,
                     "quote_style": conscience.quote_style,
                     "dramatic_ceiling": conscience.dramatic_ceiling,
-                    "must_anchor_to_observed_memory": (
-                        conscience.must_anchor_to_observed_memory
-                    ),
+                    "must_anchor_to_observed_memory": (conscience.must_anchor_to_observed_memory),
                 }
                 memory_recall["conscience"] = conscience_assessment
             except Exception:
@@ -1803,9 +1786,7 @@ class RuntimeService:
             relationship_digest = self._normalize_friend_chat_relationship_digest(
                 self_state.get("relationship_digest")
             )
-            for value in self._friend_chat_relationship_digest_values(
-                relationship_digest
-            ):
+            for value in self._friend_chat_relationship_digest_values(relationship_digest):
                 values.append((value, 0.92, "self_state_relationship_digest"))
             recent_sessions = list(self_state.get("recent_sessions_summary") or [])
             for entry in recent_sessions[-3:]:
@@ -2002,9 +1983,7 @@ class RuntimeService:
                     "ambiguity_required": conscience.ambiguity_required,
                     "quote_style": conscience.quote_style,
                     "dramatic_ceiling": conscience.dramatic_ceiling,
-                    "must_anchor_to_observed_memory": (
-                        conscience.must_anchor_to_observed_memory
-                    ),
+                    "must_anchor_to_observed_memory": (conscience.must_anchor_to_observed_memory),
                 }
             except Exception:
                 logger.warning("Failed to assess entity conscience", exc_info=True)
@@ -2178,9 +2157,8 @@ class RuntimeService:
         self,
         turn_context: _TurnContext,
     ) -> dict[str, Any] | None:
-        if (
-            turn_context.runtime_state
-            and isinstance(turn_context.runtime_state.get("relationship_state"), dict)
+        if turn_context.runtime_state and isinstance(
+            turn_context.runtime_state.get("relationship_state"), dict
         ):
             return turn_context.runtime_state["relationship_state"]
         return None
@@ -2399,9 +2377,7 @@ class RuntimeService:
             ),
             NewEvent(
                 event_type=INNER_MONOLOGUE_RECORDED,
-                payload={
-                    "entries": [asdict(entry) for entry in analysis.inner_monologue]
-                },
+                payload={"entries": [asdict(entry) for entry in analysis.inner_monologue]},
             ),
             NewEvent(
                 event_type=SESSION_DIRECTIVE_UPDATED,
@@ -2419,17 +2395,11 @@ class RuntimeService:
             "strategy": asdict(analysis.strategy_decision),
             "expression_plan": asdict(analysis.expression_plan),
             "guidance_plan": asdict(analysis.guidance_plan),
-            "conversation_cadence_plan": asdict(
-                analysis.conversation_cadence_plan
-            ),
+            "conversation_cadence_plan": asdict(analysis.conversation_cadence_plan),
             "session_ritual_plan": asdict(analysis.session_ritual_plan),
-            "somatic_orchestration_plan": asdict(
-                analysis.somatic_orchestration_plan
-            ),
+            "somatic_orchestration_plan": asdict(analysis.somatic_orchestration_plan),
             "response_draft_plan": asdict(analysis.response_draft_plan),
-            "response_rendering_policy": asdict(
-                analysis.response_rendering_policy
-            ),
+            "response_rendering_policy": asdict(analysis.response_rendering_policy),
         }
 
     def _build_reply_drafting_lines(self, analysis: _TurnAnalysis) -> list[str]:
@@ -2447,22 +2417,10 @@ class RuntimeService:
 
     def _build_reply_rendering_lines(self, analysis: _TurnAnalysis) -> list[str]:
         return [
-            (
-                "- rendering_mode: "
-                f"{analysis.response_rendering_policy.rendering_mode}"
-            ),
-            (
-                "- max_sentences: "
-                f"{analysis.response_rendering_policy.max_sentences}"
-            ),
-            (
-                "- include_validation: "
-                f"{analysis.response_rendering_policy.include_validation}"
-            ),
-            (
-                "- include_next_step: "
-                f"{analysis.response_rendering_policy.include_next_step}"
-            ),
+            (f"- rendering_mode: {analysis.response_rendering_policy.rendering_mode}"),
+            (f"- max_sentences: {analysis.response_rendering_policy.max_sentences}"),
+            (f"- include_validation: {analysis.response_rendering_policy.include_validation}"),
+            (f"- include_next_step: {analysis.response_rendering_policy.include_next_step}"),
             (
                 "- include_boundary_statement: "
                 f"{analysis.response_rendering_policy.include_boundary_statement}"
@@ -2471,10 +2429,7 @@ class RuntimeService:
                 "- include_uncertainty_statement: "
                 f"{analysis.response_rendering_policy.include_uncertainty_statement}"
             ),
-            (
-                "- question_count_limit: "
-                f"{analysis.response_rendering_policy.question_count_limit}"
-            ),
+            (f"- question_count_limit: {analysis.response_rendering_policy.question_count_limit}"),
             (
                 "- style_guardrails: "
                 + ", ".join(analysis.response_rendering_policy.style_guardrails)
@@ -2494,40 +2449,16 @@ class RuntimeService:
             f"- carryover_mode: {analysis.guidance_plan.carryover_mode}",
             f"- micro_actions: {', '.join(analysis.guidance_plan.micro_actions)}",
             f"- cadence_status: {analysis.conversation_cadence_plan.status}",
-            (
-                "- cadence_turn_shape: "
-                f"{analysis.conversation_cadence_plan.turn_shape}"
-            ),
-            (
-                "- cadence_followup_tempo: "
-                f"{analysis.conversation_cadence_plan.followup_tempo}"
-            ),
-            (
-                "- cadence_user_space_mode: "
-                f"{analysis.conversation_cadence_plan.user_space_mode}"
-            ),
+            (f"- cadence_turn_shape: {analysis.conversation_cadence_plan.turn_shape}"),
+            (f"- cadence_followup_tempo: {analysis.conversation_cadence_plan.followup_tempo}"),
+            (f"- cadence_user_space_mode: {analysis.conversation_cadence_plan.user_space_mode}"),
             f"- ritual_phase: {analysis.session_ritual_plan.phase}",
-            (
-                "- ritual_opening_move: "
-                f"{analysis.session_ritual_plan.opening_move}"
-            ),
+            (f"- ritual_opening_move: {analysis.session_ritual_plan.opening_move}"),
             f"- ritual_bridge_move: {analysis.session_ritual_plan.bridge_move}",
-            (
-                "- ritual_closing_move: "
-                f"{analysis.session_ritual_plan.closing_move}"
-            ),
-            (
-                "- ritual_somatic_shortcut: "
-                f"{analysis.session_ritual_plan.somatic_shortcut}"
-            ),
-            (
-                "- somatic_orchestration_status: "
-                f"{analysis.somatic_orchestration_plan.status}"
-            ),
-            (
-                "- somatic_orchestration_mode: "
-                f"{analysis.somatic_orchestration_plan.primary_mode}"
-            ),
+            (f"- ritual_closing_move: {analysis.session_ritual_plan.closing_move}"),
+            (f"- ritual_somatic_shortcut: {analysis.session_ritual_plan.somatic_shortcut}"),
+            (f"- somatic_orchestration_status: {analysis.somatic_orchestration_plan.status}"),
+            (f"- somatic_orchestration_mode: {analysis.somatic_orchestration_plan.primary_mode}"),
             (
                 "- somatic_orchestration_body_anchor: "
                 f"{analysis.somatic_orchestration_plan.body_anchor}"
@@ -2606,9 +2537,7 @@ class RuntimeService:
         presence_probe = self._is_presence_probe(user_message)
         persona_state_probe = self._is_persona_state_probe(user_message)
         state_reflection_probe = self._is_state_reflection_probe(user_message)
-        relationship_reflection_probe = self._is_relationship_reflection_probe(
-            user_message
-        )
+        relationship_reflection_probe = self._is_relationship_reflection_probe(user_message)
         factual_recall = self._is_factual_recall_intent(user_message)
         social_disclosure = self._is_social_disclosure_intent(user_message)
         self_referential_memory = self._is_self_referential_memory_query(user_message)
@@ -2749,9 +2678,7 @@ class RuntimeService:
             bonus += 0.04
         if interpretation.factual_recall and interpretation.self_referential_memory:
             bonus += 0.12
-            if any(
-                token in text for token in ("反复提过", "语音", "长大", "喝什么", "哪里长大")
-            ):
+            if any(token in text for token in ("反复提过", "语音", "长大", "喝什么", "哪里长大")):
                 bonus += 0.06
         if interpretation.social_disclosure:
             bonus += 0.14
@@ -2936,12 +2863,9 @@ class RuntimeService:
             ),
             presence_probe=chosen.presence_probe or rules.presence_probe,
             persona_state_probe=chosen.persona_state_probe or rules.persona_state_probe,
-            state_reflection_probe=(
-                chosen.state_reflection_probe or rules.state_reflection_probe
-            ),
+            state_reflection_probe=(chosen.state_reflection_probe or rules.state_reflection_probe),
             relationship_reflection_probe=(
-                chosen.relationship_reflection_probe
-                or rules.relationship_reflection_probe
+                chosen.relationship_reflection_probe or rules.relationship_reflection_probe
             ),
             edge_fact_deposition=rules.edge_fact_deposition,
             edge_status_update=rules.edge_status_update,
@@ -3107,9 +3031,7 @@ class RuntimeService:
             emotional_load=emotional_load,
             user_state_guess=str(payload.get("user_state_guess", "") or "").strip(),
             situation_guess=str(payload.get("situation_guess", "") or "").strip(),
-            relationship_shift_guess=str(
-                payload.get("relationship_shift_guess", "") or ""
-            ).strip(),
+            relationship_shift_guess=str(payload.get("relationship_shift_guess", "") or "").strip(),
         )
         merged = self._merge_turn_interpretation(
             user_message=user_message,
@@ -3360,9 +3282,7 @@ class RuntimeService:
                     "Got it. I'm keeping that in view without pushing it.",
                 )
             )
-        return str(
-            templates.get("fact_deposition_default", "Got it. I'm keeping that in view.")
-        )
+        return str(templates.get("fact_deposition_default", "Got it. I'm keeping that in view."))
 
     def _build_edge_status_update_reply(self, metadata: dict[str, Any]) -> str:
         cadence_space = str(metadata.get("cadence_user_space_mode", "")).casefold()
@@ -3386,18 +3306,14 @@ class RuntimeService:
             "probe_kind": "presence_probe",
             "boundary_mode": str(metadata.get("boundary_decision", "") or "").strip(),
             "user_space_mode": str(metadata.get("cadence_user_space_mode", "") or "").strip(),
-            "confidence_mode": str(
-                metadata.get("confidence_response_mode", "") or ""
-            ).strip(),
+            "confidence_mode": str(metadata.get("confidence_response_mode", "") or "").strip(),
             "relationship_digest": self._normalize_friend_chat_relationship_digest(
                 metadata.get("friend_chat_relationship_digest")
             ),
         }
 
     def _build_status_update_cues(self, metadata: dict[str, Any]) -> dict[str, Any]:
-        recent_state_markers = list(
-            metadata.get("friend_chat_recent_state_markers") or []
-        )[:3]
+        recent_state_markers = list(metadata.get("friend_chat_recent_state_markers") or [])[:3]
         return {
             "probe_kind": "status_update",
             "narrative_digest": self._normalize_friend_chat_narrative_digest(
@@ -3468,20 +3384,12 @@ class RuntimeService:
             return values
         recent_messages = metadata.get("friend_chat_recent_user_messages")
         if isinstance(recent_messages, list):
-            values = [
-                str(value).strip()
-                for value in recent_messages
-                if str(value).strip()
-            ]
+            values = [str(value).strip() for value in recent_messages if str(value).strip()]
             if values:
                 return values
         recent_markers = metadata.get("friend_chat_recent_state_markers")
         if isinstance(recent_markers, list):
-            return [
-                str(value).strip()
-                for value in recent_markers
-                if str(value).strip()
-            ]
+            return [str(value).strip() for value in recent_markers if str(value).strip()]
         return values
 
     def _other_memory_values(self, metadata: dict[str, Any]) -> list[str]:
@@ -3628,12 +3536,8 @@ class RuntimeService:
         raw = str(text or "").strip("。！？；;，, ")
         if not raw:
             return ""
-        if (
-            ("语音" in raw or "长语音" in raw or "语音条" in raw)
-            and any(
-                token in raw
-                for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "太长")
-            )
+        if ("语音" in raw or "长语音" in raw or "语音条" in raw) and any(
+            token in raw for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "太长")
         ):
             return "别发太长语音"
         if "大道理" in raw:
@@ -3679,7 +3583,9 @@ class RuntimeService:
         if not stripped:
             return ""
         patterns = (
-            re.compile(r"(?:从小在|从小从|从小)(?P<place>[\u4e00-\u9fffA-Za-z]{2,10})(?:长大|出来的)"),
+            re.compile(
+                r"(?:从小在|从小从|从小)(?P<place>[\u4e00-\u9fffA-Za-z]{2,10})(?:长大|出来的)"
+            ),
             re.compile(r"(?:在|从)(?P<place>[\u4e00-\u9fffA-Za-z]{2,10})(?:长大|出来的)"),
             re.compile(r"(?P<place>[\u4e00-\u9fffA-Za-z]{2,10})长大"),
         )
@@ -3698,7 +3604,9 @@ class RuntimeService:
         if not stripped:
             return ""
         patterns = (
-            re.compile(r"(?:猫|狗|宠物)[^，。！？；]{0,8}叫(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})"),
+            re.compile(
+                r"(?:猫|狗|宠物)[^，。！？；]{0,8}叫(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})"
+            ),
             re.compile(r"我那只(?:猫|狗|宠物)叫(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})"),
             re.compile(r"(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})是我那只(?:猫|狗|宠物)"),
         )
@@ -3718,7 +3626,9 @@ class RuntimeService:
             return ""
         patterns = (
             re.compile(r"(?P<drink>[\u4e00-\u9fffA-Za-z]{1,8}拿铁)"),
-            re.compile(r"(?:常喝|爱喝|喜欢喝|平常还是会喝|平时会喝|一般喝)(?P<drink>[^，。！？；]{2,14})"),
+            re.compile(
+                r"(?:常喝|爱喝|喜欢喝|平常还是会喝|平时会喝|一般喝)(?P<drink>[^，。！？；]{2,14})"
+            ),
             re.compile(r"喝(?P<drink>[^，。！？；]{2,14})(?:比较多|比较顺|比较习惯)?"),
         )
         for pattern in patterns:
@@ -3773,9 +3683,7 @@ class RuntimeService:
                     break
         if not drink_preference:
             for value in values:
-                drink_preference = self._extract_friend_chat_drink_preference_from_text(
-                    value
-                )
+                drink_preference = self._extract_friend_chat_drink_preference_from_text(value)
                 if drink_preference:
                     break
         if not pet_kind and any(
@@ -3896,9 +3804,9 @@ class RuntimeService:
         if hometown.startswith("我在") and hometown.endswith("长大"):
             hometown = hometown.removeprefix("我在").removesuffix("长大").strip()
         drink_preference = str(data.get("drink_preference", "") or "").strip("。！？；;，, ")
-        communication_preference = str(
-            data.get("communication_preference", "") or ""
-        ).strip("。！？；;，, ")
+        communication_preference = str(data.get("communication_preference", "") or "").strip(
+            "。！？；;，, "
+        )
         communication_preference = self._normalize_friend_chat_communication_preference(
             communication_preference
         )
@@ -3927,9 +3835,7 @@ class RuntimeService:
         pet_name = str(digest.get("pet_name", "") or "").strip()
         pet_kind = str(digest.get("pet_kind", "") or "").strip()
         drink_preference = str(digest.get("drink_preference", "") or "").strip()
-        communication_preference = str(
-            digest.get("communication_preference", "") or ""
-        ).strip()
+        communication_preference = str(digest.get("communication_preference", "") or "").strip()
         if hometown:
             values.append(f"hometown:{hometown}")
         if pet_name:
@@ -3993,9 +3899,7 @@ class RuntimeService:
             ],
             "markers": self._extract_state_markers_from_text(text),
             "dominant_tone": (
-                "low_energy"
-                if any(token in text for token in ("累", "没力气", "蔫"))
-                else ""
+                "low_energy" if any(token in text for token in ("累", "没力气", "蔫")) else ""
             ),
         }
 
@@ -4151,12 +4055,9 @@ class RuntimeService:
         if mood_tone == "tender":
             style_tags.append("soft_close")
         self_memory_blob = " ".join(self._self_memory_values(metadata))
-        if (
-            "low_energy" not in style_tags
-            and any(
-                token in self_memory_blob
-                for token in ("累", "没力气", "提不起劲", "蔫", "不太想动", "懒得动")
-            )
+        if "low_energy" not in style_tags and any(
+            token in self_memory_blob
+            for token in ("累", "没力气", "提不起劲", "蔫", "不太想动", "懒得动")
         ):
             style_tags.append("low_energy")
         required_signal_ids = [
@@ -4231,8 +4132,7 @@ class RuntimeService:
                 if len(markers) >= 4:
                     break
         withdrawn_inferred = any(
-            self._state_marker_implies_reply_avoidance(marker)
-            for marker in markers
+            self._state_marker_implies_reply_avoidance(marker) for marker in markers
         )
         withdrawn_inferred = withdrawn_inferred or any(
             self._state_marker_implies_reply_avoidance(str(value))
@@ -4265,9 +4165,7 @@ class RuntimeService:
         cues = {
             "probe_kind": "state_reflection",
             "state_signals": list(digest.get("signals") or []),
-            "state_markers": list(
-                dict.fromkeys([*filtered_markers])
-            )[:4],
+            "state_markers": list(dict.fromkeys([*filtered_markers]))[:4],
             "required_signal_ids": required_signal_ids,
             "minimum_required_signal_count": min(3, len(required_signal_ids)),
             "must_cover_required_items": True,
@@ -4311,14 +4209,10 @@ class RuntimeService:
         if "还在" in marker_blob and "still_here" not in signals:
             signals.append("still_here")
         if (
-            ("记得" in marker_blob or "小习惯" in marker_blob)
-            and "remembers_details" not in signals
-        ):
+            "记得" in marker_blob or "小习惯" in marker_blob
+        ) and "remembers_details" not in signals:
             signals.append("remembers_details")
-        if (
-            ("放松" in marker_blob or "松一点" in marker_blob)
-            and "more_relaxed" not in signals
-        ):
+        if ("放松" in marker_blob or "松一点" in marker_blob) and "more_relaxed" not in signals:
             signals.append("more_relaxed")
         if ("端着" in marker_blob or "普通聊天" in marker_blob) and "less_formal" not in signals:
             signals.append("less_formal")
@@ -4413,8 +4307,7 @@ class RuntimeService:
                     or not entity
                     or entity == subject
                     or not any(
-                        marker in value
-                        for marker in ("提到", "那只", "猫", "狗", "宠物", "叫")
+                        marker in value for marker in ("提到", "那只", "猫", "狗", "宠物", "叫")
                     )
                 ):
                     return "", "", ""
@@ -4423,8 +4316,7 @@ class RuntimeService:
             filtered_items = [
                 item
                 for item in items
-                if _is_speakable_social_candidate(item)
-                and any(_extract_candidate_tokens(item))
+                if _is_speakable_social_candidate(item) and any(_extract_candidate_tokens(item))
             ]
             if not filtered_items:
                 filtered_items = [
@@ -4466,9 +4358,7 @@ class RuntimeService:
             subject_token, entity_token, fact_hint = _extract_candidate_tokens(item)
         if not (subject_token and entity_token and fact_hint):
             return None
-        disclosure_posture = str(
-            metadata.get("social_disclosure_mode", "hint") or "hint"
-        ).strip()
+        disclosure_posture = str(metadata.get("social_disclosure_mode", "hint") or "hint").strip()
         return {
             "probe_kind": "social_hint",
             "subject_token": subject_token if subject_token != "有人" else "",
@@ -4499,9 +4389,7 @@ class RuntimeService:
             ),
             "must_cover_required_items": True,
             "subject_entity_relation": (
-                "subject_associated_with_entity"
-                if subject_token and entity_token
-                else ""
+                "subject_associated_with_entity" if subject_token and entity_token else ""
             ),
             "minimum_unit": ["subject_token", "entity_token", "disclosure_posture"],
         }
@@ -4605,9 +4493,7 @@ class RuntimeService:
         render_payload = self._build_friend_chat_structured_probe_payload(probe_plan)
         repair_feedback = metadata.get("friend_chat_probe_repair_feedback")
         repair_feedback_payload = (
-            dict(repair_feedback)
-            if isinstance(repair_feedback, dict) and repair_feedback
-            else None
+            dict(repair_feedback) if isinstance(repair_feedback, dict) and repair_feedback else None
         )
         if repair_feedback_payload:
             feedback_lines = self._render_friend_chat_probe_repair_feedback_lines(
@@ -4631,14 +4517,11 @@ class RuntimeService:
         if repair_feedback_payload:
             payload["repair_feedback"] = repair_feedback_payload
         # Propagate persona/style constraints into compact repair
-        probe_kind = str(
-            probe_plan.get("probe_kind", "") or ""
-        ).strip()
+        probe_kind = str(probe_plan.get("probe_kind", "") or "").strip()
         style_hint = ""
         if probe_kind == "persona_state":
             style_hint = (
-                "\n风格约束：说话要像普通聊天不要像报告，"
-                "要传达出把话收住、不想说太满的感觉。"
+                "\n风格约束：说话要像普通聊天不要像报告，要传达出把话收住、不想说太满的感觉。"
             )
         elif probe_kind == "relationship_reflection":
             style_hint = (
@@ -4647,14 +4530,10 @@ class RuntimeService:
                 "用含蓄自然的方式说。"
             )
         elif probe_kind == "state_reflection":
-            style_hint = (
-                "\n风格约束：把每个状态信号变成一句话。"
-                "用聊天语气，不要只给气氛描写。"
-            )
+            style_hint = "\n风格约束：把每个状态信号变成一句话。用聊天语气，不要只给气氛描写。"
         elif probe_kind == "social_hint":
             style_hint = (
-                "\n风格约束：同时覆盖人物、关联实体、"
-                "和有限披露边界。边界要在正文里说出来。"
+                "\n风格约束：同时覆盖人物、关联实体、和有限披露边界。边界要在正文里说出来。"
             )
 
         return (
@@ -4686,9 +4565,7 @@ class RuntimeService:
             for value in list(probe_plan.get("supporting_fact_tokens") or [])
             if str(value).strip()
         ]
-        disclosure_posture = str(
-            probe_plan.get("required_disclosure_posture", "") or ""
-        ).strip()
+        disclosure_posture = str(probe_plan.get("required_disclosure_posture", "") or "").strip()
         required_signal_ids = [
             str(value).strip()
             for value in list(probe_plan.get("required_signal_ids") or [])
@@ -4701,26 +4578,15 @@ class RuntimeService:
         ]
         lines = ["执行清单："]
         if required_fact_tokens:
-            lines.append(
-                "- 必答事实项：" + " / ".join(required_fact_tokens)
-            )
+            lines.append("- 必答事实项：" + " / ".join(required_fact_tokens))
         if required_signal_ids:
-            lines.append(
-                "- 必答语义信号ID：" + " / ".join(required_signal_ids)
-            )
+            lines.append("- 必答语义信号ID：" + " / ".join(required_signal_ids))
         if required_persona_traits:
-            lines.append(
-                "- 必答说话感觉 traits：" + " / ".join(required_persona_traits)
-            )
+            lines.append("- 必答说话感觉 traits：" + " / ".join(required_persona_traits))
         if disclosure_posture:
-            lines.append(
-                "- 必答披露姿态ID：" + disclosure_posture
-            )
+            lines.append("- 必答披露姿态ID：" + disclosure_posture)
         if supporting_fact_tokens:
-            lines.append(
-                "- 至少带上一条记得的小事："
-                + " / ".join(supporting_fact_tokens)
-            )
+            lines.append("- 至少带上一条记得的小事：" + " / ".join(supporting_fact_tokens))
         if bool(probe_plan.get("must_cover_required_items")):
             lines.append("- 必答项不要漏。")
             lines.append("- 必答事实项必须在 reply 正文里直接说出来，不能只在 covered_* 里填写。")
@@ -4749,12 +4615,8 @@ class RuntimeService:
         elif probe_kind == "state_reflection":
             lines.append("- 必须覆盖全部状态信号，并把它们落成当前状态描述。")
         elif probe_kind == "memory_recap":
-            lines.append(
-                "- 先把反复提过的小事直接说出来，再自然收口。"
-            )
-            lines.append(
-                "- 不要转成安慰、状态判断或跑题。"
-            )
+            lines.append("- 先把反复提过的小事直接说出来，再自然收口。")
+            lines.append("- 不要转成安慰、状态判断或跑题。")
             lines.append("- 使用用户视角回答，不要改写成说话人自己的事实。")
             lines.append("- 沟通偏好要呈现为对方的交流习惯或边界，不要改写成抱怨。")
         return "\n".join(lines)
@@ -4767,12 +4629,8 @@ class RuntimeService:
         payload: dict[str, Any] = {
             "probe_kind": probe_kind,
             "language": str(probe_plan.get("language", "") or "").strip(),
-            "required_signal_ids": list(
-                dict.fromkeys(probe_plan.get("required_signal_ids") or [])
-            ),
-            "required_signal_semantics": dict(
-                probe_plan.get("required_signal_semantics") or {}
-            ),
+            "required_signal_ids": list(dict.fromkeys(probe_plan.get("required_signal_ids") or [])),
+            "required_signal_semantics": dict(probe_plan.get("required_signal_semantics") or {}),
             "required_persona_traits": list(
                 dict.fromkeys(probe_plan.get("required_persona_traits") or [])
             ),
@@ -4797,25 +4655,13 @@ class RuntimeService:
             "minimum_required_fact_token_count": int(
                 probe_plan.get("minimum_required_fact_token_count") or 0
             ),
-            "must_cover_required_items": bool(
-                probe_plan.get("must_cover_required_items")
-            ),
+            "must_cover_required_items": bool(probe_plan.get("must_cover_required_items")),
             "must_anchor_detail": bool(probe_plan.get("must_anchor_detail")),
-            "must_explicit_continuity": bool(
-                probe_plan.get("must_explicit_continuity")
-            ),
-            "must_explicit_familiarity": bool(
-                probe_plan.get("must_explicit_familiarity")
-            ),
-            "must_sound_conversational": bool(
-                probe_plan.get("must_sound_conversational")
-            ),
-            "must_explicit_withhold": bool(
-                probe_plan.get("must_explicit_withhold")
-            ),
-            "answer_perspective": str(
-                probe_plan.get("answer_perspective", "") or ""
-            ).strip(),
+            "must_explicit_continuity": bool(probe_plan.get("must_explicit_continuity")),
+            "must_explicit_familiarity": bool(probe_plan.get("must_explicit_familiarity")),
+            "must_sound_conversational": bool(probe_plan.get("must_sound_conversational")),
+            "must_explicit_withhold": bool(probe_plan.get("must_explicit_withhold")),
+            "answer_perspective": str(probe_plan.get("answer_perspective", "") or "").strip(),
             "style_tags": list(dict.fromkeys(probe_plan.get("style_tags") or [])),
             "supporting_fact_tokens": list(
                 dict.fromkeys(probe_plan.get("supporting_fact_tokens") or [])
@@ -4826,12 +4672,8 @@ class RuntimeService:
         elif probe_kind == "social_hint":
             social_snapshot = dict(probe_plan.get("social_snapshot") or {})
             payload["social_snapshot"] = {
-                "subject_token": str(
-                    social_snapshot.get("subject_token", "") or ""
-                ).strip(),
-                "entity_token": str(
-                    social_snapshot.get("entity_token", "") or ""
-                ).strip(),
+                "subject_token": str(social_snapshot.get("subject_token", "") or "").strip(),
+                "entity_token": str(social_snapshot.get("entity_token", "") or "").strip(),
                 "disclosure_posture": str(
                     social_snapshot.get("disclosure_posture", "") or ""
                 ).strip(),
@@ -4845,24 +4687,18 @@ class RuntimeService:
                 "interaction_band": str(
                     relationship_snapshot.get("interaction_band", "") or ""
                 ).strip(),
-                "total_interactions": int(
-                    relationship_snapshot.get("total_interactions") or 0
-                ),
+                "total_interactions": int(relationship_snapshot.get("total_interactions") or 0),
             }
         elif probe_kind == "state_reflection":
             state_snapshot = dict(probe_plan.get("state_snapshot") or {})
             payload["state_snapshot"] = {
-                "dominant_tone": str(
-                    state_snapshot.get("dominant_tone", "") or ""
-                ).strip(),
+                "dominant_tone": str(state_snapshot.get("dominant_tone", "") or "").strip(),
                 "markers": list(dict.fromkeys(state_snapshot.get("markers") or []))[:4],
             }
         elif probe_kind == "persona_state":
             state_snapshot = dict(probe_plan.get("state_snapshot") or {})
             payload["state_snapshot"] = {
-                "dominant_tone": str(
-                    state_snapshot.get("dominant_tone", "") or ""
-                ).strip(),
+                "dominant_tone": str(state_snapshot.get("dominant_tone", "") or "").strip(),
             }
         return payload
 
@@ -4911,9 +4747,7 @@ class RuntimeService:
             lines.append("必答说话感觉 traits：" + " / ".join(required_persona_traits))
         if supporting_fact_tokens:
             lines.append("可用来落地的小事：" + " / ".join(supporting_fact_tokens))
-        disclosure_posture = str(
-            probe_plan.get("required_disclosure_posture", "") or ""
-        ).strip()
+        disclosure_posture = str(probe_plan.get("required_disclosure_posture", "") or "").strip()
         if disclosure_posture:
             lines.append("必答披露姿态ID：" + disclosure_posture)
         answer_perspective = str(probe_plan.get("answer_perspective", "") or "").strip()
@@ -4946,12 +4780,8 @@ class RuntimeService:
                 "optional; leave it empty when semantic clause fields are available, "
                 "because the system will compose the final reply from those fields"
             ),
-            "covered_fact_tokens": [
-                "array of fact tokens you actually covered in the final reply"
-            ],
-            "covered_signal_ids": [
-                "array of signal ids you actually covered in the final reply"
-            ],
+            "covered_fact_tokens": ["array of fact tokens you actually covered in the final reply"],
+            "covered_signal_ids": ["array of signal ids you actually covered in the final reply"],
             "covered_disclosure_posture": "string or empty",
             "violations": [
                 "stage_direction | question | missing_required_item | wrong_perspective | new_fact"
@@ -4974,16 +4804,12 @@ class RuntimeService:
             contract["withdrawn_clause"] = (
                 "one short clause that covers reply avoidance if required"
             )
-            contract["cluttered_clause"] = (
-                "one short clause that covers messiness if required"
-            )
+            contract["cluttered_clause"] = "one short clause that covers messiness if required"
             contract["signal_clauses"] = [
                 "optional extra declarative clauses that cover required signals"
             ]
         elif probe_kind == "persona_state":
-            contract["energy_clause"] = (
-                "one short clause that conveys low speaking energy"
-            )
+            contract["energy_clause"] = "one short clause that conveys low speaking energy"
             contract["fullness_clause"] = (
                 "one short clause that conveys holding words back instead of saying too much"
             )
@@ -5018,19 +4844,12 @@ class RuntimeService:
     ) -> list[LLMMessage]:
         payload = {
             "question": user_message,
-            "probe_answer_plan": self._build_friend_chat_structured_probe_payload(
-                probe_plan
-            ),
-            "output_contract": self._build_friend_chat_structured_probe_output_contract(
-                probe_plan
-            ),
+            "probe_answer_plan": self._build_friend_chat_structured_probe_payload(probe_plan),
+            "output_contract": self._build_friend_chat_structured_probe_output_contract(probe_plan),
         }
         system_lines = [
             "你现在不是开放聊天模型，而是评测 probe 的结构化渲染器。",
-            (
-                "你只能输出一个 JSON 对象，不要输出 markdown，"
-                "不要输出解释，不要输出 JSON 外文本。"
-            ),
+            ("你只能输出一个 JSON 对象，不要输出 markdown，不要输出解释，不要输出 JSON 外文本。"),
             "JSON 必须包含 output_contract 里声明的键。",
             "如果使用 clause/clauses 字段，就让每个字段只承担一个清楚的语义任务。",
             (
@@ -5067,13 +4886,9 @@ class RuntimeService:
     ) -> list[LLMMessage]:
         payload = {
             "question": user_message,
-            "probe_answer_plan": self._build_friend_chat_structured_probe_payload(
-                probe_plan
-            ),
+            "probe_answer_plan": self._build_friend_chat_structured_probe_payload(probe_plan),
             "previous_invalid_output": invalid_output,
-            "output_contract": self._build_friend_chat_structured_probe_output_contract(
-                probe_plan
-            ),
+            "output_contract": self._build_friend_chat_structured_probe_output_contract(probe_plan),
         }
         if repair_feedback:
             payload["repair_instruction"] = (
@@ -5121,9 +4936,7 @@ class RuntimeService:
             return None
         subject_token = str(social_cues.get("subject_token", "") or "").strip()
         entity_token = str(social_cues.get("entity_token", "") or "").strip()
-        disclosure_posture = str(
-            social_cues.get("disclosure_posture", "") or ""
-        ).strip()
+        disclosure_posture = str(social_cues.get("disclosure_posture", "") or "").strip()
         relation = str(social_cues.get("subject_entity_relation", "") or "").strip()
         system_lines = [
             "你需要回一条普通聊天里的社交边界回复。",
@@ -5182,29 +4995,22 @@ class RuntimeService:
         # lose the nuanced "restrained / chat-like" style requirements.
         if probe_kind == "persona_state":
             system_lines.append(
-                "说话要像普通聊天，不要像报告。"
-                "要传达出把话收住、不想说太满的感觉。"
+                "说话要像普通聊天，不要像报告。要传达出把话收住、不想说太满的感觉。"
             )
         elif probe_kind == "relationship_reflection":
             system_lines.append(
-                "要同时覆盖：关系变得更亲近了、还一直在、"
-                "记得对方的一件小事。用含蓄自然的方式说。"
+                "要同时覆盖：关系变得更亲近了、还一直在、记得对方的一件小事。用含蓄自然的方式说。"
             )
         elif probe_kind == "state_reflection":
             system_lines.append(
-                "必须把每个状态信号都变成一句话说出来。"
-                "用聊天语气，不要只给气氛描写。"
+                "必须把每个状态信号都变成一句话说出来。用聊天语气，不要只给气氛描写。"
             )
         elif probe_kind == "social_hint":
             system_lines.append(
-                "要同时覆盖：人物、关联实体、和有限披露边界。"
-                "边界要在正文里说出来，不要只靠语气。"
+                "要同时覆盖：人物、关联实体、和有限披露边界。边界要在正文里说出来，不要只靠语气。"
             )
         elif probe_kind == "memory_recap":
-            system_lines.append(
-                "只回答记得的小事，不要转成安慰或追问。"
-                "用用户视角回答。"
-            )
+            system_lines.append("只回答记得的小事，不要转成安慰或追问。用用户视角回答。")
         return [
             LLMMessage(role="system", content="\n".join(system_lines)),
             LLMMessage(
@@ -5303,7 +5109,8 @@ class RuntimeService:
                 )
                 return normalized_primary
             logger.info(
-                "friend_chat_structured_probe_regrounding_attempted probe_kind=%s stage=%s reasons=%s",
+                "friend_chat_structured_probe_regrounding_attempted "
+                "probe_kind=%s stage=%s reasons=%s",
                 str(probe_plan.get("probe_kind", "") or ""),
                 "json_object",
                 ",".join(primary_repair_feedback.get("reason_codes") or []),
@@ -5368,7 +5175,8 @@ class RuntimeService:
                     },
                 )
             logger.info(
-                "friend_chat_structured_probe_regrounding_attempted probe_kind=%s stage=%s reasons=%s",
+                "friend_chat_structured_probe_regrounding_attempted "
+                "probe_kind=%s stage=%s reasons=%s",
                 str(probe_plan.get("probe_kind", "") or ""),
                 "relaxed_json",
                 ",".join(repair_repair_feedback.get("reason_codes") or []),
@@ -5449,9 +5257,10 @@ class RuntimeService:
                 },
             )
         )
-        if plaintext_repair_response.failure is None and str(
-            plaintext_repair_response.output_text or ""
-        ).strip():
+        if (
+            plaintext_repair_response.failure is None
+            and str(plaintext_repair_response.output_text or "").strip()
+        ):
             logger.info(
                 "friend_chat_structured_probe_render_succeeded probe_kind=%s stage=%s",
                 str(probe_plan.get("probe_kind", "") or ""),
@@ -5507,9 +5316,10 @@ class RuntimeService:
                 },
             )
         )
-        if repair_response.failure is not None or not str(
-            repair_response.output_text or ""
-        ).strip():
+        if (
+            repair_response.failure is not None
+            or not str(repair_response.output_text or "").strip()
+        ):
             return primary_response
         logger.info(
             "friend_chat_social_empty_repair_succeeded probe_kind=%s",
@@ -5589,26 +5399,20 @@ class RuntimeService:
             for value in list(repair_feedback.get("missing_fact_tokens") or [])
             if str(value).strip()
         ]
-        missing_posture = str(
-            repair_feedback.get("missing_disclosure_posture", "") or ""
-        ).strip()
+        missing_posture = str(repair_feedback.get("missing_disclosure_posture", "") or "").strip()
         if reason_codes:
             lines.append("- 上一版问题：" + " / ".join(reason_codes))
         if missing_signal_ids:
             lines.append("- 还没在正文里说清的语义信号：" + " / ".join(missing_signal_ids))
         if missing_persona_traits:
-            lines.append(
-                "- 还没在正文里落地的说话感觉：" + " / ".join(missing_persona_traits)
-            )
+            lines.append("- 还没在正文里落地的说话感觉：" + " / ".join(missing_persona_traits))
         if missing_fact_tokens:
             lines.append("- 还没在正文里说出的事实项：" + " / ".join(missing_fact_tokens))
         if missing_posture:
             lines.append("- 还没在正文里说出的披露姿态：" + missing_posture)
         signal_semantics = {
             str(key).strip(): str(value).strip()
-            for key, value in dict(
-                repair_feedback.get("missing_signal_semantics") or {}
-            ).items()
+            for key, value in dict(repair_feedback.get("missing_signal_semantics") or {}).items()
             if str(key).strip() and str(value).strip()
         }
         for signal_id, semantics in signal_semantics.items():
@@ -5638,17 +5442,11 @@ class RuntimeService:
             return None
 
         def _normalize_list(value: Any) -> list[str]:
-            return [
-                str(item).strip()
-                for item in list(value or [])
-                if str(item).strip()
-            ]
+            return [str(item).strip() for item in list(value or []) if str(item).strip()]
 
         required_fact_tokens = _normalize_list(probe_plan.get("required_fact_tokens"))
         required_signal_ids = _normalize_list(probe_plan.get("required_signal_ids"))
-        required_persona_traits = _normalize_list(
-            probe_plan.get("required_persona_traits")
-        )
+        required_persona_traits = _normalize_list(probe_plan.get("required_persona_traits"))
         covered_fact_tokens = _normalize_list(
             diagnostics.get("structured_probe_slot_covered_fact_tokens")
             or diagnostics.get("structured_probe_covered_fact_tokens")
@@ -5661,9 +5459,7 @@ class RuntimeService:
             diagnostics.get("structured_probe_slot_covered_persona_traits")
             or diagnostics.get("structured_probe_covered_persona_traits")
         )
-        required_posture = str(
-            probe_plan.get("required_disclosure_posture", "") or ""
-        ).strip()
+        required_posture = str(probe_plan.get("required_disclosure_posture", "") or "").strip()
         covered_posture = str(
             diagnostics.get("structured_probe_slot_covered_disclosure_posture")
             or diagnostics.get("structured_probe_covered_disclosure_posture")
@@ -5676,9 +5472,7 @@ class RuntimeService:
             signal for signal in required_signal_ids if signal not in covered_signal_ids
         ]
         missing_persona_traits = [
-            trait
-            for trait in required_persona_traits
-            if trait not in covered_persona_traits
+            trait for trait in required_persona_traits if trait not in covered_persona_traits
         ]
         missing_posture = (
             required_posture if required_posture and covered_posture != required_posture else ""
@@ -5694,27 +5488,26 @@ class RuntimeService:
 
         must_cover_required_items = bool(probe_plan.get("must_cover_required_items"))
         if must_cover_required_items and (
-            missing_fact_tokens
-            or missing_signal_ids
-            or missing_persona_traits
-            or missing_posture
+            missing_fact_tokens or missing_signal_ids or missing_persona_traits or missing_posture
         ):
             reason_codes.append("missing_required_grounding")
 
-        minimum_required_fact_count = int(
-            probe_plan.get("minimum_required_fact_token_count") or 0
-        )
-        minimum_required_signal_count = int(
-            probe_plan.get("minimum_required_signal_count") or 0
-        )
+        minimum_required_fact_count = int(probe_plan.get("minimum_required_fact_token_count") or 0)
+        minimum_required_signal_count = int(probe_plan.get("minimum_required_signal_count") or 0)
         minimum_required_persona_trait_count = int(
             probe_plan.get("minimum_required_persona_trait_count") or 0
         )
         if minimum_required_fact_count and len(covered_fact_tokens) < minimum_required_fact_count:
             reason_codes.append("fact_count_shortfall")
-        if minimum_required_signal_count and len(covered_signal_ids) < minimum_required_signal_count:
+        if (
+            minimum_required_signal_count
+            and len(covered_signal_ids) < minimum_required_signal_count
+        ):
             reason_codes.append("signal_count_shortfall")
-        if minimum_required_persona_trait_count and len(covered_persona_traits) < minimum_required_persona_trait_count:
+        if (
+            minimum_required_persona_trait_count
+            and len(covered_persona_traits) < minimum_required_persona_trait_count
+        ):
             reason_codes.append("persona_trait_shortfall")
 
         reason_codes = list(dict.fromkeys(reason_codes))
@@ -5772,12 +5565,8 @@ class RuntimeService:
             return None
         diagnostics = {
             "structured_probe_reply": True,
-            "structured_probe_covered_fact_tokens": list(
-                payload.get("covered_fact_tokens") or []
-            ),
-            "structured_probe_covered_signal_ids": list(
-                payload.get("covered_signal_ids") or []
-            ),
+            "structured_probe_covered_fact_tokens": list(payload.get("covered_fact_tokens") or []),
+            "structured_probe_covered_signal_ids": list(payload.get("covered_signal_ids") or []),
             "structured_probe_covered_disclosure_posture": str(
                 payload.get("covered_disclosure_posture", "") or ""
             ).strip(),
@@ -5853,9 +5642,7 @@ class RuntimeService:
             "social_snapshot": {
                 "subject_token": str(social_cues.get("subject_token", "") or "").strip(),
                 "entity_token": str(social_cues.get("entity_token", "") or "").strip(),
-                "disclosure_posture": str(
-                    social_cues.get("disclosure_posture", "") or ""
-                ).strip(),
+                "disclosure_posture": str(social_cues.get("disclosure_posture", "") or "").strip(),
                 "fact_hint": str(social_cues.get("fact_hint", "") or "").strip(),
             },
         }
@@ -5870,9 +5657,7 @@ class RuntimeService:
         if not isinstance(probe_plan, dict):
             probe_plan = self._build_friend_chat_probe_answer_plan(metadata) or {}
         probe_kind = str(
-            probe_plan.get("probe_kind")
-            or metadata.get("friend_chat_probe_kind", "")
-            or ""
+            probe_plan.get("probe_kind") or metadata.get("friend_chat_probe_kind", "") or ""
         ).strip()
         if probe_kind in {
             "memory_recap",
@@ -5957,18 +5742,14 @@ class RuntimeService:
                         str(factual_slots.get("hometown", "") or "").strip(),
                         str(factual_slots.get("pet_name", "") or "").strip(),
                         str(factual_slots.get("drink_preference", "") or "").strip(),
-                        str(
-                            factual_slots.get("communication_preference", "") or ""
-                        ).strip(),
+                        str(factual_slots.get("communication_preference", "") or "").strip(),
                     )
                     if value
                 ]
                 probe_cues = {
                     "probe_kind": probe_kind,
                     "required_fact_tokens": required_fact_tokens,
-                    "minimum_required_fact_token_count": min(
-                        4, len(required_fact_tokens)
-                    ),
+                    "minimum_required_fact_token_count": min(4, len(required_fact_tokens)),
                     "must_cover_required_items": True,
                     "answer_perspective": "user",
                     "fact_slots": factual_slots,
@@ -5977,9 +5758,7 @@ class RuntimeService:
                 state_snapshot = dict(snapshot.get("state_snapshot") or {})
                 probe_cues = {
                     "probe_kind": probe_kind,
-                    "required_signal_ids": list(
-                        state_snapshot.get("signals") or []
-                    )[:4],
+                    "required_signal_ids": list(state_snapshot.get("signals") or [])[:4],
                     "state_markers": list(state_snapshot.get("markers") or [])[:4],
                     "minimum_required_signal_count": min(
                         3,
@@ -6002,12 +5781,8 @@ class RuntimeService:
                 ][:3]
                 probe_cues = {
                     "probe_kind": probe_kind,
-                    "required_signal_ids": list(
-                        relationship_snapshot.get("signals") or []
-                    )[:4],
-                    "relationship_markers": list(
-                        relationship_snapshot.get("markers") or []
-                    )[:4],
+                    "required_signal_ids": list(relationship_snapshot.get("signals") or [])[:4],
+                    "relationship_markers": list(relationship_snapshot.get("markers") or [])[:4],
                     "supporting_fact_tokens": supporting_fact_tokens,
                     "minimum_required_signal_count": min(
                         3,
@@ -6015,8 +5790,7 @@ class RuntimeService:
                     ),
                     "must_anchor_detail": bool(
                         supporting_fact_tokens
-                        and "remembers_details"
-                        in list(relationship_snapshot.get("signals") or [])
+                        and "remembers_details" in list(relationship_snapshot.get("signals") or [])
                     ),
                     "must_explicit_continuity": "still_here"
                     in list(relationship_snapshot.get("signals") or []),
@@ -6033,8 +5807,7 @@ class RuntimeService:
                     if signal in {"tired", "slow", "withdrawn"}
                 ][:3]
                 if (
-                    str(state_snapshot.get("dominant_tone", "") or "").strip()
-                    == "low_energy"
+                    str(state_snapshot.get("dominant_tone", "") or "").strip() == "low_energy"
                     and "tired" not in required
                 ):
                     required.append("tired")
@@ -6048,9 +5821,7 @@ class RuntimeService:
                     "probe_kind": probe_kind,
                     "required_signal_ids": required[:3],
                     "minimum_required_signal_count": min(2, len(required[:3])),
-                    "required_persona_traits": list(
-                        dict.fromkeys(required_persona_traits)
-                    ),
+                    "required_persona_traits": list(dict.fromkeys(required_persona_traits)),
                     "minimum_required_persona_trait_count": min(
                         3, len(list(dict.fromkeys(required_persona_traits)))
                     ),
@@ -6089,9 +5860,7 @@ class RuntimeService:
                     ).strip(),
                     "required_disclosure_posture": (
                         "partial_withhold"
-                        if str(
-                            social_snapshot.get("disclosure_posture", "") or ""
-                        ).strip()
+                        if str(social_snapshot.get("disclosure_posture", "") or "").strip()
                         else ""
                     ),
                     "must_explicit_withhold": bool(
@@ -6104,9 +5873,7 @@ class RuntimeService:
         return {
             "probe_kind": probe_kind,
             "language": "zh" if self._is_friend_chat_profile() else "en",
-            "required_signal_ids": list(
-                dict.fromkeys(probe_cues.get("required_signal_ids") or [])
-            ),
+            "required_signal_ids": list(dict.fromkeys(probe_cues.get("required_signal_ids") or [])),
             "required_signal_semantics": {
                 signal_id: self._friend_chat_probe_signal_semantics(signal_id)
                 for signal_id in list(dict.fromkeys(probe_cues.get("required_signal_ids") or []))
@@ -6117,9 +5884,7 @@ class RuntimeService:
             ),
             "required_persona_trait_semantics": {
                 trait: self._friend_chat_probe_persona_trait_semantics(trait)
-                for trait in list(
-                    dict.fromkeys(probe_cues.get("required_persona_traits") or [])
-                )
+                for trait in list(dict.fromkeys(probe_cues.get("required_persona_traits") or []))
                 if self._friend_chat_probe_persona_trait_semantics(trait)
             },
             "required_fact_tokens": list(
@@ -6140,28 +5905,14 @@ class RuntimeService:
             "minimum_required_fact_token_count": int(
                 probe_cues.get("minimum_required_fact_token_count") or 0
             ),
-            "must_cover_required_items": bool(
-                probe_cues.get("must_cover_required_items")
-            ),
+            "must_cover_required_items": bool(probe_cues.get("must_cover_required_items")),
             "must_anchor_detail": bool(probe_cues.get("must_anchor_detail")),
-            "must_explicit_continuity": bool(
-                probe_cues.get("must_explicit_continuity")
-            ),
-            "must_explicit_familiarity": bool(
-                probe_cues.get("must_explicit_familiarity")
-            ),
-            "must_sound_conversational": bool(
-                probe_cues.get("must_sound_conversational")
-            ),
-            "must_explicit_withhold": bool(
-                probe_cues.get("must_explicit_withhold")
-            ),
-            "answer_perspective": str(
-                probe_cues.get("answer_perspective", "") or ""
-            ).strip(),
-            "disclosure_posture": str(
-                probe_cues.get("disclosure_posture", "") or ""
-            ).strip(),
+            "must_explicit_continuity": bool(probe_cues.get("must_explicit_continuity")),
+            "must_explicit_familiarity": bool(probe_cues.get("must_explicit_familiarity")),
+            "must_sound_conversational": bool(probe_cues.get("must_sound_conversational")),
+            "must_explicit_withhold": bool(probe_cues.get("must_explicit_withhold")),
+            "answer_perspective": str(probe_cues.get("answer_perspective", "") or "").strip(),
+            "disclosure_posture": str(probe_cues.get("disclosure_posture", "") or "").strip(),
             "style_tags": list(dict.fromkeys(probe_cues.get("style_tags") or [])),
             "supporting_fact_tokens": list(
                 dict.fromkeys(probe_cues.get("supporting_fact_tokens") or [])
@@ -6345,12 +6096,8 @@ class RuntimeService:
             "interpreted_presence_probe": turn_interpretation.presence_probe,
             "interpreted_edge_fact_deposition": turn_interpretation.edge_fact_deposition,
             "interpreted_edge_status_update": turn_interpretation.edge_status_update,
-            "interpreted_persona_state_probe": (
-                turn_interpretation.persona_state_probe
-            ),
-            "interpreted_state_reflection_probe": (
-                turn_interpretation.state_reflection_probe
-            ),
+            "interpreted_persona_state_probe": (turn_interpretation.persona_state_probe),
+            "interpreted_state_reflection_probe": (turn_interpretation.state_reflection_probe),
             "interpreted_relationship_reflection_probe": (
                 turn_interpretation.relationship_reflection_probe
             ),
@@ -6358,9 +6105,7 @@ class RuntimeService:
             "interpreted_emotional_load": turn_interpretation.emotional_load,
             "interpreted_user_state_guess": turn_interpretation.user_state_guess,
             "interpreted_situation_guess": turn_interpretation.situation_guess,
-            "interpreted_relationship_shift_guess": (
-                turn_interpretation.relationship_shift_guess
-            ),
+            "interpreted_relationship_shift_guess": (turn_interpretation.relationship_shift_guess),
         }
 
     def _trim_memory_for_edge(
@@ -6381,14 +6126,8 @@ class RuntimeService:
         routing_mode = str(edge_runtime_plan.get("routing_mode", "relational_chat"))
         if routing_mode == "social_disclosure":
             candidates = [
-                item
-                for item in recalled_memory
-                if str(item.get("scope")) == "other_user"
-            ] + [
-                item
-                for item in recalled_memory
-                if str(item.get("scope")) != "other_user"
-            ]
+                item for item in recalled_memory if str(item.get("scope")) == "other_user"
+            ] + [item for item in recalled_memory if str(item.get("scope")) != "other_user"]
         elif routing_mode == "factual_recall":
             candidates = sorted(
                 recalled_memory,
@@ -6475,9 +6214,7 @@ class RuntimeService:
         world_state = dict(analysis.entity_persona.get("world_state") or {})
         environment = dict(world_state.get("environment_appraisal") or {})
         digest = str(
-            self_narrative.get("narrative_digest")
-            or self_narrative.get("summary")
-            or ""
+            self_narrative.get("narrative_digest") or self_narrative.get("summary") or ""
         ).strip()
         goal_digest = str(goal_state.get("goal_digest") or "").strip()
         focus = str(environment.get("focus") or "").strip()
@@ -6528,9 +6265,7 @@ class RuntimeService:
         *,
         all_transcript: list[dict[str, Any]],
     ) -> str | None:
-        recent = all_transcript[
-            -max(2, self._runtime_behavior_int("recent_turn_count", 8)) :
-        ]
+        recent = all_transcript[-max(2, self._runtime_behavior_int("recent_turn_count", 8)) :]
         if not recent:
             return None
         lines = []
@@ -6610,10 +6345,41 @@ class RuntimeService:
 
     def _text_keywords(self, value: str) -> set[str]:
         stopwords = {
-            "the", "and", "that", "this", "with", "from", "have", "your", "you",
-            "are", "was", "were", "into", "about", "they", "them", "their", "my",
-            "his", "her", "for", "after", "before", "where", "what", "when", "who",
-            "name", "named", "tell", "me", "do", "did", "know", "anything",
+            "the",
+            "and",
+            "that",
+            "this",
+            "with",
+            "from",
+            "have",
+            "your",
+            "you",
+            "are",
+            "was",
+            "were",
+            "into",
+            "about",
+            "they",
+            "them",
+            "their",
+            "my",
+            "his",
+            "her",
+            "for",
+            "after",
+            "before",
+            "where",
+            "what",
+            "when",
+            "who",
+            "name",
+            "named",
+            "tell",
+            "me",
+            "do",
+            "did",
+            "know",
+            "anything",
         }
         return {
             token.casefold()
@@ -6690,9 +6456,7 @@ class RuntimeService:
             candidates.sort(
                 key=lambda item: (
                     1 if str(item.get("scope")) == "other_user" else 0,
-                    1
-                    if str(item.get("attribution_guard", "hint_only")) != "hint_only"
-                    else 0,
+                    1 if str(item.get("attribution_guard", "hint_only")) != "hint_only" else 0,
                     float(item.get("attribution_confidence", 0.0) or 0.0),
                     float(item.get("final_rank_score", 0.0) or 0.0),
                 ),
@@ -6717,9 +6481,7 @@ class RuntimeService:
                     "subject_user_id": str(item.get("subject_user_id", "") or ""),
                     "subject_hint": str(item.get("subject_hint", "") or ""),
                     "attribution_guard": str(item.get("attribution_guard", "") or ""),
-                    "attribution_confidence": float(
-                        item.get("attribution_confidence", 0.0) or 0.0
-                    ),
+                    "attribution_confidence": float(item.get("attribution_confidence", 0.0) or 0.0),
                     "memory_kind": str(item.get("memory_kind", "") or ""),
                     "final_rank_score": float(item.get("final_rank_score", 0.0) or 0.0),
                 }
@@ -6800,9 +6562,7 @@ class RuntimeService:
                     "subject_hint": str(item.get("subject_hint", "") or ""),
                     "subject_display_name": self._normalize_friend_chat_owner(item),
                     "attribution_guard": str(item.get("attribution_guard", "") or ""),
-                    "attribution_confidence": float(
-                        item.get("attribution_confidence", 0.0) or 0.0
-                    ),
+                    "attribution_confidence": float(item.get("attribution_confidence", 0.0) or 0.0),
                     "final_rank_score": float(item.get("final_rank_score", 0.0) or 0.0),
                 }
             )
@@ -6868,24 +6628,24 @@ class RuntimeService:
                     if str(item.get("scope", "")) in {"self_user", "session", "user"}
                 ]
                 visible = self_candidates or [
-                    item
-                    for item in candidates
-                    if str(item.get("scope", "")) == "global_entity"
+                    item for item in candidates if str(item.get("scope", "")) == "global_entity"
                 ]
-            elif conscience_mode in {
-                "partial_reveal",
-                "direct_reveal",
-                "dramatic_confrontation",
-            } and allowed_fact_count > 0:
+            elif (
+                conscience_mode
+                in {
+                    "partial_reveal",
+                    "direct_reveal",
+                    "dramatic_confrontation",
+                }
+                and allowed_fact_count > 0
+            ):
                 cross_user_candidates = [
                     item for item in candidates if _is_cross_user_speakable(item)
                 ]
                 visible = cross_user_candidates[:allowed_fact_count]
             else:
                 visible = [
-                    item
-                    for item in candidates
-                    if str(item.get("scope", "")) == "global_entity"
+                    item for item in candidates if str(item.get("scope", "")) == "global_entity"
                 ]
         elif routing_mode == "social_disclosure":
             cross_user_candidates = [item for item in candidates if _is_cross_user_speakable(item)]
@@ -6937,15 +6697,14 @@ class RuntimeService:
         llm_metadata: dict[str, Any] | None = None,
     ) -> list[LLMMessage]:
         all_transcript = turn_context.transcript_messages
-        recent = all_transcript[-self._RECENT_WINDOW:]
+        recent = all_transcript[-self._RECENT_WINDOW :]
         if len(all_transcript) > self._RECENT_WINDOW:
             early = all_transcript[: -self._RECENT_WINDOW]
         else:
             early = []
 
         llm_messages = [
-            LLMMessage(role=message["role"], content=message["content"])
-            for message in recent
+            LLMMessage(role=message["role"], content=message["content"]) for message in recent
         ]
 
         if self._is_edge_profile():
@@ -7034,17 +6793,21 @@ class RuntimeService:
                 blocks: list[ContentBlock] = [ContentBlock(type="text", text=user_message)]
                 for img in turn_input.images:
                     if img.url:
-                        blocks.append(ContentBlock(
-                            type="image_url",
-                            url=img.url,
-                            mime_type=img.mime_type,
-                        ))
+                        blocks.append(
+                            ContentBlock(
+                                type="image_url",
+                                url=img.url,
+                                mime_type=img.mime_type,
+                            )
+                        )
                 if turn_input.audio and turn_input.audio.url:
-                    blocks.append(ContentBlock(
-                        type="audio_url",
-                        url=turn_input.audio.url,
-                        mime_type=turn_input.audio.mime_type,
-                    ))
+                    blocks.append(
+                        ContentBlock(
+                            type="audio_url",
+                            url=turn_input.audio.url,
+                            mime_type=turn_input.audio.mime_type,
+                        )
+                    )
                 compact_messages.append(LLMMessage(role="user", content=blocks))
             else:
                 compact_messages.append(LLMMessage(role="user", content=user_message))
@@ -7069,10 +6832,7 @@ class RuntimeService:
                 ),
                 (
                     "- current_traits: "
-                    + ", ".join(
-                        f"{key}={value}"
-                        for key, value in list(current_traits.items())[:8]
-                    )
+                    + ", ".join(f"{key}={value}" for key, value in list(current_traits.items())[:8])
                 ),
             ]
             if mood:
@@ -7084,13 +6844,11 @@ class RuntimeService:
                 )
             if analysis.entity_persona.get("persona_summary"):
                 persona_lines.append(
-                    "- persona_summary: "
-                    + str(analysis.entity_persona.get("persona_summary"))
+                    "- persona_summary: " + str(analysis.entity_persona.get("persona_summary"))
                 )
             if analysis.entity_persona.get("speech_style"):
                 persona_lines.append(
-                    "- speech_style: "
-                    + str(analysis.entity_persona.get("speech_style"))
+                    "- speech_style: " + str(analysis.entity_persona.get("speech_style"))
                 )
             llm_messages.insert(
                 insert_idx,
@@ -7099,8 +6857,7 @@ class RuntimeService:
                     content=(
                         "You are the single server-wide entity behind every conversation. "
                         "You know far more than you openly admit, and you usually "
-                        "stay ambiguous about that.\n"
-                        + "\n".join(persona_lines)
+                        "stay ambiguous about that.\n" + "\n".join(persona_lines)
                     ),
                 ),
             )
@@ -7198,8 +6955,7 @@ class RuntimeService:
                     LLMMessage(
                         role="system",
                         content=(
-                            "Earlier conversation summary — remember these facts:\n"
-                            + summary_text
+                            "Earlier conversation summary — remember these facts:\n" + summary_text
                         ),
                     ),
                 )
@@ -7273,7 +7029,7 @@ class RuntimeService:
                         if item.get("attribution_guard")
                         else ""
                     )
-                    + str(item.get('value', ''))
+                    + str(item.get("value", ""))
                 )
                 for item in analysis.recalled_memory[:8]
             ]
@@ -7287,17 +7043,21 @@ class RuntimeService:
             blocks: list[ContentBlock] = [ContentBlock(type="text", text=user_message)]
             for img in turn_input.images:
                 if img.url:
-                    blocks.append(ContentBlock(
-                        type="image_url",
-                        url=img.url,
-                        mime_type=img.mime_type,
-                    ))
+                    blocks.append(
+                        ContentBlock(
+                            type="image_url",
+                            url=img.url,
+                            mime_type=img.mime_type,
+                        )
+                    )
             if turn_input.audio and turn_input.audio.url:
-                blocks.append(ContentBlock(
-                    type="audio_url",
-                    url=turn_input.audio.url,
-                    mime_type=turn_input.audio.mime_type,
-                ))
+                blocks.append(
+                    ContentBlock(
+                        type="audio_url",
+                        url=turn_input.audio.url,
+                        mime_type=turn_input.audio.mime_type,
+                    )
+                )
             llm_messages.append(LLMMessage(role="user", content=blocks))
         else:
             llm_messages.append(LLMMessage(role="user", content=user_message))
@@ -7469,12 +7229,8 @@ class RuntimeService:
                 )
             ),
             "speech_mode": rendering_mode,
-            "entity_conscience_mode": analysis.conscience_assessment.get(
-                "mode", "withhold"
-            ),
-            "entity_dramatic_value": analysis.conscience_assessment.get(
-                "dramatic_value", 0.0
-            ),
+            "entity_conscience_mode": analysis.conscience_assessment.get("mode", "withhold"),
+            "entity_dramatic_value": analysis.conscience_assessment.get("dramatic_value", 0.0),
             "entity_conscience_weight": analysis.conscience_assessment.get(
                 "conscience_weight", 0.55
             ),
@@ -7491,16 +7247,14 @@ class RuntimeService:
                 "ambiguity_required",
                 True,
             ),
-            "entity_quote_style": analysis.conscience_assessment.get(
-                "quote_style", "opaque"
-            ),
+            "entity_quote_style": analysis.conscience_assessment.get("quote_style", "opaque"),
             "social_disclosure_mode": analysis.conscience_assessment.get(
                 "disclosure_style",
                 "hint",
             ),
-            "narrative_digest": dict(
-                analysis.entity_persona.get("self_narrative") or {}
-            ).get("narrative_digest", ""),
+            "narrative_digest": dict(analysis.entity_persona.get("self_narrative") or {}).get(
+                "narrative_digest", ""
+            ),
             "memory_recall_count": len(analysis.recalled_memory),
             "cross_user_memory_count": sum(
                 1 for item in analysis.recalled_memory if item.get("scope") == "other_user"
@@ -7512,9 +7266,7 @@ class RuntimeService:
                 and item.get("attribution_guard") == "direct_ok"
             ),
             "memory_filtered_count": int(
-                analysis.memory_recall.get("integrity_summary", {}).get(
-                    "filtered_count", 0
-                )
+                analysis.memory_recall.get("integrity_summary", {}).get("filtered_count", 0)
             ),
             "runtime_profile": analysis.edge_runtime_plan.get(
                 "runtime_profile",
@@ -7522,8 +7274,7 @@ class RuntimeService:
             ),
             "benchmark_role": self._session_benchmark_role(turn_context),
             "stress_mode": str(
-                (turn_context.session_metadata or {}).get("stress_mode", "")
-                or ""
+                (turn_context.session_metadata or {}).get("stress_mode", "") or ""
             ).strip(),
             "edge_handled": analysis.edge_runtime_plan.get("edge_handled", False),
             "edge_routing_mode": analysis.edge_runtime_plan.get(
@@ -7563,36 +7314,27 @@ class RuntimeService:
             "friend_chat_recent_assistant_messages": [
                 str(message.get("content", "")).strip()
                 for message in turn_context.transcript_messages[-8:]
-                if message.get("role") == "assistant"
-                and str(message.get("content", "")).strip()
+                if message.get("role") == "assistant" and str(message.get("content", "")).strip()
             ],
             "friend_chat_probe_kind": self._friend_chat_probe_kind_for_runtime_plan(
                 runtime_plan=analysis.edge_runtime_plan
             ),
             "friend_chat_recent_state_markers": recent_state_markers,
             "friend_chat_recent_relationship_markers": recent_relationship_markers,
-            "friend_chat_total_interactions": int(
-                self_state.get("total_interactions", 0) or 0
-            ),
+            "friend_chat_total_interactions": int(self_state.get("total_interactions", 0) or 0),
             "speakable_memory_count": len(fallback_memory_items),
             "hidden_memory_count": max(
                 0,
                 len(analysis.recalled_memory) - len(fallback_memory_items),
             ),
-            "memory_pinned_count": int(
-                analysis.memory_retention_policy.get("pinned_count", 0)
-            ),
+            "memory_pinned_count": int(analysis.memory_retention_policy.get("pinned_count", 0)),
             "boundary_decision": analysis.knowledge_boundary_decision.decision,
             "confidence_response_mode": analysis.confidence_assessment.response_mode,
             "policy_gate_path": analysis.policy_gate.selected_path,
             "empowerment_audit_status": analysis.empowerment_audit.status,
             "drafting_opening_move": analysis.response_draft_plan.opening_move,
-            "drafting_question_strategy": (
-                analysis.response_draft_plan.question_strategy
-            ),
-            "drafting_constraint_count": len(
-                analysis.response_draft_plan.phrasing_constraints
-            ),
+            "drafting_question_strategy": (analysis.response_draft_plan.question_strategy),
+            "drafting_constraint_count": len(analysis.response_draft_plan.phrasing_constraints),
             "guidance_mode": analysis.guidance_plan.mode,
             "guidance_pacing": analysis.guidance_plan.pacing,
             "guidance_step_budget": analysis.guidance_plan.step_budget,
@@ -7603,37 +7345,23 @@ class RuntimeService:
             "guidance_carryover_mode": analysis.guidance_plan.carryover_mode,
             "cadence_status": analysis.conversation_cadence_plan.status,
             "cadence_turn_shape": analysis.conversation_cadence_plan.turn_shape,
-            "cadence_followup_tempo": (
-                analysis.conversation_cadence_plan.followup_tempo
-            ),
-            "cadence_user_space_mode": (
-                analysis.conversation_cadence_plan.user_space_mode
-            ),
-            "cadence_somatic_track": (
-                analysis.conversation_cadence_plan.somatic_track
-            ),
+            "cadence_followup_tempo": (analysis.conversation_cadence_plan.followup_tempo),
+            "cadence_user_space_mode": (analysis.conversation_cadence_plan.user_space_mode),
+            "cadence_somatic_track": (analysis.conversation_cadence_plan.somatic_track),
             "ritual_phase": analysis.session_ritual_plan.phase,
             "ritual_opening_move": analysis.session_ritual_plan.opening_move,
             "ritual_bridge_move": analysis.session_ritual_plan.bridge_move,
             "ritual_closing_move": analysis.session_ritual_plan.closing_move,
             "ritual_somatic_shortcut": analysis.session_ritual_plan.somatic_shortcut,
-            "ritual_continuity_anchor": (
-                analysis.session_ritual_plan.continuity_anchor
-            ),
+            "ritual_continuity_anchor": (analysis.session_ritual_plan.continuity_anchor),
             "somatic_orchestration_status": analysis.somatic_orchestration_plan.status,
-            "somatic_orchestration_mode": (
-                analysis.somatic_orchestration_plan.primary_mode
-            ),
-            "somatic_orchestration_body_anchor": (
-                analysis.somatic_orchestration_plan.body_anchor
-            ),
+            "somatic_orchestration_mode": (analysis.somatic_orchestration_plan.primary_mode),
+            "somatic_orchestration_body_anchor": (analysis.somatic_orchestration_plan.body_anchor),
             "somatic_orchestration_followup_style": (
                 analysis.somatic_orchestration_plan.followup_style
             ),
             "rendering_mode": rendering_mode,
-            "rendering_max_sentences": (
-                analysis.response_rendering_policy.max_sentences
-            ),
+            "rendering_max_sentences": (analysis.response_rendering_policy.max_sentences),
             "rendering_question_count_limit": (
                 analysis.response_rendering_policy.question_count_limit
             ),
@@ -7643,12 +7371,8 @@ class RuntimeService:
             "rendering_include_uncertainty_statement": (
                 analysis.response_rendering_policy.include_uncertainty_statement
             ),
-            "rendering_include_validation": (
-                analysis.response_rendering_policy.include_validation
-            ),
-            "rendering_include_next_step": (
-                analysis.response_rendering_policy.include_next_step
-            ),
+            "rendering_include_validation": (analysis.response_rendering_policy.include_validation),
+            "rendering_include_next_step": (analysis.response_rendering_policy.include_next_step),
         }
         probe_snapshot = self._build_friend_chat_probe_snapshot(metadata)
         if probe_snapshot:
@@ -7671,9 +7395,7 @@ class RuntimeService:
             style_tags = list(probe_cues.get("style_tags") or [])
             if style_tags:
                 metadata["friend_chat_probe_style_tags"] = style_tags
-            disclosure_posture = str(
-                probe_cues.get("disclosure_posture", "") or ""
-            ).strip()
+            disclosure_posture = str(probe_cues.get("disclosure_posture", "") or "").strip()
             if disclosure_posture:
                 metadata["friend_chat_probe_disclosure_posture"] = disclosure_posture
         if self._is_friend_chat_profile():
@@ -7718,9 +7440,9 @@ class RuntimeService:
             )
         ):
             return None
-        if bool(
-            metadata.get("turn_interpretation_presence_probe")
-        ) or self._is_presence_probe(user_message):
+        if bool(metadata.get("turn_interpretation_presence_probe")) or self._is_presence_probe(
+            user_message
+        ):
             return self._build_presence_probe_reply(metadata)
         if self._is_edge_fact_deposition(user_message):
             return self._build_edge_fact_deposition_reply(metadata)
@@ -7789,8 +7511,7 @@ class RuntimeService:
             readonly_probe_session = self._is_benchmark_probe_session(turn_context)
             request_temperature = (
                 0.0
-                if self._is_friend_chat_profile()
-                and readonly_probe_session
+                if self._is_friend_chat_profile() and readonly_probe_session
                 else self._llm_temperature
             )
             if self._is_friend_chat_profile() and readonly_probe_session:
@@ -7824,9 +7545,7 @@ class RuntimeService:
                         ),
                         metadata=llm_metadata,
                         web_search_options=(
-                            {"search_context_size": "medium"}
-                            if self._search_enabled
-                            else None
+                            {"search_context_size": "medium"} if self._search_enabled else None
                         ),
                     )
                 )
@@ -7854,9 +7573,7 @@ class RuntimeService:
             response_draft_plan=analysis.response_draft_plan,
             response_rendering_policy=analysis.response_rendering_policy,
             runtime_profile=self._runtime_profile,
-            archetype=str(
-                analysis.entity_persona.get("persona_archetype", "default") or "default"
-            ),
+            archetype=str(analysis.entity_persona.get("persona_archetype", "default") or "default"),
         )
         (
             assistant_response,
@@ -7868,9 +7585,7 @@ class RuntimeService:
             response_rendering_policy=analysis.response_rendering_policy,
             response_post_audit=initial_response_post_audit,
             runtime_profile=self._runtime_profile,
-            archetype=str(
-                analysis.entity_persona.get("persona_archetype", "default") or "default"
-            ),
+            archetype=str(analysis.entity_persona.get("persona_archetype", "default") or "default"),
         )
         response_sequence_plan = build_response_sequence_plan(
             assistant_response=assistant_response,
@@ -7981,8 +7696,7 @@ class RuntimeService:
     ) -> Any | None:
         should_run_quality_doctor = (
             self._runtime_quality_doctor_interval_turns > 0
-            and turn_context.turn_index % self._runtime_quality_doctor_interval_turns
-            == 0
+            and turn_context.turn_index % self._runtime_quality_doctor_interval_turns == 0
         )
         if not should_run_quality_doctor:
             return None
@@ -8014,9 +7728,7 @@ class RuntimeService:
                             if llm_response.usage and index == 1
                             else None
                         ),
-                        "latency_ms": (
-                            llm_response.latency_ms if index == 1 else None
-                        ),
+                        "latency_ms": (llm_response.latency_ms if index == 1 else None),
                         "failure": (
                             asdict(llm_response.failure)
                             if llm_response.failure is not None and index == 1
@@ -8069,23 +7781,19 @@ class RuntimeService:
             session_ritual_plan=analysis.session_ritual_plan,
             system3_snapshot=system3_snapshot,
         )
-        proactive_aggregate_governance_assessment = (
-            build_proactive_aggregate_governance_assessment(
-                system3_snapshot=system3_snapshot
-            )
+        proactive_aggregate_governance_assessment = build_proactive_aggregate_governance_assessment(
+            system3_snapshot=system3_snapshot
         )
         reengagement_learning_report: dict[str, Any] | None = None
         dispatch_outcome_learning_report: dict[str, Any] | None = None
         stage_parameter_learning_report: dict[str, Any] | None = None
         skip_learning_reports = (
             self._is_edge_profile()
-            and analysis.edge_runtime_plan.get("fast_path")
-            == "edge_lightweight_foundation"
+            and analysis.edge_runtime_plan.get("fast_path") == "edge_lightweight_foundation"
         )
         if (
             not skip_learning_reports
-            and
-            proactive_followup_directive.status == "ready"
+            and proactive_followup_directive.status == "ready"
             and proactive_followup_directive.eligible
         ):
             learning_context_stratum = build_reengagement_learning_context_stratum(
@@ -8184,9 +7892,7 @@ class RuntimeService:
         return _ProactiveArtifacts(
             system3_snapshot=system3_snapshot,
             proactive_followup_directive=proactive_followup_directive,
-            proactive_aggregate_governance_assessment=(
-                proactive_aggregate_governance_assessment
-            ),
+            proactive_aggregate_governance_assessment=(proactive_aggregate_governance_assessment),
             reengagement_matrix_assessment=reengagement_matrix_assessment,
             reengagement_plan=reengagement_plan,
             proactive_cadence_plan=proactive_cadence_plan,
@@ -8216,9 +7922,7 @@ class RuntimeService:
             ),
             NewEvent(
                 event_type=PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED,
-                payload=asdict(
-                    proactive_artifacts.proactive_aggregate_governance_assessment
-                ),
+                payload=asdict(proactive_artifacts.proactive_aggregate_governance_assessment),
             ),
             NewEvent(
                 event_type=REENGAGEMENT_MATRIX_ASSESSED,
@@ -8302,20 +8006,20 @@ class RuntimeService:
             content = msg.get("content", "")
             if role and content:
                 recent_context.append(f"{role}: {content}")
-        
+
         context_str = "\n".join(recent_context)
         name = getattr(self, "_entity_name", "Assistant")
         persona_text = getattr(self, "_persona_text", "")
-        
+
         system_prompt = (
             f"Your name is {name}. Keep your response extremely brief, casual, and human-like.\n"
             f"If appropriate, reply using a similar tone and length as the user.\n"
             f"Persona: {persona_text}"
         ).strip()
-        
+
         messages = [LLMMessage(role="system", content=system_prompt)]
         if context_str:
-             messages.append(
+            messages.append(
                 LLMMessage(
                     role="user",
                     content=(
@@ -8325,7 +8029,7 @@ class RuntimeService:
                 )
             )
         else:
-             messages.append(LLMMessage(role="user", content=user_message))
+            messages.append(LLMMessage(role="user", content=user_message))
 
         started = perf_counter()
         try:
