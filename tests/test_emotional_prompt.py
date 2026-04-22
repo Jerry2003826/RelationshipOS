@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from relationship_os.application.analyzers.emotional_prompt import (
     VALID_EMOTION_TAGS,
+    audit_unsupported_recall,
     build_emotional_prompt,
     diff_prompts,
 )
@@ -141,3 +142,65 @@ def test_output_is_deterministic() -> None:
     b = build_emotional_prompt(**kwargs)
     assert a.text == b.text
     assert a.sections == b.sections
+
+
+# ---------------------------------------------------------------------------
+# W5.3 grounded-recall guard tests
+# ---------------------------------------------------------------------------
+
+
+def test_grounded_guard_appended_when_memory_present() -> None:
+    p = build_emotional_prompt(
+        persona="x",
+        recent_memory=[{"summary": "你昨天聊到工作很累"}],
+    )
+    assert "记忆使用守则" in p.text
+    assert "不要编造" in p.text
+
+
+def test_grounded_guard_says_no_memory_when_empty() -> None:
+    p = build_emotional_prompt(persona="x", recent_memory=[])
+    assert "记忆使用守则" in p.text
+    assert "本轮没有可用记忆" in p.text
+
+
+def test_audit_flags_unsupported_familiarity() -> None:
+    # This is the exact shape of the 2026-04-22 manual-review failure.
+    response = "到家了呢, 我还记得你上次说不喜欢吃香菜, 这两天大概也还是那样。"
+    recent_memory = [
+        {"summary": "昨天说通勤很烦", "tags": ["emotion"]},
+    ]
+    flagged = audit_unsupported_recall(response, recent_memory)
+    assert flagged, "该捕捉到 不喜欢吃香菜 的伪造记忆"
+    assert any("香菜" in phrase for phrase in flagged)
+
+
+def test_audit_accepts_supported_recall() -> None:
+    response = "还记得你说通勤烦, 最近有没有好一点?"
+    recent_memory = [{"summary": "昨天说通勤很烦"}]
+    flagged = audit_unsupported_recall(response, recent_memory)
+    assert flagged == []
+
+
+def test_audit_ignores_vague_warmth() -> None:
+    # Generic relational language must not be flagged.
+    response = "感觉跟你越来越熟了, 继续聊。"
+    assert audit_unsupported_recall(response, [{"summary": "a"}]) == []
+
+
+def test_audit_handles_empty_memory() -> None:
+    response = "我记得你的猫叫小黑"
+    flagged = audit_unsupported_recall(response, None)
+    assert flagged  # With no memory at all, any specific claim is unsupported.
+
+
+def test_audit_accepts_tag_match() -> None:
+    # Tags on a memory card count as grounded surface too.
+    response = "我记得你对 emotion 比较敏感"
+    recent_memory = [{"summary": "昨晚情绪低落", "tags": ["emotion"]}]
+    # Note: grounded because "emotion" appears in tags.
+    assert audit_unsupported_recall(response, recent_memory) == []
+
+
+def test_audit_returns_list_type_on_empty_response() -> None:
+    assert audit_unsupported_recall("", [{"summary": "x"}]) == []

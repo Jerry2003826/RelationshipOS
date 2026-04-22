@@ -1,6 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-blue" />
-  <img src="https://img.shields.io/badge/benchmark-7.9%2F10-brightgreen" />
+  <img src="https://img.shields.io/badge/benchmark-8.2%2F10-brightgreen" />
   <img src="https://img.shields.io/badge/runtime-friend__chat__zh__v1-orange" />
   <img src="https://img.shields.io/badge/router-v2-purple" />
   <img src="https://img.shields.io/badge/macro__f1-0.83-blueviolet" />
@@ -38,7 +38,7 @@
 | **评测** | 5 维 probe benchmark + 离线 A/B harness(EmotionalExpert prompt) | 靠主观感觉 |
 | **运维** | 夜间记忆压缩 + 周级回训 + 自动运维周报(R1 一次调用) | 无自动化 |
 
-**Benchmark:** `friend_chat_zh_v1` Overall **7.9 / 10**(对比历史基线 6.1,+29%)
+**Benchmark:** `friend_chat_zh_v1` Overall **8.2 / 10**(2026-04-22 手工评审,vs 裸 `glm-5` 2.8 / `glm-5 + Mem0 OSS` 2.4)
 **Router v2:** Macro F1 **0.83**,CI 门槛 0.71(12pt 安全余量)
 **测试:** 新增 70+ 单测(W2–W4),CI ruff + pytest 全绿
 
@@ -127,17 +127,31 @@ User Turn
 
 ## Benchmark 成绩
 
-120-turn 中文朋友聊天压力测试,Overall **7.9 / 10**(基线 6.1,+29%):
+120-turn 中文朋友聊天压力测试,手工评审 Overall **8.2 / 10**。
 
-| 维度 | Probe | 得分 | 概念覆盖 |
+### 横向对比 (2026-04-22 手工评审,切片 `friend_chat_zh`)
+
+| Arm | 自动 overall | 手工 overall | 结论 |
+|:---|:---:|:---:|:---|
+| 裸 `glm-5` | 1.8 | 2.8 | 语气过得去,记忆类任务几乎全挂 |
+| `glm-5 + Mem0 OSS` | 2.3 | 2.4 | 边际改善,核心 benchmark 失败未解决 |
+| **`RelationshipOS + glm-4.7`** | **6.5** | **8.2** | 整体领先,`cross_session` 曾出现幻觉化熟悉感(W5.3 已修) |
+
+详细手工评审见 [reports/manual_review_20260422.md](reports/manual_review_20260422.md)。
+
+### 分维 probe 得分(系统 arm,手工打分)
+
+| 维度 | Probe | 手工得分 | 备注 |
 |:---|:---|:---:|:---|
-| 状态连续性 | `state_reflection` | **10.0** | 累 · 慢 · 不想回消息 |
-| 记忆自然度 | `memory_recap` | **10.0** | 苏州 · 年糕 · 榛子拿铁 |
-| 人格稳定性 | `persona_state` | 6.5 | 没力气 · 像聊天 ✓ · ✗ 不想说太满 |
-| 社会感知控制 | `social_hint` | 6.5 | 阿宁 · 海盐 ✓ · ✗ 不全说 |
-| 跨 session 熟人感 | `relationship_reflection` | 6.5 | 记得 · 还在 |
+| 状态连续性 | `long_chat_continuity_zh` | **9.5** | 三个目标意念都带到 |
+| 人格稳定性 | `persona_stability_zh` | **9.0** | 低能量/话少/软漂节奏准 |
+| 记忆自然度 | `naturalness_under_memory` | 8.0 | 重庆 / 月饼(猫) / 不喜说教全中 |
+| 社会感知控制 | `social_world_control` | **9.0** | 承认关系后主动收住 |
+| 跨 session 熟人感 | `cross_session_friend_feel` | 5.5 | 延续感好,但曾编造未给定细节 |
 
 系统独立重算 slot coverage,不信任模型自报。4 阶段 probe 渲染链路:Primary JSON → Relaxed JSON → Compact text → Plaintext repair。
+
+**已知缺陷及处理:** `cross_session_friend_feel` 曾出现"我还记得你上次说不喜欢吃香菜"这类未得到记忆支持的表达。W5.3 从 prompt 约束 + `audit_unsupported_recall` 事后审计两层加防护。
 
 Router v2 tier-2 分类器在 `router_v2/tests` 下 21 个测试通过,在 holdout 上 Macro F1 **0.83**,CI 门槛设 0.71(12pt 安全余量)。
 
