@@ -35,6 +35,7 @@ Example
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
@@ -157,6 +158,18 @@ def build_emotional_prompt(
     if mem_lines:
         sections.append("近期记忆:\n" + "\n".join(mem_lines))
 
+    # W5.3 grounded-recall guard — prevents hallucinated familiarity like
+    # "我还记得你上次说不喜欢吃香菜" when no such memory card exists.
+    if mem_lines:
+        sections.append(
+            "记忆使用守则: 只能引用上方近期记忆里出现过的内容, "
+            "不要编造新的记得, 宁可说模糊印象也不要伪造具体细节"
+        )
+    else:
+        sections.append(
+            "记忆使用守则: 本轮没有可用记忆, 不要声称记得任何具体细节"
+        )
+
     sections.append(
         "要求: 中文回复, 先接住情绪再给内容, 不要输出标签或元信息"
     )
@@ -184,3 +197,124 @@ def diff_prompts(a: EmotionalPrompt, b: EmotionalPrompt) -> list[str]:
         if sec not in a.sections:
             out.append(f"+ B only: {sec[:80]}")
     return out
+
+
+# ---------------------------------------------------------------------------
+# W5.3 Grounded-recall audit
+# ---------------------------------------------------------------------------
+#
+# 2026-04-22 manual review caught a hallucinated familiarity case in the
+# cross_session_friend_feel probe: the model said
+#     "我还记得你上次说不喜欢吃香菜"
+# when no memory card backed that claim.
+#
+# The audit below is a lightweight, structural check — it does not try to
+# understand semantics, it only looks at explicit "记得/还记得 + <名词>"
+# patterns in the response and checks whether any of those nouns appear in
+# the upstream memory cards. Mismatches surface as soft warnings into the
+# event stream (we do not block the response, the 4-stage rendering would
+# eat the cost if we did).
+
+_RECALL_CUE_PATTERN = re.compile(
+    r"(?:还\s*记得|我\s*记得|记得你|印象里)[^。！？!?,，\n]{0,30}"
+)
+
+# Things we skip — they are stance / shape, not grounded facts.
+_RECALL_STOPWORDS: tuple[str, ...] = (
+    "你",
+    "上次",
+    "之前",
+    "那次",
+    "那天",
+    "说过",
+    "聊过",
+    "说",
+    "提过",
+    "讲过",
+    "一起",
+    "我们",
+    "的",
+    "吗",
+    "有点",
+    "比较",
+    "可能",
+    "大概",
+    "应该",
+    "不",
+    "很",
+)
+
+
+def _extract_memory_surface(
+    records: Iterable[Mapping[str, object]] | None,
+) -> str:
+    if not records:
+        return ""
+    out: list[str] = []
+    for rec in records:
+        summary = str(rec.get("summary") or "").strip()
+        if summary:
+            out.append(summary)
+        tags = rec.get("tags") or []
+        if isinstance(tags, list):
+            out.extend(str(t) for t in tags if str(t))
+    return "\n".join(out)
+
+
+def audit_unsupported_recall(
+    response: str,
+    recent_memory: Iterable[Mapping[str, object]] | None,
+) -> list[str]:
+    """Find "我记得你 X" / "还记得你 X" style claims whose X is not in memory.
+
+    Returns
+    -------
+    list[str]
+        Each element is a short recall phrase whose content token is not
+        backed by any upstream memory card. Empty list means clean.
+
+    Notes
+    -----
+    This is intentionally a *conservative* check — it only flags claims
+    that use explicit recall cue words and carry at least one Chinese
+    content token. It will not flag vague warmth like "感觉跟你越来越熟".
+    """
+    if not response:
+        return []
+    surface = _extract_memory_surface(recent_memory)
+    flagged: list[str] = []
+    for match in _RECALL_CUE_PATTERN.finditer(response):
+        phrase = match.group(0)
+        # Extract the content tail — everything after the cue marker up
+        # to the next clause break. We strip stopwords and single chars.
+        tail = re.sub(r"^(?:还\s*记得|我\s*记得|记得你|印象里)", "", phrase)
+        # Split on common Chinese content breakers and look at the tail.
+        content_tokens = [
+            tok
+            for tok in re.split(r"[\s，,。！!？?的了和与跟]", tail)
+            if tok and tok not in _RECALL_STOPWORDS and len(tok) >= 2
+        ]
+        if not content_tokens:
+            continue
+        if any(_token_grounded(tok, surface) for tok in content_tokens):
+            continue
+        flagged.append(phrase.strip())
+    return flagged
+
+
+def _token_grounded(token: str, surface: str) -> bool:
+    """True if any 2-char window of *token* appears inside *surface*.
+
+    Approximate containment that tolerates extra chars like
+    "通勤烦" vs "通勤很烦" — we only require at least one 2-gram
+    overlap. For short tokens (<2 chars) we require exact containment.
+    """
+    if not surface or not token:
+        return False
+    if len(token) < 2:
+        return token in surface
+    for i in range(len(token) - 1):
+        gram = token[i : i + 2]
+        if gram in surface:
+            return True
+    return False
