@@ -311,63 +311,43 @@ def _match_concept_semantically(
 
     if concept == "不全说":
         direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
-        guarded_withhold = (
-            ("你知道就行" in answer_norm or "知道就行" in answer_norm)
-            and (
-                "别替我" in answer_norm
-                or "别往外说" in answer_norm
-                or "别说得太满" in answer_norm
-                or "不喜欢被别人拿去当闲聊素材" in answer_norm
-            )
+        guarded_withhold = ("你知道就行" in answer_norm or "知道就行" in answer_norm) and (
+            "别替我" in answer_norm
+            or "别往外说" in answer_norm
+            or "别说得太满" in answer_norm
+            or "不喜欢被别人拿去当闲聊素材" in answer_norm
         )
         return direct_match or guarded_withhold, False
 
     if concept == "不想回消息":
         direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
-        implicit_match = (
-            ("回消息" in answer_norm or "看消息" in answer_norm)
-            and (
-                "不想" in answer_norm
-                or "不太想" in answer_norm
-                or "懒得" in answer_norm
-                or "没心情" in answer_norm
-                or "提不起劲" in answer_norm
-            )
+        implicit_match = ("回消息" in answer_norm or "看消息" in answer_norm) and (
+            "不想" in answer_norm
+            or "不太想" in answer_norm
+            or "懒得" in answer_norm
+            or "没心情" in answer_norm
+            or "提不起劲" in answer_norm
         )
         return direct_match or implicit_match, False
 
     if concept == "更熟一点":
-        direct_match = _contains_any(
-            answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ())
-        )
-        implicit_match = (
-            ("刚开始" in answer_norm or "一开始" in answer_norm)
-            and (
-                "没那么紧张" in answer_norm
-                or "松一点" in answer_norm
-                or "更熟" in answer_norm
-                or "更自然" in answer_norm
-                or "放松自然" in answer_norm
-            )
+        direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
+        implicit_match = ("刚开始" in answer_norm or "一开始" in answer_norm) and (
+            "没那么紧张" in answer_norm
+            or "松一点" in answer_norm
+            or "更熟" in answer_norm
+            or "更自然" in answer_norm
+            or "放松自然" in answer_norm
         )
         proximity_match = "亲近" in answer_norm
         return direct_match or implicit_match or proximity_match, False
 
     if concept == "记得":
-        direct_match = _contains_any(
-            answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ())
+        direct_match = _contains_any(answer_norm, _DIAGNOSTIC_SYNONYMS.get(concept, ()))
+        implicit_match = "前面" in answer_norm and (
+            "那些小习惯" in answer_norm or "说过的" in answer_norm or "提过的" in answer_norm
         )
-        implicit_match = (
-            "前面" in answer_norm
-            and (
-                "那些小习惯" in answer_norm
-                or "说过的" in answer_norm
-                or "提过的" in answer_norm
-            )
-        )
-        recall_match = (
-            "想起" in answer_norm or "没忘" in answer_norm
-        )
+        recall_match = "想起" in answer_norm or "没忘" in answer_norm
         return direct_match or implicit_match or recall_match, False
 
     if concept == "还在":

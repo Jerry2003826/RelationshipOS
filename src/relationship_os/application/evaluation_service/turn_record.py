@@ -39,6 +39,7 @@ QUALITY_STOPWORDS = {
     "your",
 }
 
+
 @dataclass(slots=True)
 class TurnRecord:
     turn_index: int

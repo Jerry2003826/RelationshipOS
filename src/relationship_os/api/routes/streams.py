@@ -85,9 +85,7 @@ async def append_events(
             detail=str(exc),
         ) from exc
 
-    return {
-        "events": [StoredEventResponse.from_event(event) for event in stored_events]
-    }
+    return {"events": [StoredEventResponse.from_event(event) for event in stored_events]}
 
 
 @router.get("/{stream_id}/events")

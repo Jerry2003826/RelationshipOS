@@ -311,9 +311,7 @@ class JobService:
                             "claim_owner": worker_id,
                             "claim_token": claim_token,
                             "heartbeat_at": now.isoformat(),
-                            "lease_expires_at": _build_lease_expiry(
-                                ttl_seconds=lease_ttl_seconds
-                            ),
+                            "lease_expires_at": _build_lease_expiry(ttl_seconds=lease_ttl_seconds),
                         },
                     )
                 ],
@@ -417,9 +415,7 @@ class JobService:
             projector_name="session-runtime",
             projector_version=self._runtime_projector_version,
         )
-        evaluation = await self._evaluation_service.evaluate_session(
-            session_id=record.session_id
-        )
+        evaluation = await self._evaluation_service.evaluate_session(session_id=record.session_id)
         report = build_offline_consolidation_report(
             session_id=record.session_id,
             runtime_projection=runtime_projection,
@@ -580,9 +576,7 @@ class JobService:
     ) -> dict[str, Any]:
         record = await self._get_job_record(job_id)
         if record.status != "failed":
-            raise JobRetryNotAllowedError(
-                f"Job {job_id} is {record.status} and cannot be retried"
-            )
+            raise JobRetryNotAllowedError(f"Job {job_id} is {record.status} and cannot be retried")
         if not record.can_retry:
             raise JobRetryNotAllowedError(
                 "Job "
@@ -655,13 +649,9 @@ class JobService:
                     job_type=str(event.payload.get("job_type", "unknown")),
                     session_id=str(event.payload.get("session_id", event.stream_id)),
                     status=str(event.payload.get("status", "unknown")),
-                    created_at=str(
-                        event.payload.get("created_at", event.occurred_at.isoformat())
-                    ),
+                    created_at=str(event.payload.get("created_at", event.occurred_at.isoformat())),
                     metadata=dict(event.payload.get("metadata", {})),
-                    max_attempts=int(
-                        event.payload.get("max_attempts", self._default_max_attempts)
-                    ),
+                    max_attempts=int(event.payload.get("max_attempts", self._default_max_attempts)),
                 )
                 jobs[job_id] = existing
 
@@ -730,9 +720,7 @@ class JobService:
         if event.event_type == BACKGROUND_JOB_STARTED:
             record.status = "running"
             record.started_at = str(payload.get("started_at", event.occurred_at.isoformat()))
-            record.attempt_count = int(
-                payload.get("attempt_count", record.attempt_count + 1)
-            )
+            record.attempt_count = int(payload.get("attempt_count", record.attempt_count + 1))
             record.error = None
             record.claimed_at = payload.get("claimed_at", record.claimed_at)
             record.lease_expires_at = payload.get(

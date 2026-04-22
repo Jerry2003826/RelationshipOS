@@ -134,9 +134,7 @@ def _resolve_governance_gate_override(
     ) in specs:
         if governance_flags.get(f"{domain}_recenter_active"):
             return _build_dispatch_gate_override(
-                retry_after_seconds=recenter_high
-                if elevated_or_repair_soft
-                else recenter_low,
+                retry_after_seconds=recenter_high if elevated_or_repair_soft else recenter_low,
                 gate_key=f"{stage_label}_{domain}_extra_space",
                 gate_notes=_governance_gate_defer_notes(stage_label, domain, "recenter"),
             )
@@ -488,10 +486,7 @@ def build_proactive_dispatch_gate_decision(
         and any(governance_flags.values())
         # Guardrail-tightened windows only; plain progression_advanced would defer
         # too many routine due/overdue first/second dispatches.
-        and (
-            dispatch_window_status == "guarded_release"
-            or "guardrail:" in schedule_reason_text
-        )
+        and (dispatch_window_status == "guarded_release" or "guardrail:" in schedule_reason_text)
     ):
         elevated_or_repair_soft = (
             system3_snapshot.emotional_debt_status == "elevated"
@@ -718,9 +713,7 @@ def _build_dispatch_envelope_selections(
         or str(current_stage_directive.get("autonomy_mode") or "light_invitation"),
         selected_stage_objective=stage_replan_assessment.selected_sequence_objective
         or str(current_stage_directive.get("objective") or ""),
-        selected_stage_closing_style=str(
-            current_stage_directive.get("closing_style") or "none"
-        ),
+        selected_stage_closing_style=str(current_stage_directive.get("closing_style") or "none"),
         selected_opening_move=stage_refresh_plan.refreshed_opening_move
         or str(current_stage_actuation.get("opening_move") or "none"),
         selected_bridge_move=stage_refresh_plan.refreshed_bridge_move

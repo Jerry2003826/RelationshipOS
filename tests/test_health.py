@@ -109,7 +109,9 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
             "alignment_check",
         }
         assert item["ritual_closing_move"] in {
-            "progress_invitation", "reflective_close", "clarify_pause"
+            "progress_invitation",
+            "reflective_close",
+            "clarify_pause",
         }
         assert item["somatic_orchestration_status"] == "not_needed"
         assert item["somatic_orchestration_mode"] == "none"
@@ -177,109 +179,56 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
         next_item = post_dispatch_body["items"][0]
         assert next_item["queue_status"] == "scheduled"
         assert next_item["proactive_cadence_stage_label"] == "first_touch"
+        assert datetime.fromisoformat(next_item["due_at"]) > datetime.fromisoformat(item["due_at"])
+        assert next_item["proactive_lifecycle_dispatch_decision"] == "reschedule_lifecycle_dispatch"
+        assert next_item["proactive_lifecycle_dispatch_mode"] == "rescheduled_lifecycle_dispatch"
         assert (
-            datetime.fromisoformat(next_item["due_at"])
-            > datetime.fromisoformat(item["due_at"])
+            next_item["proactive_lifecycle_activation_decision"] == "buffer_current_lifecycle_stage"
         )
-        assert (
-            next_item["proactive_lifecycle_dispatch_decision"]
-            == "reschedule_lifecycle_dispatch"
-        )
-        assert (
-            next_item["proactive_lifecycle_dispatch_mode"]
-            == "rescheduled_lifecycle_dispatch"
-        )
-        assert (
-            next_item["proactive_lifecycle_activation_decision"]
-            == "buffer_current_lifecycle_stage"
-        )
-        assert (
-            next_item["proactive_lifecycle_settlement_decision"]
-            == "buffer_lifecycle_settlement"
-        )
-        assert (
-            next_item["proactive_lifecycle_closure_decision"]
-            == "buffer_lifecycle_closure"
-        )
+        assert next_item["proactive_lifecycle_settlement_decision"] == "buffer_lifecycle_settlement"
+        assert next_item["proactive_lifecycle_closure_decision"] == "buffer_lifecycle_closure"
         assert (
             next_item["proactive_lifecycle_availability_decision"]
             == "buffer_lifecycle_availability"
         )
+        assert next_item["proactive_lifecycle_retention_decision"] == "buffer_lifecycle_retention"
         assert (
-            next_item["proactive_lifecycle_retention_decision"]
-            == "buffer_lifecycle_retention"
+            next_item["proactive_lifecycle_eligibility_decision"] == "buffer_lifecycle_eligibility"
         )
-        assert (
-            next_item["proactive_lifecycle_eligibility_decision"]
-            == "buffer_lifecycle_eligibility"
-        )
-        assert (
-            next_item["proactive_lifecycle_candidate_decision"]
-            == "buffer_lifecycle_candidate"
-        )
+        assert next_item["proactive_lifecycle_candidate_decision"] == "buffer_lifecycle_candidate"
         assert (
             next_item["proactive_lifecycle_selectability_decision"]
             == "buffer_lifecycle_selectability"
         )
-        assert (
-            next_item["proactive_lifecycle_reentry_decision"]
-            == "buffer_lifecycle_reentry"
-        )
+        assert next_item["proactive_lifecycle_reentry_decision"] == "buffer_lifecycle_reentry"
         assert (
             next_item["proactive_lifecycle_reactivation_decision"]
             == "buffer_lifecycle_reactivation"
         )
-        assert (
-            next_item["proactive_lifecycle_resumption_decision"]
-            == "buffer_lifecycle_resumption"
-        )
-        assert (
-            next_item["proactive_lifecycle_readiness_decision"]
-            == "buffer_lifecycle_readiness"
-        )
-        assert (
-            next_item["proactive_lifecycle_arming_decision"]
-            == "buffer_lifecycle_arming"
-        )
-        assert (
-            next_item["proactive_lifecycle_trigger_decision"]
-            == "buffer_lifecycle_trigger"
-        )
-        assert (
-            next_item["proactive_lifecycle_launch_decision"]
-            == "buffer_lifecycle_launch"
-        )
-        assert (
-            next_item["proactive_lifecycle_handoff_decision"]
-            == "buffer_lifecycle_handoff"
-        )
+        assert next_item["proactive_lifecycle_resumption_decision"] == "buffer_lifecycle_resumption"
+        assert next_item["proactive_lifecycle_readiness_decision"] == "buffer_lifecycle_readiness"
+        assert next_item["proactive_lifecycle_arming_decision"] == "buffer_lifecycle_arming"
+        assert next_item["proactive_lifecycle_trigger_decision"] == "buffer_lifecycle_trigger"
+        assert next_item["proactive_lifecycle_launch_decision"] == "buffer_lifecycle_launch"
+        assert next_item["proactive_lifecycle_handoff_decision"] == "buffer_lifecycle_handoff"
         assert (
             next_item["proactive_lifecycle_continuation_decision"]
             == "buffer_lifecycle_continuation"
         )
         assert (
-            next_item["proactive_lifecycle_sustainment_decision"]
-            == "buffer_lifecycle_sustainment"
+            next_item["proactive_lifecycle_sustainment_decision"] == "buffer_lifecycle_sustainment"
         )
         assert (
-            next_item["proactive_lifecycle_stewardship_decision"]
-            == "buffer_lifecycle_stewardship"
+            next_item["proactive_lifecycle_stewardship_decision"] == "buffer_lifecycle_stewardship"
         )
         assert (
             next_item["proactive_lifecycle_guardianship_decision"]
             == "buffer_lifecycle_guardianship"
         )
+        assert next_item["proactive_lifecycle_oversight_decision"] == "buffer_lifecycle_oversight"
+        assert next_item["proactive_lifecycle_assurance_decision"] == "buffer_lifecycle_assurance"
         assert (
-            next_item["proactive_lifecycle_oversight_decision"]
-            == "buffer_lifecycle_oversight"
-        )
-        assert (
-            next_item["proactive_lifecycle_assurance_decision"]
-            == "buffer_lifecycle_assurance"
-        )
-        assert (
-            next_item["proactive_lifecycle_attestation_decision"]
-            == "buffer_lifecycle_attestation"
+            next_item["proactive_lifecycle_attestation_decision"] == "buffer_lifecycle_attestation"
         )
         assert (
             next_item["proactive_lifecycle_verification_decision"]
@@ -298,106 +247,40 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
             == "buffer_lifecycle_ratification"
         )
         assert (
-            next_item["proactive_lifecycle_endorsement_decision"]
-            == "buffer_lifecycle_endorsement"
+            next_item["proactive_lifecycle_endorsement_decision"] == "buffer_lifecycle_endorsement"
         )
         assert (
             next_item["proactive_lifecycle_authorization_decision"]
             == "buffer_lifecycle_authorization"
         )
         assert "lifecycle_endorsement_buffered" in str(next_item["schedule_reason"])
+        assert next_item["proactive_lifecycle_enactment_decision"] == "buffer_lifecycle_enactment"
+        assert next_item["proactive_lifecycle_finality_decision"] == "buffer_lifecycle_finality"
+        assert next_item["proactive_lifecycle_completion_decision"] == "buffer_lifecycle_completion"
+        assert next_item["proactive_lifecycle_conclusion_decision"] == "buffer_lifecycle_conclusion"
         assert (
-            next_item["proactive_lifecycle_enactment_decision"]
-            == "buffer_lifecycle_enactment"
+            next_item["proactive_lifecycle_disposition_decision"] == "buffer_lifecycle_disposition"
         )
+        assert next_item["proactive_lifecycle_standing_decision"] == "buffer_lifecycle_standing"
+        assert next_item["proactive_lifecycle_residency_decision"] == "buffer_lifecycle_residency"
+        assert next_item["proactive_lifecycle_tenure_decision"] == "buffer_lifecycle_tenure"
         assert (
-            next_item["proactive_lifecycle_finality_decision"]
-            == "buffer_lifecycle_finality"
+            next_item["proactive_lifecycle_persistence_decision"] == "buffer_lifecycle_persistence"
         )
-        assert (
-            next_item["proactive_lifecycle_completion_decision"]
-            == "buffer_lifecycle_completion"
-        )
-        assert (
-            next_item["proactive_lifecycle_conclusion_decision"]
-            == "buffer_lifecycle_conclusion"
-        )
-        assert (
-            next_item["proactive_lifecycle_disposition_decision"]
-            == "buffer_lifecycle_disposition"
-        )
-        assert (
-            next_item["proactive_lifecycle_standing_decision"]
-            == "buffer_lifecycle_standing"
-        )
-        assert (
-            next_item["proactive_lifecycle_residency_decision"]
-            == "buffer_lifecycle_residency"
-        )
-        assert (
-            next_item["proactive_lifecycle_tenure_decision"]
-            == "buffer_lifecycle_tenure"
-        )
-        assert (
-            next_item["proactive_lifecycle_persistence_decision"]
-            == "buffer_lifecycle_persistence"
-        )
-        assert (
-            next_item["proactive_lifecycle_durability_decision"]
-            == "buffer_lifecycle_durability"
-        )
-        assert (
-            next_item["proactive_lifecycle_longevity_decision"]
-            == "buffer_lifecycle_longevity"
-        )
-        assert (
-            next_item["proactive_lifecycle_legacy_decision"]
-            == "buffer_lifecycle_legacy"
-        )
-        assert (
-            next_item["proactive_lifecycle_heritage_decision"]
-            == "buffer_lifecycle_heritage"
-        )
-        assert (
-            next_item["proactive_lifecycle_lineage_decision"]
-            == "buffer_lifecycle_lineage"
-        )
-        assert (
-            next_item["proactive_lifecycle_ancestry_decision"]
-            == "buffer_lifecycle_ancestry"
-        )
-        assert (
-            next_item["proactive_lifecycle_provenance_decision"]
-            == "buffer_lifecycle_provenance"
-        )
-        assert (
-            next_item["proactive_lifecycle_origin_decision"]
-            == "buffer_lifecycle_origin"
-        )
-        assert (
-            next_item["proactive_lifecycle_root_decision"]
-            == "buffer_lifecycle_root"
-        )
-        assert (
-            next_item["proactive_lifecycle_foundation_decision"]
-            == "buffer_lifecycle_foundation"
-        )
-        assert (
-            next_item["proactive_lifecycle_bedrock_decision"]
-            == "buffer_lifecycle_bedrock"
-        )
-        assert (
-            next_item["proactive_lifecycle_substrate_decision"]
-            == "buffer_lifecycle_substrate"
-        )
-        assert (
-            next_item["proactive_lifecycle_stratum_decision"]
-            == "buffer_lifecycle_stratum"
-        )
-        assert (
-            next_item["proactive_lifecycle_layer_decision"]
-            == "buffer_lifecycle_layer"
-        )
+        assert next_item["proactive_lifecycle_durability_decision"] == "buffer_lifecycle_durability"
+        assert next_item["proactive_lifecycle_longevity_decision"] == "buffer_lifecycle_longevity"
+        assert next_item["proactive_lifecycle_legacy_decision"] == "buffer_lifecycle_legacy"
+        assert next_item["proactive_lifecycle_heritage_decision"] == "buffer_lifecycle_heritage"
+        assert next_item["proactive_lifecycle_lineage_decision"] == "buffer_lifecycle_lineage"
+        assert next_item["proactive_lifecycle_ancestry_decision"] == "buffer_lifecycle_ancestry"
+        assert next_item["proactive_lifecycle_provenance_decision"] == "buffer_lifecycle_provenance"
+        assert next_item["proactive_lifecycle_origin_decision"] == "buffer_lifecycle_origin"
+        assert next_item["proactive_lifecycle_root_decision"] == "buffer_lifecycle_root"
+        assert next_item["proactive_lifecycle_foundation_decision"] == "buffer_lifecycle_foundation"
+        assert next_item["proactive_lifecycle_bedrock_decision"] == "buffer_lifecycle_bedrock"
+        assert next_item["proactive_lifecycle_substrate_decision"] == "buffer_lifecycle_substrate"
+        assert next_item["proactive_lifecycle_stratum_decision"] == "buffer_lifecycle_stratum"
+        assert next_item["proactive_lifecycle_layer_decision"] == "buffer_lifecycle_layer"
         assert "lifecycle_standing_buffered" not in str(next_item["schedule_reason"])
         assert "lifecycle_residency_buffered" not in str(next_item["schedule_reason"])
         assert "lifecycle_tenure_buffered" not in str(next_item["schedule_reason"])
@@ -463,9 +346,8 @@ def test_runtime_proactive_followups_endpoint_tracks_waiting_due_and_overdue() -
         assert guarded_due_item["proactive_cadence_stage_label"] == "second_touch"
         assert guarded_due_item["proactive_cadence_stage_index"] == 2
         assert guarded_due_item["proactive_progression_advanced"] is True
-        assert (
-            "line_controller:remaining_line_orchestration_recentered_after_first_touch"
-            in str(guarded_due_item["schedule_reason"])
+        assert "line_controller:remaining_line_orchestration_recentered_after_first_touch" in str(
+            guarded_due_item["schedule_reason"]
         )
         assert "first_touch:advance_to_next_stage->second_touch" in str(
             guarded_due_item["proactive_progression_reason"]

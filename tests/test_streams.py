@@ -44,9 +44,7 @@ def test_append_read_and_project_stream() -> None:
     assert read_response.status_code == 200
     assert len(read_response.json()["events"]) == 2
 
-    projection_response = client.get(
-        "/api/v1/streams/session-1/projection/session-transcript"
-    )
+    projection_response = client.get("/api/v1/streams/session-1/projection/session-transcript")
     assert projection_response.status_code == 200
     projection = projection_response.json()
     assert projection["projector"] == {"name": "session-transcript", "version": "v1"}
@@ -89,15 +87,11 @@ def test_rebuild_projection_reports_selected_streams() -> None:
 
     client.post(
         "/api/v1/streams/session-a/events",
-        json={
-            "events": [{"event_type": "user.message.received", "payload": {"content": "a"}}]
-        },
+        json={"events": [{"event_type": "user.message.received", "payload": {"content": "a"}}]},
     )
     client.post(
         "/api/v1/streams/session-b/events",
-        json={
-            "events": [{"event_type": "assistant.message.sent", "payload": {"content": "b"}}]
-        },
+        json={"events": [{"event_type": "assistant.message.sent", "payload": {"content": "b"}}]},
     )
 
     response = client.post(
@@ -177,9 +171,7 @@ def test_stream_service_apply_events_matches_full_runtime_projection() -> None:
         assert turn_response.status_code == 201
 
         container = client.app.state.container
-        events = asyncio.run(
-            container.stream_service.read_stream(stream_id="stream-projection")
-        )
+        events = asyncio.run(container.stream_service.read_stream(stream_id="stream-projection"))
         assert len(events) > 1
 
         full_projection = container.stream_service.project_events(
@@ -227,9 +219,7 @@ def test_runtime_v2_projects_lifecycle_snapshot_without_legacy_raw_events() -> N
         assert dispatch_response.status_code == 200
 
         container = client.app.state.container
-        events = asyncio.run(
-            container.stream_service.read_stream(stream_id="stream-lifecycle")
-        )
+        events = asyncio.run(container.stream_service.read_stream(stream_id="stream-lifecycle"))
         event_types = [event.event_type for event in events]
         projection = asyncio.run(
             container.stream_service.project_stream(
@@ -304,10 +294,7 @@ def test_legacy_lifecycle_stream_remains_raw_visible_but_projection_endpoints_re
     runtime_audit = runtime_audit_response.json()
     assert runtime_audit["projection_supported"] is False
     assert runtime_audit["projection_error"] == expected_error
-    assert (
-        runtime_audit["event_type_counts"]["system.proactive_lifecycle_state.updated"]
-        == 1
-    )
+    assert runtime_audit["event_type_counts"]["system.proactive_lifecycle_state.updated"] == 1
     assert projection_response.status_code == 409
     assert projection_response.json() == expected_error
     assert replay_response.status_code == 409

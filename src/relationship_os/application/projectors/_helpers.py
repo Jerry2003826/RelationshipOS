@@ -185,9 +185,7 @@ def _append_graph_nodes(
 ) -> list[dict[str, Any]]:
     next_nodes = [dict(item) for item in existing]
     index_by_id = {
-        str(item.get("id", "")): index
-        for index, item in enumerate(next_nodes)
-        if item.get("id")
+        str(item.get("id", "")): index for index, item in enumerate(next_nodes) if item.get("id")
     }
     for value in values:
         label = str(value).strip()

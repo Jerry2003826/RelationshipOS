@@ -18,4 +18,3 @@ event_records = Table(
     UniqueConstraint("stream_id", "version"),
     Index("ix_event_records_stream_id_occurred_at", "stream_id", "occurred_at"),
 )
-

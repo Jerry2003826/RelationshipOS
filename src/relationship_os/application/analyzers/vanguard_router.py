@@ -8,30 +8,60 @@ from relationship_os.domain.llm import LLMClient, LLMMessage, LLMRequest
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass(slots=True, frozen=True)
 class RouterDecision:
     route_type: str  # "FAST_PONG" or "NEED_DEEP_THINK"
     reason: str
     confidence: float
 
+
 _FAST_PONG_EXACT_MATCHES = {
-    "哈哈", "哈哈哈", "哈哈哈哈", "嗯", "嗯嗯", "哦", "哦哦", "好的", "好", "好滴", "行",
-    "早", "早上好", "晚安", "拜拜", "再见", "收到", "知道了", "卧槽", "牛逼", "牛",
-    "hahaha", "haha", "ok", "okay", "gm", "gn", "bye", "hi", "hello"
+    "哈哈",
+    "哈哈哈",
+    "哈哈哈哈",
+    "嗯",
+    "嗯嗯",
+    "哦",
+    "哦哦",
+    "好的",
+    "好",
+    "好滴",
+    "行",
+    "早",
+    "早上好",
+    "晚安",
+    "拜拜",
+    "再见",
+    "收到",
+    "知道了",
+    "卧槽",
+    "牛逼",
+    "牛",
+    "hahaha",
+    "haha",
+    "ok",
+    "okay",
+    "gm",
+    "gn",
+    "bye",
+    "hi",
+    "hello",
 }
 _FAST_PONG_PATTERN = re.compile(r"^(哈哈+|嗯+|哦+|哈+|呵+|嘿+|呜+|啊+)$")
+
 
 def _level_1_rule_intercept(user_message: str) -> RouterDecision | None:
     text = str(user_message).strip()
     if not text:
         return RouterDecision(route_type="FAST_PONG", reason="empty_message", confidence=1.0)
-    
+
     # Very short messages
     if len(text) <= 8:
         # Check exact matches
         if text.casefold() in _FAST_PONG_EXACT_MATCHES:
             return RouterDecision(route_type="FAST_PONG", reason="rule_exact_match", confidence=1.0)
-        
+
         # Check patterns like "哈哈哈哈" or "嗯嗯嗯"
         if _FAST_PONG_PATTERN.match(text):
             return RouterDecision(
@@ -39,8 +69,9 @@ def _level_1_rule_intercept(user_message: str) -> RouterDecision | None:
                 reason="rule_pattern_match",
                 confidence=1.0,
             )
-            
+
     return None
+
 
 async def route_user_turn(
     llm_client: LLMClient,
@@ -62,9 +93,9 @@ async def route_user_turn(
         content = msg.get("content", "")
         if role and content:
             recent_context.append(f"{role.upper()}: {content}")
-            
+
     context_str = "\n".join(recent_context)
-    
+
     system_prompt = (
         "You are an intent classifier for a chat AI. "
         "Classify if the user's latest message requires deep memory "
@@ -88,15 +119,15 @@ async def route_user_turn(
         '{"route_type": "FAST_PONG" | "NEED_DEEP_THINK",'
         ' "reason": "short explanation"}'
     )
-    
+
     messages = [
         LLMMessage(role="system", content=system_prompt),
         LLMMessage(
-            role="user", 
-            content=f"Recent Context:\n{context_str}\n\nLatest User Message: {user_message}"
-        )
+            role="user",
+            content=f"Recent Context:\n{context_str}\n\nLatest User Message: {user_message}",
+        ),
     ]
-    
+
     try:
         response = await llm_client.complete(
             request=LLMRequest(
@@ -113,15 +144,15 @@ async def route_user_turn(
                 reason="llm_no_response",
                 confidence=0.0,
             )
-            
+
         content = response.output_text
         data = json.loads(content)
         route_type = str(data.get("route_type", "NEED_DEEP_THINK")).strip()
         reason = str(data.get("reason", "llm_routed")).strip()
-        
+
         if route_type not in ("FAST_PONG", "NEED_DEEP_THINK"):
             route_type = "NEED_DEEP_THINK"
-            
+
         return RouterDecision(route_type=route_type, reason=reason, confidence=0.85)
 
     except Exception as e:

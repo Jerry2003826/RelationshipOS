@@ -164,12 +164,16 @@ def infer_topic(text: str) -> str:
 def infer_attention(text: str) -> str:
     lowered = text.lower()
     attention_policy = _context_section("attention")
-    if len(text) > int(attention_policy.get("high_length_threshold", 160)) or any(
-        token in lowered
-        for token in _policy_list("attention", "high_tokens_en", ["urgent", "asap"])
-    ) or any(
-        token in text
-        for token in _policy_list("attention", "high_tokens_zh", ["马上", "紧急", "尽快"])
+    if (
+        len(text) > int(attention_policy.get("high_length_threshold", 160))
+        or any(
+            token in lowered
+            for token in _policy_list("attention", "high_tokens_en", ["urgent", "asap"])
+        )
+        or any(
+            token in text
+            for token in _policy_list("attention", "high_tokens_zh", ["马上", "紧急", "尽快"])
+        )
     ):
         return "high"
     if len(text) > int(attention_policy.get("focused_length_threshold", 60)):
@@ -215,11 +219,16 @@ def apply_semantic_hints(
     )
     bid_signal = context_frame.bid_signal
     if bid_signal == "low_signal":
-        if normalized_intent in {
-            "persona_state_probe",
-            "state_reflection_probe",
-            "relationship_reflection_probe",
-        } or next_appraisal in {"negative", "mixed"} or normalized_emotional_load == "high":
+        if (
+            normalized_intent
+            in {
+                "persona_state_probe",
+                "state_reflection_probe",
+                "relationship_reflection_probe",
+            }
+            or next_appraisal in {"negative", "mixed"}
+            or normalized_emotional_load == "high"
+        ):
             bid_signal = "connection_request"
         elif normalized_intent == "social_disclosure":
             bid_signal = "soft_bid"

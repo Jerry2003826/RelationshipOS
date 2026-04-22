@@ -328,10 +328,7 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_strategy_audit_watch_turn_count"] >= 0
     assert body["summary"]["system3_strategy_audit_trajectory_watch_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_strategy_audit_trajectory_corrective_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_strategy_audit_trajectory_corrective_turn_count"] >= 0
     assert body["summary"]["latest_system3_growth_stage"] in {
         "forming",
         "stabilizing",
@@ -518,10 +515,7 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
         None,
     }
     assert body["summary"]["system3_strategy_supervision_trajectory_watch_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_strategy_supervision_trajectory_tighten_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_strategy_supervision_trajectory_tighten_turn_count"] >= 0
     assert body["summary"]["latest_system3_strategy_supervision_trajectory_status"] in {
         "stable",
         "watch",
@@ -607,10 +601,7 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
         None,
     }
     assert body["summary"]["system3_emotional_debt_trajectory_watch_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_emotional_debt_trajectory_decompression_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_emotional_debt_trajectory_decompression_turn_count"] >= 0
     assert body["summary"]["latest_system3_emotional_debt_trajectory_status"] in {
         "stable",
         "watch",
@@ -690,14 +681,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_expectation_calibration_watch_turn_count"] >= 0
     assert body["summary"]["system3_expectation_calibration_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_expectation_calibration_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_expectation_calibration_trajectory_reset_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_expectation_calibration_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_expectation_calibration_trajectory_reset_turn_count"] >= 0
     assert body["summary"]["latest_system3_expectation_calibration_status"] in {
         "pass",
         "watch",
@@ -756,14 +741,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_dependency_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_dependency_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_dependency_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_dependency_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_dependency_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_dependency_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_dependency_governance_status"] in {
         "pass",
         "watch",
@@ -822,14 +801,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_autonomy_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_autonomy_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_autonomy_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_autonomy_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_autonomy_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_autonomy_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_autonomy_governance_status"] in {
         "pass",
         "watch",
@@ -885,14 +858,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_boundary_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_boundary_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_boundary_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_boundary_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_boundary_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_boundary_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_boundary_governance_status"] in {
         "pass",
         "watch",
@@ -949,14 +916,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_support_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_support_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_support_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_support_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_support_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_support_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_support_governance_status"] in {
         "pass",
         "watch",
@@ -1017,16 +978,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_continuity_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_continuity_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_continuity_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_continuity_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_continuity_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_continuity_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_continuity_governance_status"] in {
         "pass",
         "watch",
@@ -1053,52 +1006,37 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
         "thin_context_continuity_watch",
         None,
     }
-    assert (
-        body["summary"]["latest_system3_continuity_governance_trajectory_status"]
-        in {
-            "stable",
-            "watch",
-            "recenter",
-            None,
-        }
-    )
-    assert (
-        body["summary"]["latest_system3_continuity_governance_trajectory_target"]
-        in {
-            "steady_contextual_continuity",
-            "context_reanchor_continuity",
-            "memory_regrounded_continuity",
-            "low_pressure_continuity",
-            "clarified_context_continuity",
-            "stepwise_continuity",
-            "thin_context_continuity",
-            None,
-        }
-    )
-    assert (
-        body["summary"]["latest_system3_continuity_governance_trajectory_trigger"]
-        in {
-            "continuity_governance_stable",
-            "context_reanchor_recenter",
-            "memory_reground_recenter",
-            "support_continuity_watch",
-            "clarification_continuity_watch",
-            "segmented_continuity_watch",
-            "thin_context_continuity_watch",
-            "continuity_watch_active",
-            None,
-        }
-    )
+    assert body["summary"]["latest_system3_continuity_governance_trajectory_status"] in {
+        "stable",
+        "watch",
+        "recenter",
+        None,
+    }
+    assert body["summary"]["latest_system3_continuity_governance_trajectory_target"] in {
+        "steady_contextual_continuity",
+        "context_reanchor_continuity",
+        "memory_regrounded_continuity",
+        "low_pressure_continuity",
+        "clarified_context_continuity",
+        "stepwise_continuity",
+        "thin_context_continuity",
+        None,
+    }
+    assert body["summary"]["latest_system3_continuity_governance_trajectory_trigger"] in {
+        "continuity_governance_stable",
+        "context_reanchor_recenter",
+        "memory_reground_recenter",
+        "support_continuity_watch",
+        "clarification_continuity_watch",
+        "segmented_continuity_watch",
+        "thin_context_continuity_watch",
+        "continuity_watch_active",
+        None,
+    }
     assert body["summary"]["system3_repair_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_repair_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_repair_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_repair_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_repair_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_repair_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_repair_governance_status"] in {
         "pass",
         "watch",
@@ -1158,14 +1096,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_trust_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_trust_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_trust_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_trust_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_trust_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_trust_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_trust_governance_status"] in {
         "pass",
         "watch",
@@ -1236,14 +1168,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_clarity_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_clarity_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_clarity_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_clarity_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_clarity_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_clarity_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_clarity_governance_status"] in {
         "pass",
         "watch",
@@ -1307,14 +1233,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_pacing_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_pacing_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_pacing_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_pacing_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_pacing_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_pacing_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_pacing_governance_status"] in {
         "pass",
         "watch",
@@ -1377,14 +1297,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_attunement_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_attunement_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_attunement_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_attunement_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_attunement_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_attunement_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_attunement_governance_status"] in {
         "pass",
         "watch",
@@ -1448,16 +1362,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_commitment_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_commitment_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_commitment_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_commitment_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_commitment_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_commitment_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_commitment_governance_status"] in {
         "pass",
         "watch",
@@ -1537,16 +1443,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_disclosure_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_disclosure_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_disclosure_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_disclosure_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_disclosure_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_disclosure_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_disclosure_governance_status"] in {
         "pass",
         "watch",
@@ -1614,16 +1512,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_reciprocity_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_reciprocity_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_reciprocity_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_reciprocity_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_reciprocity_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_reciprocity_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_reciprocity_governance_status"] in {
         "pass",
         "watch",
@@ -1699,16 +1589,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_pressure_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_pressure_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_pressure_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_pressure_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_pressure_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_pressure_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_pressure_governance_status"] in {
         "pass",
         "watch",
@@ -1784,16 +1666,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_relational_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_relational_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_relational_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_relational_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_relational_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_relational_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_relational_governance_status"] in {
         "pass",
         "watch",
@@ -1872,14 +1746,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_safety_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_safety_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_safety_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_safety_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_safety_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_safety_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_safety_governance_status"] in {
         "pass",
         "watch",
@@ -1962,14 +1830,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_progress_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_progress_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_progress_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"]["system3_progress_governance_trajectory_recenter_turn_count"]
-        >= 0
-    )
+    assert body["summary"]["system3_progress_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_progress_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_progress_governance_status"] in {
         "pass",
         "watch",
@@ -2048,16 +1910,8 @@ def test_evaluate_single_session_returns_summary_and_turns() -> None:
     }
     assert body["summary"]["system3_stability_governance_watch_turn_count"] >= 0
     assert body["summary"]["system3_stability_governance_revise_turn_count"] >= 0
-    assert (
-        body["summary"]["system3_stability_governance_trajectory_watch_turn_count"]
-        >= 0
-    )
-    assert (
-        body["summary"][
-            "system3_stability_governance_trajectory_recenter_turn_count"
-        ]
-        >= 0
-    )
+    assert body["summary"]["system3_stability_governance_trajectory_watch_turn_count"] >= 0
+    assert body["summary"]["system3_stability_governance_trajectory_recenter_turn_count"] >= 0
     assert body["summary"]["latest_system3_stability_governance_status"] in {
         "pass",
         "watch",
@@ -2192,8 +2046,7 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
     assert first_dispatch_response.status_code == 200
     assert first_dispatch_response.json()["dispatched_count"] == 0
     assert (
-        first_dispatch_response.json()["skipped"][0]["reason"]
-        == "lifecycle_dispatch_rescheduled"
+        first_dispatch_response.json()["skipped"][0]["reason"] == "lifecycle_dispatch_rescheduled"
     )
 
     rescheduled_item = client.get(
@@ -2218,9 +2071,7 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
     assert final_dispatch_response.status_code == 200
     assert final_dispatch_response.json()["dispatched_count"] == 1
 
-    summary = client.get(
-        "/api/v1/evaluations/sessions/eval-followup-dispatch"
-    ).json()["summary"]
+    summary = client.get("/api/v1/evaluations/sessions/eval-followup-dispatch").json()["summary"]
     assert summary["proactive_followup_dispatch_count"] == 1
     assert summary["proactive_followup_message_event_count"] == 1
     assert summary["proactive_lifecycle_dispatch_decision_count"] == 1
@@ -2341,18 +2192,9 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
     assert summary["latest_proactive_dispatch_feedback_key"] == "second_touch_baseline_feedback"
     assert summary["latest_proactive_dispatch_gate_key"] == "second_touch_dispatch_clear"
     assert summary["latest_proactive_dispatch_gate_decision"] == "dispatch"
-    assert (
-        summary["latest_proactive_lifecycle_trigger_decision"]
-        == "archive_lifecycle_trigger"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_launch_decision"]
-        == "archive_lifecycle_launch"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_handoff_decision"]
-        == "archive_lifecycle_handoff"
-    )
+    assert summary["latest_proactive_lifecycle_trigger_decision"] == "archive_lifecycle_trigger"
+    assert summary["latest_proactive_lifecycle_launch_decision"] == "archive_lifecycle_launch"
+    assert summary["latest_proactive_lifecycle_handoff_decision"] == "archive_lifecycle_handoff"
     assert (
         summary["latest_proactive_lifecycle_continuation_decision"]
         == "archive_lifecycle_continuation"
@@ -2369,14 +2211,8 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
         summary["latest_proactive_lifecycle_guardianship_decision"]
         == "archive_lifecycle_guardianship"
     )
-    assert (
-        summary["latest_proactive_lifecycle_oversight_decision"]
-        == "archive_lifecycle_oversight"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_assurance_decision"]
-        == "archive_lifecycle_assurance"
-    )
+    assert summary["latest_proactive_lifecycle_oversight_decision"] == "archive_lifecycle_oversight"
+    assert summary["latest_proactive_lifecycle_assurance_decision"] == "archive_lifecycle_assurance"
     assert (
         summary["latest_proactive_lifecycle_attestation_decision"]
         == "archive_lifecycle_attestation"
@@ -2405,190 +2241,91 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
         summary["latest_proactive_lifecycle_authorization_decision"]
         == "archive_lifecycle_authorization"
     )
+    assert summary["latest_proactive_lifecycle_enactment_decision"] == "archive_lifecycle_enactment"
+    assert summary["latest_proactive_lifecycle_finality_decision"] == "archive_lifecycle_finality"
     assert (
-        summary["latest_proactive_lifecycle_enactment_decision"]
-        == "archive_lifecycle_enactment"
+        summary["latest_proactive_lifecycle_completion_decision"] == "archive_lifecycle_completion"
     )
     assert (
-        summary["latest_proactive_lifecycle_finality_decision"]
-        == "archive_lifecycle_finality"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_completion_decision"]
-        == "archive_lifecycle_completion"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_conclusion_decision"]
-        == "archive_lifecycle_conclusion"
+        summary["latest_proactive_lifecycle_conclusion_decision"] == "archive_lifecycle_conclusion"
     )
     assert (
         summary["latest_proactive_lifecycle_disposition_decision"]
         == "archive_lifecycle_disposition"
     )
-    assert (
-        summary["latest_proactive_lifecycle_standing_decision"]
-        == "archive_lifecycle_standing"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_residency_decision"]
-        == "archive_lifecycle_residency"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_tenure_decision"]
-        == "archive_lifecycle_tenure"
-    )
+    assert summary["latest_proactive_lifecycle_standing_decision"] == "archive_lifecycle_standing"
+    assert summary["latest_proactive_lifecycle_residency_decision"] == "archive_lifecycle_residency"
+    assert summary["latest_proactive_lifecycle_tenure_decision"] == "archive_lifecycle_tenure"
     assert (
         summary["latest_proactive_lifecycle_persistence_decision"]
         == "archive_lifecycle_persistence"
     )
     assert (
-        summary["latest_proactive_lifecycle_durability_decision"]
-        == "archive_lifecycle_durability"
+        summary["latest_proactive_lifecycle_durability_decision"] == "archive_lifecycle_durability"
     )
+    assert summary["latest_proactive_lifecycle_longevity_decision"] == "archive_lifecycle_longevity"
+    assert summary["latest_proactive_lifecycle_legacy_decision"] == "archive_lifecycle_legacy"
+    assert summary["latest_proactive_lifecycle_heritage_decision"] == "archive_lifecycle_heritage"
+    assert summary["latest_proactive_lifecycle_lineage_decision"] == "archive_lifecycle_lineage"
+    assert summary["latest_proactive_lifecycle_ancestry_decision"] == "archive_lifecycle_ancestry"
     assert (
-        summary["latest_proactive_lifecycle_longevity_decision"]
-        == "archive_lifecycle_longevity"
+        summary["latest_proactive_lifecycle_provenance_decision"] == "archive_lifecycle_provenance"
     )
+    assert summary["latest_proactive_lifecycle_origin_decision"] == "archive_lifecycle_origin"
+    assert summary["latest_proactive_lifecycle_root_decision"] == "archive_lifecycle_root"
     assert (
-        summary["latest_proactive_lifecycle_legacy_decision"]
-        == "archive_lifecycle_legacy"
+        summary["latest_proactive_lifecycle_foundation_decision"] == "archive_lifecycle_foundation"
     )
+    assert summary["latest_proactive_lifecycle_bedrock_decision"] == "archive_lifecycle_bedrock"
+    assert summary["latest_proactive_lifecycle_substrate_decision"] == "archive_lifecycle_substrate"
+    assert summary["latest_proactive_lifecycle_stratum_decision"] == "archive_lifecycle_stratum"
+    assert summary["latest_proactive_lifecycle_layer_decision"] == "archive_lifecycle_layer"
     assert (
-        summary["latest_proactive_lifecycle_heritage_decision"]
-        == "archive_lifecycle_heritage"
+        summary["latest_proactive_lifecycle_dispatch_decision"] == "close_loop_lifecycle_dispatch"
     )
-    assert (
-        summary["latest_proactive_lifecycle_lineage_decision"]
-        == "archive_lifecycle_lineage"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_ancestry_decision"]
-        == "archive_lifecycle_ancestry"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_provenance_decision"]
-        == "archive_lifecycle_provenance"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_origin_decision"]
-        == "archive_lifecycle_origin"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_root_decision"]
-        == "archive_lifecycle_root"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_foundation_decision"]
-        == "archive_lifecycle_foundation"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_bedrock_decision"]
-        == "archive_lifecycle_bedrock"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_substrate_decision"]
-        == "archive_lifecycle_substrate"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_stratum_decision"]
-        == "archive_lifecycle_stratum"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_layer_decision"]
-        == "archive_lifecycle_layer"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_dispatch_decision"]
-        == "close_loop_lifecycle_dispatch"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_dispatch_mode"]
-        == "close_loop_lifecycle_dispatch"
-    )
+    assert summary["latest_proactive_lifecycle_dispatch_mode"] == "close_loop_lifecycle_dispatch"
     assert summary["latest_proactive_lifecycle_dispatch_actionability"] == "close_loop"
-    assert (
-        summary["latest_proactive_lifecycle_outcome_decision"]
-        == "lifecycle_close_loop_sent"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_outcome_mode"]
-        == "close_loop_sent_lifecycle_outcome"
-    )
+    assert summary["latest_proactive_lifecycle_outcome_decision"] == "lifecycle_close_loop_sent"
+    assert summary["latest_proactive_lifecycle_outcome_mode"] == "close_loop_sent_lifecycle_outcome"
     assert summary["latest_proactive_lifecycle_outcome_actionability"] == "close_loop"
     assert summary["latest_proactive_lifecycle_outcome_message_event_count"] == 1
     assert (
-        summary["latest_proactive_lifecycle_resolution_decision"]
-        == "retire_lifecycle_resolution"
+        summary["latest_proactive_lifecycle_resolution_decision"] == "retire_lifecycle_resolution"
     )
-    assert (
-        summary["latest_proactive_lifecycle_resolution_mode"]
-        == "terminal_lifecycle_resolution"
-    )
+    assert summary["latest_proactive_lifecycle_resolution_mode"] == "terminal_lifecycle_resolution"
     assert summary["latest_proactive_lifecycle_resolution_actionability"] == "retire"
-    assert (
-        summary["latest_proactive_lifecycle_activation_decision"]
-        == "retire_lifecycle_line"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_activation_mode"]
-        == "terminal_lifecycle_activation"
-    )
+    assert summary["latest_proactive_lifecycle_activation_decision"] == "retire_lifecycle_line"
+    assert summary["latest_proactive_lifecycle_activation_mode"] == "terminal_lifecycle_activation"
     assert summary["latest_proactive_lifecycle_activation_actionability"] == "retire"
+    assert summary["latest_proactive_lifecycle_settlement_decision"] == "close_lifecycle_settlement"
     assert (
-        summary["latest_proactive_lifecycle_settlement_decision"]
-        == "close_lifecycle_settlement"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_settlement_mode"]
-        == "close_loop_lifecycle_settlement"
+        summary["latest_proactive_lifecycle_settlement_mode"] == "close_loop_lifecycle_settlement"
     )
     assert summary["latest_proactive_lifecycle_settlement_actionability"] == "close_loop"
-    assert (
-        summary["latest_proactive_lifecycle_closure_decision"]
-        == "close_loop_lifecycle_closure"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_closure_mode"]
-        == "close_loop_lifecycle_closure"
-    )
+    assert summary["latest_proactive_lifecycle_closure_decision"] == "close_loop_lifecycle_closure"
+    assert summary["latest_proactive_lifecycle_closure_mode"] == "close_loop_lifecycle_closure"
     assert summary["latest_proactive_lifecycle_closure_actionability"] == "close_loop"
     assert (
         summary["latest_proactive_lifecycle_availability_decision"]
         == "close_loop_lifecycle_availability"
     )
     assert (
-        summary["latest_proactive_lifecycle_availability_mode"]
-        == "closed_lifecycle_availability"
+        summary["latest_proactive_lifecycle_availability_mode"] == "closed_lifecycle_availability"
     )
-    assert (
-        summary["latest_proactive_lifecycle_availability_actionability"] == "close_loop"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_retention_decision"]
-        == "archive_lifecycle_retention"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_retention_mode"]
-        == "archived_lifecycle_retention"
-    )
+    assert summary["latest_proactive_lifecycle_availability_actionability"] == "close_loop"
+    assert summary["latest_proactive_lifecycle_retention_decision"] == "archive_lifecycle_retention"
+    assert summary["latest_proactive_lifecycle_retention_mode"] == "archived_lifecycle_retention"
     assert summary["latest_proactive_lifecycle_retention_actionability"] == "archive"
     assert (
         summary["latest_proactive_lifecycle_eligibility_decision"]
         == "archive_lifecycle_eligibility"
     )
     assert (
-        summary["latest_proactive_lifecycle_eligibility_mode"]
-        == "archived_lifecycle_eligibility"
+        summary["latest_proactive_lifecycle_eligibility_mode"] == "archived_lifecycle_eligibility"
     )
     assert summary["latest_proactive_lifecycle_eligibility_actionability"] == "archive"
-    assert (
-        summary["latest_proactive_lifecycle_candidate_decision"]
-        == "archive_lifecycle_candidate"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_candidate_mode"]
-        == "archived_lifecycle_candidate"
-    )
+    assert summary["latest_proactive_lifecycle_candidate_decision"] == "archive_lifecycle_candidate"
+    assert summary["latest_proactive_lifecycle_candidate_mode"] == "archived_lifecycle_candidate"
     assert summary["latest_proactive_lifecycle_candidate_actionability"] == "archive"
     assert (
         summary["latest_proactive_lifecycle_selectability_decision"]
@@ -2599,41 +2336,24 @@ def test_session_evaluation_tracks_proactive_followup_dispatch() -> None:
         == "archived_lifecycle_selectability"
     )
     assert summary["latest_proactive_lifecycle_selectability_actionability"] == "archive"
-    assert (
-        summary["latest_proactive_lifecycle_reentry_decision"]
-        == "archive_lifecycle_reentry"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_reentry_mode"]
-        == "archived_lifecycle_reentry"
-    )
+    assert summary["latest_proactive_lifecycle_reentry_decision"] == "archive_lifecycle_reentry"
+    assert summary["latest_proactive_lifecycle_reentry_mode"] == "archived_lifecycle_reentry"
     assert summary["latest_proactive_lifecycle_reentry_actionability"] == "archive"
     assert (
         summary["latest_proactive_lifecycle_reactivation_decision"]
         == "archive_lifecycle_reactivation"
     )
     assert (
-        summary["latest_proactive_lifecycle_reactivation_mode"]
-        == "archived_lifecycle_reactivation"
+        summary["latest_proactive_lifecycle_reactivation_mode"] == "archived_lifecycle_reactivation"
     )
     assert summary["latest_proactive_lifecycle_reactivation_actionability"] == "archive"
     assert (
-        summary["latest_proactive_lifecycle_resumption_decision"]
-        == "archive_lifecycle_resumption"
+        summary["latest_proactive_lifecycle_resumption_decision"] == "archive_lifecycle_resumption"
     )
-    assert (
-        summary["latest_proactive_lifecycle_resumption_mode"]
-        == "archived_lifecycle_resumption"
-    )
+    assert summary["latest_proactive_lifecycle_resumption_mode"] == "archived_lifecycle_resumption"
     assert summary["latest_proactive_lifecycle_resumption_actionability"] == "archive"
-    assert (
-        summary["latest_proactive_lifecycle_readiness_decision"]
-        == "archive_lifecycle_readiness"
-    )
-    assert (
-        summary["latest_proactive_lifecycle_readiness_mode"]
-        == "archived_lifecycle_readiness"
-    )
+    assert summary["latest_proactive_lifecycle_readiness_decision"] == "archive_lifecycle_readiness"
+    assert summary["latest_proactive_lifecycle_readiness_mode"] == "archived_lifecycle_readiness"
     assert summary["latest_proactive_lifecycle_readiness_actionability"] == "archive"
 
 
@@ -2651,9 +2371,7 @@ def test_session_evaluation_tracks_proactive_dispatch_gate_deferral() -> None:
         assert (
             client.post(
                 "/api/v1/sessions/eval-followup-gate/turns",
-                json={
-                    "content": "Let's keep moving on the roadmap and make one steady next step."
-                },
+                json={"content": "Let's keep moving on the roadmap and make one steady next step."},
             ).status_code
             == 201
         )
@@ -2693,9 +2411,7 @@ def test_session_evaluation_tracks_proactive_dispatch_gate_deferral() -> None:
         assert dispatch_response.status_code == 200
         assert dispatch_response.json()["dispatched_count"] == 1
 
-        summary = client.get(
-            "/api/v1/evaluations/sessions/eval-followup-gate"
-        ).json()["summary"]
+        summary = client.get("/api/v1/evaluations/sessions/eval-followup-gate").json()["summary"]
         assert summary["proactive_followup_dispatch_count"] == 1
         assert summary["proactive_dispatch_feedback_assessment_count"] == 1
         assert summary["latest_proactive_dispatch_feedback_key"] == "second_touch_baseline_feedback"
@@ -2707,8 +2423,7 @@ def test_session_evaluation_tracks_proactive_dispatch_gate_deferral() -> None:
             == "close_loop_lifecycle_dispatch"
         )
         assert (
-            summary["latest_proactive_lifecycle_dispatch_mode"]
-            == "close_loop_lifecycle_dispatch"
+            summary["latest_proactive_lifecycle_dispatch_mode"] == "close_loop_lifecycle_dispatch"
         )
 
 
@@ -2772,8 +2487,7 @@ def test_session_evaluation_tracks_runtime_quality_doctor() -> None:
             return LLMResponse(
                 model=request.model,
                 output_text=(
-                    "I hear you, and I want to keep this grounded. "
-                    "The next step is to keep moving."
+                    "I hear you, and I want to keep this grounded. The next step is to keep moving."
                 ),
             )
 
@@ -2787,9 +2501,7 @@ def test_session_evaluation_tracks_runtime_quality_doctor() -> None:
             )
             assert response.status_code == 201
 
-        evaluation_response = client.get(
-            "/api/v1/evaluations/sessions/eval-quality-doctor"
-        )
+        evaluation_response = client.get("/api/v1/evaluations/sessions/eval-quality-doctor")
 
     assert evaluation_response.status_code == 200
     summary = evaluation_response.json()["summary"]
@@ -2843,9 +2555,7 @@ def test_session_evaluation_detects_output_quality_degradation() -> None:
             )
             assert response.status_code == 201
 
-        evaluation_response = client.get(
-            "/api/v1/evaluations/sessions/quality-drift-session"
-        )
+        evaluation_response = client.get("/api/v1/evaluations/sessions/quality-drift-session")
 
     assert evaluation_response.status_code == 200
     body = evaluation_response.json()
@@ -2934,13 +2644,9 @@ def test_strategy_preference_report_applies_quality_floor_and_noise_control() ->
         "contextual_reinforcement",
     }
     assert any(
-        session["session_id"] == "preference-quality"
-        for session in body["filtered_sessions"]
+        session["session_id"] == "preference-quality" for session in body["filtered_sessions"]
     )
-    assert any(
-        session["session_id"] == "preference-quality"
-        for session in body["noisy_sessions"]
-    )
+    assert any(session["session_id"] == "preference-quality" for session in body["noisy_sessions"])
 
 
 def test_list_session_evaluations_returns_all_session_summaries() -> None:
@@ -3036,8 +2742,7 @@ def test_scenario_runs_can_be_listed_retrieved_and_trended() -> None:
     assert detailed_run["run_id"] == run_id
     assert detailed_run["scenario_count"] == 1
     assert (
-        detailed_run["results"][0]["scenario"]["scenario_id"]
-        == "stress_memory_recall_continuity"
+        detailed_run["results"][0]["scenario"]["scenario_id"] == "stress_memory_recall_continuity"
     )
 
     trends_response = client.get("/api/v1/evaluations/scenarios/trends")
@@ -3177,9 +2882,7 @@ def test_scenario_release_gate_blocks_when_full_suite_still_has_failures() -> No
 
     catalog_response = client.get("/api/v1/evaluations/scenarios")
     assert catalog_response.status_code == 200
-    catalog_ids = [
-        item["scenario_id"] for item in catalog_response.json()["scenarios"]
-    ]
+    catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
     first_run = client.post(
         "/api/v1/evaluations/scenarios/run",
@@ -3250,9 +2953,7 @@ def test_scenario_misalignment_report_returns_failure_taxonomy() -> None:
 
     catalog_response = client.get("/api/v1/evaluations/scenarios")
     assert catalog_response.status_code == 200
-    catalog_ids = [
-        item["scenario_id"] for item in catalog_response.json()["scenarios"]
-    ]
+    catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
     run_response = client.post(
         "/api/v1/evaluations/scenarios/run",
@@ -3272,8 +2973,7 @@ def test_scenario_misalignment_report_returns_failure_taxonomy() -> None:
     modules = {item["module"] for item in body["modules"]}
     assert "L7" in modules
     assert any(
-        incident["taxonomy_type"] == "strategy_execution_failure"
-        for incident in body["incidents"]
+        incident["taxonomy_type"] == "strategy_execution_failure" for incident in body["incidents"]
     )
 
 
@@ -3281,9 +2981,7 @@ def test_scenario_ship_readiness_reports_release_and_runtime_state() -> None:
     with TestClient(create_app()) as client:
         catalog_response = client.get("/api/v1/evaluations/scenarios")
         assert catalog_response.status_code == 200
-        catalog_ids = [
-            item["scenario_id"] for item in catalog_response.json()["scenarios"]
-        ]
+        catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
         first_run = client.post(
             "/api/v1/evaluations/scenarios/run",
@@ -3384,9 +3082,7 @@ def test_scenario_hardening_checklist_summarizes_taxonomy_and_readiness() -> Non
     with TestClient(create_app()) as client:
         catalog_response = client.get("/api/v1/evaluations/scenarios")
         assert catalog_response.status_code == 200
-        catalog_ids = [
-            item["scenario_id"] for item in catalog_response.json()["scenarios"]
-        ]
+        catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
         first_run = client.post(
             "/api/v1/evaluations/scenarios/run",
@@ -3407,9 +3103,7 @@ def test_scenario_hardening_checklist_summarizes_taxonomy_and_readiness() -> Non
         )
         assert second_run.status_code == 201
 
-        checklist_response = client.get(
-            "/api/v1/evaluations/scenarios/hardening-checklist"
-        )
+        checklist_response = client.get("/api/v1/evaluations/scenarios/hardening-checklist")
         assert checklist_response.status_code == 200
         body = checklist_response.json()
 
@@ -3450,9 +3144,9 @@ def test_scenario_migration_readiness_report_tracks_projector_replay_health() ->
     assert body["summary"]["sampled_stream_count"] >= 2
     assert body["summary"]["primary_sample_stream_count"] >= 2
     assert body["summary"]["inconsistent_projection_count"] == 0
-    assert body["summary"]["checked_projection_count"] >= body["summary"][
-        "registered_projector_count"
-    ]
+    assert (
+        body["summary"]["checked_projection_count"] >= body["summary"]["registered_projector_count"]
+    )
     check_names = {item["name"] for item in body["checks"]}
     assert "projector_rebuild_consistency_clear" in check_names
     assert "primary_runtime_sample_available" in check_names
@@ -3462,9 +3156,7 @@ def test_scenario_release_dossier_summarizes_final_release_posture() -> None:
     with TestClient(create_app()) as client:
         catalog_response = client.get("/api/v1/evaluations/scenarios")
         assert catalog_response.status_code == 200
-        catalog_ids = [
-            item["scenario_id"] for item in catalog_response.json()["scenarios"]
-        ]
+        catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
         first_run = client.post(
             "/api/v1/evaluations/scenarios/run",
@@ -3507,9 +3199,7 @@ def test_scenario_launch_signoff_report_summarizes_domain_signoff() -> None:
     with TestClient(create_app()) as client:
         catalog_response = client.get("/api/v1/evaluations/scenarios")
         assert catalog_response.status_code == 200
-        catalog_ids = [
-            item["scenario_id"] for item in catalog_response.json()["scenarios"]
-        ]
+        catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
         first_run = client.post(
             "/api/v1/evaluations/scenarios/run",
@@ -3554,9 +3244,7 @@ def test_scenario_baseline_governance_report_tracks_baseline_freshness() -> None
     with TestClient(create_app()) as client:
         catalog_response = client.get("/api/v1/evaluations/scenarios")
         assert catalog_response.status_code == 200
-        catalog_ids = [
-            item["scenario_id"] for item in catalog_response.json()["scenarios"]
-        ]
+        catalog_ids = [item["scenario_id"] for item in catalog_response.json()["scenarios"]]
 
         first_run = client.post(
             "/api/v1/evaluations/scenarios/run",

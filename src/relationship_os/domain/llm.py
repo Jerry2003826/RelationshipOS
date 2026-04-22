@@ -25,10 +25,7 @@ class LLMMessage:
         """Extract plain text regardless of content format."""
         if isinstance(self.content, str):
             return self.content
-        return " ".join(
-            block.text for block in self.content
-            if block.type == "text" and block.text
-        )
+        return " ".join(block.text for block in self.content if block.type == "text" and block.text)
 
 
 @dataclass(slots=True, frozen=True)
@@ -82,5 +79,4 @@ class LLMResponse:
 
 
 class LLMClient(Protocol):
-    async def complete(self, request: LLMRequest) -> LLMResponse:
-        ...
+    async def complete(self, request: LLMRequest) -> LLMResponse: ...

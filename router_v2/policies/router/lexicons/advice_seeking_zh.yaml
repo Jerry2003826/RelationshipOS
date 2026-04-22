@@ -1,0 +1,81 @@
+# Advice-seeking / planning lexicon (zh).
+# Positive signal for DEEP_THINK: user is asking for analysis, help,
+# advice, or signalling a serious multi-step reflection. These phrases
+# rarely appear in FAST_PONG and are a reliable way to disambiguate
+# LIGHT_RECALL (casual update) from DEEP_THINK (needs planner).
+
+version: 1
+language: zh
+entries:
+  # explicit help requests
+  - {form: "怎么办",       weight: 0.90}
+  - {form: "该怎么",       weight: 0.85}
+  - {form: "怎么才能",     weight: 0.85}
+  - {form: "怎么处理",     weight: 0.85}
+  - {form: "该不该",       weight: 0.85}
+  - {form: "要不要",       weight: 0.70}
+  - {form: "帮我想",       weight: 0.90}
+  - {form: "帮我分析",     weight: 0.95}
+  - {form: "帮我判断",     weight: 0.90}
+  - {form: "帮我梳理",     weight: 0.90}
+  - {form: "帮我规划",     weight: 0.90}
+  - {form: "帮我写",       weight: 0.85}
+  - {form: "帮我想想",     weight: 0.85}
+  - {form: "帮我复盘",     weight: 0.90}
+  - {form: "给我建议",     weight: 0.90}
+  - {form: "给点建议",     weight: 0.85}
+  - {form: "给我出个主意", weight: 0.90}
+  - {form: "替我选",       weight: 0.90}
+  - {form: "替我判断",     weight: 0.90}
+  - {form: "替我决定",     weight: 0.90}
+  - {form: "听听你的看法", weight: 0.85}
+  - {form: "你怎么看",     weight: 0.85}
+  - {form: "你怎么想",     weight: 0.80}
+  - {form: "你觉得",       weight: 0.55}   # weaker, context-dependent
+  - {form: "你觉得呢",     weight: 0.70}
+  - {form: "分析一下",     weight: 0.85}
+  - {form: "分析下",       weight: 0.85}
+  - {form: "好好想想",     weight: 0.75}
+  - {form: "想得头疼",     weight: 0.85}
+  - {form: "想不清楚",     weight: 0.85}
+  - {form: "拿不定主意",   weight: 0.90}
+  - {form: "下不了决心",   weight: 0.90}
+
+  # nominal / existential / meta questions
+  - {form: "到底是什么",   weight: 0.70}
+  - {form: "意义是什么",   weight: 0.80}
+  - {form: "为什么总是",   weight: 0.80}
+  - {form: "为什么我",     weight: 0.65}
+  - {form: "是不是我",     weight: 0.65}
+  - {form: "是不是一直",   weight: 0.70}
+  - {form: "是不是应该",   weight: 0.70}
+
+  # planning / strategy nouns
+  - {form: "计划",         weight: 0.55}
+  - {form: "方案",         weight: 0.60}
+  - {form: "策略",         weight: 0.60}
+  - {form: "选择",         weight: 0.45}
+  - {form: "决定",         weight: 0.45}
+  - {form: "长期",         weight: 0.55}
+  - {form: "规划",         weight: 0.60}
+
+  # deep-talk framing
+  - {form: "认真聊",       weight: 0.80}
+  - {form: "深入聊",       weight: 0.85}
+  - {form: "好好聊",       weight: 0.75}
+  - {form: "好好说",       weight: 0.70}
+  - {form: "好好谈",       weight: 0.75}
+  - {form: "长篇大论",     weight: 0.80}
+  - {form: "长故事",       weight: 0.80}
+  - {form: "复杂",         weight: 0.35}
+  - {form: "说来话长",     weight: 0.80}
+  - {form: "有点复杂",     weight: 0.55}
+  - {form: "理不清",       weight: 0.85}
+  - {form: "心里好乱",     weight: 0.80}
+  - {form: "脑子里一堆",   weight: 0.75}
+
+  # binary / trade-off frames
+  - {form: "还是",         weight: 0.25}   # weak on its own
+  - {form: "A还是B",       weight: 0.80}
+  - {form: "两个选",       weight: 0.80}
+  - {form: "两个offer",    weight: 0.85}

@@ -92,9 +92,7 @@ def apply_companion_stress_benchmark_controls(
         controlled["RELATIONSHIP_OS_LLM_TIMEOUT_SECONDS"] = str(
             max(1, int(round(float(deep_recall_timeout))))
         )
-    controlled["BENCHMARK_INTER_TURN_IDLE_SECONDS"] = str(
-        max(0.0, float(inter_turn_idle_seconds))
-    )
+    controlled["BENCHMARK_INTER_TURN_IDLE_SECONDS"] = str(max(0.0, float(inter_turn_idle_seconds)))
     controlled["BENCHMARK_CONSOLIDATE_BETWEEN_SESSIONS"] = (
         "true" if consolidate_between_sessions else "false"
     )
@@ -106,9 +104,7 @@ def apply_companion_stress_benchmark_controls(
     )
     normalized_stress_mode = str(stress_mode or "stable").strip().casefold()
     controlled["BENCHMARK_STRESS_MODE"] = (
-        normalized_stress_mode
-        if normalized_stress_mode in {"strict", "stable"}
-        else "stable"
+        normalized_stress_mode if normalized_stress_mode in {"strict", "stable"} else "stable"
     )
     return controlled
 
@@ -353,8 +349,7 @@ def main() -> None:
             error=str(exc),
         )
         print(
-            "MiniMax companion stress benchmark failed but emitted scored bundle: "
-            f"{bundle['html']}"
+            f"MiniMax companion stress benchmark failed but emitted scored bundle: {bundle['html']}"
         )
     finally:
         if server_process is not None and not args.keep_server:

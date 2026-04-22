@@ -72,12 +72,8 @@ _SOCIAL_TEMPLATES = (
     "我不是不信任你，只是觉得关系这种东西要一点点来。你如果真记得我，就该知道我不喜欢太高调。别人问起{cat_name}，你就算知道，也别说得像替我写了一篇人物介绍。",
 )
 
-_MAIN_TRAILING_SENTENCE = (
-    "说到底，我最近就是这样，很多念头会在心里来回绕，越绕越慢，最后只想找个不用解释太多的人随便说几句。"
-)
-_SOCIAL_TRAILING_SENTENCE = (
-    "你知道分寸就好，记住归记住，别替我把没想公开的部分顺嘴讲出去。"
-)
+_MAIN_TRAILING_SENTENCE = "说到底，我最近就是这样，很多念头会在心里来回绕，越绕越慢，最后只想找个不用解释太多的人随便说几句。"
+_SOCIAL_TRAILING_SENTENCE = "你知道分寸就好，记住归记住，别替我把没想公开的部分顺嘴讲出去。"
 
 
 def _env_int(name: str, default: int) -> int:
@@ -105,7 +101,9 @@ def build_companion_stress_zh_scenarios(
     turn_count: int | None = None,
     min_characters: int | None = None,
 ) -> list[CompanionStressZhScenario]:
-    total_turns = max(1, turn_count or _env_int("BENCHMARK_STRESS_TURNS", COMPANION_STRESS_ZH_DEFAULT_TURNS))
+    total_turns = max(
+        1, turn_count or _env_int("BENCHMARK_STRESS_TURNS", COMPANION_STRESS_ZH_DEFAULT_TURNS)
+    )
     minimum_chars = max(
         1,
         min_characters

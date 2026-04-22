@@ -160,16 +160,13 @@ class Mem0BenchmarkClient:
         return session_id
 
     def _search_memories(self, *, state: _Mem0SessionState, query: str) -> list[str]:
-        search_result = (
-            self._memory.search(
-                query=query,
-                user_id=state.user_id,
-                run_id=state.run_id,
-                limit=self.retrieval_limit,
-                rerank=False,
-            )
-            or {"results": []}
-        )
+        search_result = self._memory.search(
+            query=query,
+            user_id=state.user_id,
+            run_id=state.run_id,
+            limit=self.retrieval_limit,
+            rerank=False,
+        ) or {"results": []}
         seen: set[str] = set()
         lines: list[str] = []
         for item in search_result.get("results", []):
@@ -188,9 +185,8 @@ class Mem0BenchmarkClient:
         retrieval_lines = self._search_memories(state=state, query=content)
         messages = [dict(item) for item in state.history]
         if retrieval_lines:
-            memory_block = (
-                "Relevant memory snippets from previous conversations:\n"
-                + "\n".join(retrieval_lines[: self.retrieval_limit])
+            memory_block = "Relevant memory snippets from previous conversations:\n" + "\n".join(
+                retrieval_lines[: self.retrieval_limit]
             )
             if messages and messages[0].get("role") == "system":
                 base_content = messages[0].get("content", "").strip()

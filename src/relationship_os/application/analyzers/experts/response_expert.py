@@ -65,9 +65,7 @@ def build_response_expert_plans(
         empowerment_audit=empowerment_audit,
         runtime_coordination_snapshot=runtime_coordination_snapshot,
         runtime_profile=runtime_profile,
-        archetype=str(
-            entity_persona.get("persona_archetype", "default") or "default"
-        ),
+        archetype=str(entity_persona.get("persona_archetype", "default") or "default"),
     )
 
     return {

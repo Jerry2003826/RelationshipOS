@@ -95,9 +95,11 @@ def build_repair_assessment(
     user_message: str,
 ) -> RepairAssessment:
     lowered = user_message.lower()
-    rupture_detected = context_frame.appraisal == "negative" or any(
-        token in lowered for token in ["misunderstood", "ignored", "stuck", "frustrated"]
-    ) or any(token in user_message for token in ["你没懂", "误解", "忽略", "卡住", "受伤"])
+    rupture_detected = (
+        context_frame.appraisal == "negative"
+        or any(token in lowered for token in ["misunderstood", "ignored", "stuck", "frustrated"])
+        or any(token in user_message for token in ["你没懂", "误解", "忽略", "卡住", "受伤"])
+    )
 
     rupture_type = "none"
     if relationship_state.dependency_risk == "elevated":

@@ -65,9 +65,7 @@ def test_benchmark_chat_backend_passes_thinking_control(monkeypatch) -> None:
         captured.update(kwargs)
         return SimpleNamespace(
             choices=[
-                SimpleNamespace(
-                    message=SimpleNamespace(content="好的", reasoning_content=None)
-                )
+                SimpleNamespace(message=SimpleNamespace(content="好的", reasoning_content=None))
             ]
         )
 

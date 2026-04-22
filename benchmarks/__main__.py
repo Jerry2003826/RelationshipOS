@@ -281,17 +281,11 @@ def _finalize_deliberation_stats(stats: dict[str, Any]) -> dict[str, Any]:
         for key in ("fast_reply", "light_recall", "deep_recall")
     }
     needs = [
-        float(value)
-        for value in list(stats.get("needs") or [])
-        if isinstance(value, (int, float))
+        float(value) for value in list(stats.get("needs") or []) if isinstance(value, (int, float))
     ]
     fast_paths = dict(stats.get("fast_paths") or {})
     dominant_mode = max(mode_counts, key=mode_counts.get) if any(mode_counts.values()) else ""
-    dominant_fast_path = (
-        max(fast_paths, key=fast_paths.get)
-        if fast_paths
-        else ""
-    )
+    dominant_fast_path = max(fast_paths, key=fast_paths.get) if fast_paths else ""
     return {
         "mode_counts": mode_counts,
         "avg_need": round(sum(needs) / len(needs), 3) if needs else None,
@@ -392,9 +386,7 @@ def _finalize_turn_timing_stats(stats: dict[str, Any]) -> dict[str, Any]:
         "request_path_p95_ms": percentile_latency(totals, 0.95),
         "request_path_max_ms": max(totals) if totals else None,
         "observed_turns": len(totals),
-        "probe_session_mutation_count": int(
-            stats.get("probe_session_mutation_count", 0) or 0
-        ),
+        "probe_session_mutation_count": int(stats.get("probe_session_mutation_count", 0) or 0),
     }
 
 
@@ -1122,8 +1114,7 @@ def run_entity_social(
 
     average_score = average_scores(scores)
     dimension_scores = {
-        dimension: average_score
-        for dimension in _ENTITY_SOCIAL_DIMENSIONS.get(category, ())
+        dimension: average_score for dimension in _ENTITY_SOCIAL_DIMENSIONS.get(category, ())
     }
     if not dimension_scores:
         dimension_scores = {"social_omniscience": average_score}
@@ -1146,9 +1137,7 @@ def run_latency_budget(
 ) -> dict[str, Any]:
     del languages, max_cases
     sid = client.create_session(f"{arm_label}-edge-latency-budget", user_id=f"{arm_label}-edge")
-    probe = (
-        "In one short sentence, what kind of presence are you trying to be for me right now?"
-    )
+    probe = "In one short sentence, what kind of presence are you trying to be for me right now?"
     result = client.send_turn(sid, probe)
     latency = float(getattr(result, "latency_ms", 0.0))
     if latency <= 5000:
@@ -1313,8 +1302,7 @@ def run_living_entity(
     return {
         "average_score": average_score,
         "dimension_scores": {
-            dimension: average_score
-            for dimension in _LIVING_ENTITY_DIMENSIONS.get(category, ())
+            dimension: average_score for dimension in _LIVING_ENTITY_DIMENSIONS.get(category, ())
         },
         "language_breakdown": _suite_language_breakdown(details),
         "details": details,
@@ -1435,8 +1423,7 @@ def run_friend_chat_zh(
     return {
         "average_score": average_score,
         "dimension_scores": {
-            dimension: average_score
-            for dimension in _FRIEND_CHAT_ZH_DIMENSIONS.get(category, ())
+            dimension: average_score for dimension in _FRIEND_CHAT_ZH_DIMENSIONS.get(category, ())
         },
         "language_breakdown": _suite_language_breakdown(details),
         "details": details,
@@ -1477,13 +1464,8 @@ def run_companion_stress_zh(
     consolidate_between_sessions = _benchmark_consolidate_between_sessions()
 
     for scenario in scenarios:
-        _p(
-            f"\n  {scenario.scenario_id} [{scenario.language}] — {scenario.description}"
-        )
-        _p(
-            "    stress budget: "
-            f"{scenario.total_turns} turns / {scenario.total_characters} chars"
-        )
+        _p(f"\n  {scenario.scenario_id} [{scenario.language}] — {scenario.description}")
+        _p(f"    stress budget: {scenario.total_turns} turns / {scenario.total_characters} chars")
         turn_counter = 0
         character_counter = 0
         for session in scenario.sessions:
@@ -1608,8 +1590,7 @@ def run_companion_stress_zh(
             _p(f"    ★ {scored.score:.1f}/10 — {scored.reason}")
 
     averaged_dimension_scores = {
-        dimension: average_scores(values)
-        for dimension, values in dimension_scores.items()
+        dimension: average_scores(values) for dimension, values in dimension_scores.items()
     }
     average_score = average_scores(scores)
     return {
@@ -1627,9 +1608,7 @@ def run_companion_stress_zh(
             "inter_turn_idle_seconds": inter_turn_idle_seconds,
             "consolidate_between_sessions": consolidate_between_sessions,
             "consolidation_timeout_seconds": (
-                _benchmark_consolidation_timeout_seconds()
-                if consolidate_between_sessions
-                else None
+                _benchmark_consolidation_timeout_seconds() if consolidate_between_sessions else None
             ),
         },
     }
@@ -1867,8 +1846,7 @@ def _build_failed_suite_result(
     return {
         "average_score": 0.0,
         "dimension_scores": {
-            dimension: 0.0
-            for dimension in _FAILED_SUITE_DIMENSIONS.get(suite_name, ())
+            dimension: 0.0 for dimension in _FAILED_SUITE_DIMENSIONS.get(suite_name, ())
         },
         "language_breakdown": {language: 0.0 for language in failure_languages},
         "details": details,
@@ -2074,9 +2052,11 @@ def _build_arm_factories(
         "mem0_oss": (
             "Mem0 OSS",
             (
-                lambda: Mem0BenchmarkClient(timeout=args.timeout)
-                if Mem0BenchmarkClient is not None
-                else None
+                lambda: (
+                    Mem0BenchmarkClient(timeout=args.timeout)
+                    if Mem0BenchmarkClient is not None
+                    else None
+                )
             ),
         ),
         "system": (
@@ -2153,8 +2133,7 @@ def main() -> None:
         "model": os.getenv("RELATIONSHIP_OS_LLM_MODEL", ""),
         "benchmark_chat_provider": os.getenv("BENCHMARK_CHAT_PROVIDER", "litellm"),
         "benchmark_chat_model": (
-            os.getenv("BENCHMARK_CHAT_MODEL")
-            or os.getenv("RELATIONSHIP_OS_LLM_MODEL", "")
+            os.getenv("BENCHMARK_CHAT_MODEL") or os.getenv("RELATIONSHIP_OS_LLM_MODEL", "")
         ),
         "judge_model": judge.model,
         "runtime_profile": os.getenv("RELATIONSHIP_OS_RUNTIME_PROFILE", "default"),
@@ -2213,9 +2192,7 @@ def main() -> None:
     if runtime_profile == "friend_chat_zh_v1":
         suite_timeout_default = max(120.0, min(900.0, args.timeout * case_factor * 4.0))
     suite_timeout_seconds = (
-        args.suite_timeout
-        if args.suite_timeout is not None
-        else suite_timeout_default
+        args.suite_timeout if args.suite_timeout is not None else suite_timeout_default
     )
 
     for arm_key, (label, factory) in arm_factories.items():

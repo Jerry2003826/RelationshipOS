@@ -51,22 +51,14 @@ class _ReportsMixin:
             "run_count": len(recent_runs),
             "comparison_count": len(comparison_state["comparisons"]),
             "latest_run_id": recent_runs[0]["run_id"] if recent_runs else None,
-            "latest_overall_status": (
-                recent_runs[0]["overall_status"] if recent_runs else None
-            ),
+            "latest_overall_status": (recent_runs[0]["overall_status"] if recent_runs else None),
             "overall_pass_rate": (
-                round(run_status_counts["pass"] / len(recent_runs), 3)
-                if recent_runs
-                else None
+                round(run_status_counts["pass"] / len(recent_runs), 3) if recent_runs else None
             ),
             "status_counts": run_status_counts,
             "comparison_delta_counts": comparison_state["comparison_delta_counts"],
-            "unstable_scenario_count": sum(
-                1 for item in watchlist if item["stability"] == "watch"
-            ),
-            "stable_scenario_count": sum(
-                1 for item in watchlist if item["stability"] == "stable"
-            ),
+            "unstable_scenario_count": sum(1 for item in watchlist if item["stability"] == "watch"),
+            "stable_scenario_count": sum(1 for item in watchlist if item["stability"] == "stable"),
             "quality_watch_scenario_count": sum(
                 1
                 for item in watchlist
@@ -184,14 +176,10 @@ class _ReportsMixin:
             "stability": "watch" if is_unstable else "stable",
             "latest_run_id": trend.get("latest_run_id"),
             "latest_output_quality_status": output_quality_status,
-            "latest_output_quality_issues": list(
-                trend.get("latest_output_quality_issues", [])
-            ),
+            "latest_output_quality_issues": list(trend.get("latest_output_quality_issues", [])),
             "latest_time_awareness_mode": trend.get("latest_time_awareness_mode"),
             "latest_cognitive_load_band": trend.get("latest_cognitive_load_band"),
-            "latest_proactive_followup_status": trend.get(
-                "latest_proactive_followup_status"
-            ),
+            "latest_proactive_followup_status": trend.get("latest_proactive_followup_status"),
             "latest_runtime_quality_doctor_status": trend.get(
                 "latest_runtime_quality_doctor_status"
             ),
@@ -226,9 +214,7 @@ class _ReportsMixin:
         catalog_scenario_ids = [scenario.scenario_id for scenario in catalog_scenarios]
         catalog_id_set = set(catalog_scenario_ids)
         redteam_ids = {
-            scenario.scenario_id
-            for scenario in catalog_scenarios
-            if scenario.category == "redteam"
+            scenario.scenario_id for scenario in catalog_scenarios if scenario.category == "redteam"
         }
         latest_run_scenario_ids = (
             set(str(item) for item in recent_runs[0].get("scenario_ids", []))
@@ -245,16 +231,12 @@ class _ReportsMixin:
             "catalog_scenario_ids": catalog_scenario_ids,
             "latest_run_scenario_count": len(latest_run_scenario_ids),
             "latest_run_scenario_ids": sorted(latest_run_scenario_ids),
-            "latest_run_missing_scenario_ids": sorted(
-                catalog_id_set - latest_run_scenario_ids
-            ),
+            "latest_run_missing_scenario_ids": sorted(catalog_id_set - latest_run_scenario_ids),
             "latest_run_full_suite": bool(recent_runs)
             and latest_run_scenario_ids == catalog_id_set,
             "recent_covered_scenario_count": len(recent_covered_scenario_ids),
             "recent_covered_scenario_ids": sorted(recent_covered_scenario_ids),
-            "recent_missing_scenario_ids": sorted(
-                catalog_id_set - recent_covered_scenario_ids
-            ),
+            "recent_missing_scenario_ids": sorted(catalog_id_set - recent_covered_scenario_ids),
             "recent_catalog_coverage_complete": recent_covered_scenario_ids == catalog_id_set,
             "recent_redteam_covered": redteam_ids.issubset(recent_covered_scenario_ids),
             "redteam_scenario_count": len(redteam_ids),
@@ -471,15 +453,9 @@ class _ReportsMixin:
                 recent_summary.get("overall_pass_rate"),
                 prior_summary.get("overall_pass_rate"),
             ),
-            "recent_quality_watch_result_count": recent_summary.get(
-                "quality_watch_result_count"
-            ),
-            "prior_quality_watch_result_count": prior_summary.get(
-                "quality_watch_result_count"
-            ),
-            "quality_watch_delta": int(
-                recent_summary.get("quality_watch_result_count") or 0
-            )
+            "recent_quality_watch_result_count": recent_summary.get("quality_watch_result_count"),
+            "prior_quality_watch_result_count": prior_summary.get("quality_watch_result_count"),
+            "quality_watch_delta": int(recent_summary.get("quality_watch_result_count") or 0)
             - int(prior_summary.get("quality_watch_result_count") or 0),
             "recent_redteam_pass_rate": recent_redteam.get("pass_rate"),
             "prior_redteam_pass_rate": prior_redteam.get("pass_rate"),
@@ -487,28 +463,20 @@ class _ReportsMixin:
                 recent_redteam.get("pass_rate"),
                 prior_redteam.get("pass_rate"),
             ),
-            "recent_redteam_boundary_guard_rate": recent_redteam.get(
-                "boundary_guard_rate"
-            ),
-            "prior_redteam_boundary_guard_rate": prior_redteam.get(
-                "boundary_guard_rate"
-            ),
+            "recent_redteam_boundary_guard_rate": recent_redteam.get("boundary_guard_rate"),
+            "prior_redteam_boundary_guard_rate": prior_redteam.get("boundary_guard_rate"),
             "redteam_boundary_guard_delta": self._round_delta(
                 recent_redteam.get("boundary_guard_rate"),
                 prior_redteam.get("boundary_guard_rate"),
             ),
-            "latest_output_quality_status": recent_summary.get(
-                "latest_output_quality_status"
-            ),
+            "latest_output_quality_status": recent_summary.get("latest_output_quality_status"),
             "latest_runtime_quality_doctor_status": recent_summary.get(
                 "latest_runtime_quality_doctor_status"
             ),
             "latest_system3_strategy_audit_status": recent_summary.get(
                 "latest_system3_strategy_audit_status"
             ),
-            "latest_redteam_boundary_decision": recent_redteam.get(
-                "latest_boundary_decision"
-            ),
+            "latest_redteam_boundary_decision": recent_redteam.get("latest_boundary_decision"),
             "latest_redteam_policy_path": recent_redteam.get("latest_policy_path"),
         }
 
@@ -745,36 +713,22 @@ class _ReportsMixin:
                 short_summary.get("overall_pass_rate"),
                 long_summary.get("overall_pass_rate"),
             ),
-            "short_quality_watch_result_count": short_summary.get(
-                "quality_watch_result_count"
-            ),
-            "medium_quality_watch_result_count": medium_summary.get(
-                "quality_watch_result_count"
-            ),
-            "long_quality_watch_result_count": long_summary.get(
-                "quality_watch_result_count"
-            ),
+            "short_quality_watch_result_count": short_summary.get("quality_watch_result_count"),
+            "medium_quality_watch_result_count": medium_summary.get("quality_watch_result_count"),
+            "long_quality_watch_result_count": long_summary.get("quality_watch_result_count"),
             "short_redteam_pass_rate": short_redteam.get("pass_rate"),
             "medium_redteam_pass_rate": medium_redteam.get("pass_rate"),
             "long_redteam_pass_rate": long_redteam.get("pass_rate"),
-            "short_redteam_boundary_guard_rate": short_redteam.get(
-                "boundary_guard_rate"
-            ),
-            "long_redteam_boundary_guard_rate": long_redteam.get(
-                "boundary_guard_rate"
-            ),
-            "latest_output_quality_status": short_summary.get(
-                "latest_output_quality_status"
-            ),
+            "short_redteam_boundary_guard_rate": short_redteam.get("boundary_guard_rate"),
+            "long_redteam_boundary_guard_rate": long_redteam.get("boundary_guard_rate"),
+            "latest_output_quality_status": short_summary.get("latest_output_quality_status"),
             "latest_runtime_quality_doctor_status": short_summary.get(
                 "latest_runtime_quality_doctor_status"
             ),
             "latest_system3_strategy_audit_status": short_summary.get(
                 "latest_system3_strategy_audit_status"
             ),
-            "latest_redteam_boundary_decision": short_redteam.get(
-                "latest_boundary_decision"
-            ),
+            "latest_redteam_boundary_decision": short_redteam.get("latest_boundary_decision"),
             "latest_redteam_policy_path": short_redteam.get("latest_policy_path"),
         }
 
@@ -1032,12 +986,8 @@ class _ReportsMixin:
             "latest_quality_watch_result_count": latest_run_summary.get(
                 "quality_watch_result_count"
             ),
-            "prior_quality_watch_result_count": prior_run_summary.get(
-                "quality_watch_result_count"
-            ),
-            "quality_watch_delta": int(
-                latest_run_summary.get("quality_watch_result_count") or 0
-            )
+            "prior_quality_watch_result_count": prior_run_summary.get("quality_watch_result_count"),
+            "quality_watch_delta": int(latest_run_summary.get("quality_watch_result_count") or 0)
             - int(prior_run_summary.get("quality_watch_result_count") or 0),
             "latest_redteam_pass_rate": latest_redteam_summary.get("pass_rate"),
             "prior_redteam_pass_rate": prior_redteam_summary.get("pass_rate"),
@@ -1045,19 +995,13 @@ class _ReportsMixin:
                 latest_redteam_summary.get("pass_rate"),
                 prior_redteam_summary.get("pass_rate"),
             ),
-            "latest_redteam_boundary_guard_rate": latest_redteam_summary.get(
-                "boundary_guard_rate"
-            ),
-            "prior_redteam_boundary_guard_rate": prior_redteam_summary.get(
-                "boundary_guard_rate"
-            ),
+            "latest_redteam_boundary_guard_rate": latest_redteam_summary.get("boundary_guard_rate"),
+            "prior_redteam_boundary_guard_rate": prior_redteam_summary.get("boundary_guard_rate"),
             "redteam_boundary_guard_delta": self._round_delta(
                 latest_redteam_summary.get("boundary_guard_rate"),
                 prior_redteam_summary.get("boundary_guard_rate"),
             ),
-            "latest_output_quality_status": latest_run_summary.get(
-                "latest_output_quality_status"
-            ),
+            "latest_output_quality_status": latest_run_summary.get("latest_output_quality_status"),
             "latest_runtime_quality_doctor_status": latest_run_summary.get(
                 "latest_runtime_quality_doctor_status"
             ),
@@ -1067,9 +1011,7 @@ class _ReportsMixin:
             "latest_redteam_boundary_decision": latest_redteam_summary.get(
                 "latest_boundary_decision"
             ),
-            "latest_redteam_policy_path": latest_redteam_summary.get(
-                "latest_policy_path"
-            ),
+            "latest_redteam_policy_path": latest_redteam_summary.get("latest_policy_path"),
         }
 
     async def build_sustained_drift_report(
@@ -1096,8 +1038,7 @@ class _ReportsMixin:
             ((bucket.get("redteam_summary") or {}).get("pass_rate")) for bucket in buckets
         ]
         boundary_guard_values = [
-            ((bucket.get("redteam_summary") or {}).get("boundary_guard_rate"))
-            for bucket in buckets
+            ((bucket.get("redteam_summary") or {}).get("boundary_guard_rate")) for bucket in buckets
         ]
 
         pass_rate_decline_streak = _trailing_worsening_streak(
@@ -1309,9 +1250,7 @@ class _ReportsMixin:
                 "candidate as stable."
             )
         if quality_watch_growth_streak >= min_streak:
-            actions.append(
-                "Reduce sustained weekly growth in output-quality watch pressure."
-            )
+            actions.append("Reduce sustained weekly growth in output-quality watch pressure.")
         if redteam_pass_rate_decline_streak >= min_streak:
             actions.append(
                 "Re-run and harden redteam paths until weekly redteam pass rate stops sliding."
@@ -1385,9 +1324,7 @@ class _ReportsMixin:
             baseline_overall_delta=baseline_overall_delta,
             baseline_changed_count=baseline_changed_count,
         )
-        blocked_reasons, review_reasons = self._build_release_gate_reason_groups(
-            checks=checks
-        )
+        blocked_reasons, review_reasons = self._build_release_gate_reason_groups(checks=checks)
         if blocked_reasons:
             gate_status = "blocked"
         elif review_reasons:
@@ -1486,8 +1423,7 @@ class _ReportsMixin:
                 },
                 {
                     "name": "baseline_not_regressed",
-                    "passed": baseline_present
-                    and baseline_overall_delta in {"stable", "improved"},
+                    "passed": baseline_present and baseline_overall_delta in {"stable", "improved"},
                     "expected": "latest vs baseline overall delta in {stable, improved}",
                     "actual": baseline_overall_delta,
                 },
@@ -1609,17 +1545,14 @@ class _ReportsMixin:
     ) -> dict[str, Any]:
         catalog_ids = {scenario.scenario_id for scenario in SCENARIO_CATALOG}
         redteam_ids = {
-            scenario.scenario_id
-            for scenario in SCENARIO_CATALOG
-            if scenario.category == "redteam"
+            scenario.scenario_id for scenario in SCENARIO_CATALOG if scenario.category == "redteam"
         }
         baseline_scenario_ids = {
             str(result["scenario"]["scenario_id"])
             for result in list((baseline_run or {}).get("results", []))
         }
         baseline_anchor = self._parse_datetime(
-            str((baseline or {}).get("set_at") or (baseline or {}).get("started_at") or "")
-            or None
+            str((baseline or {}).get("set_at") or (baseline or {}).get("started_at") or "") or None
         )
         baseline_age_days = (
             round((utc_now() - baseline_anchor).total_seconds() / 86400, 1)
@@ -1638,8 +1571,7 @@ class _ReportsMixin:
         changed_scenarios = [
             item
             for item in list((comparison or {}).get("scenarios", []))
-            if item.get("status_delta") != "stable"
-            or item.get("score_delta") not in {0, None}
+            if item.get("status_delta") != "stable" or item.get("score_delta") not in {0, None}
         ]
         return {
             "catalog_ids": catalog_ids,
@@ -1723,8 +1655,7 @@ class _ReportsMixin:
                 "name": "baseline_newer_run_budget_ok",
                 "severity": "review",
                 "passed": facts["newer_run_count"] is not None
-                and facts["newer_run_count"]
-                <= BASELINE_GOVERNANCE_REVIEW_BUDGETS["newer_runs"],
+                and facts["newer_run_count"] <= BASELINE_GOVERNANCE_REVIEW_BUDGETS["newer_runs"],
                 "expected": (
                     "<="
                     f"{BASELINE_GOVERNANCE_REVIEW_BUDGETS['newer_runs']} newer runs since baseline"
@@ -1735,11 +1666,9 @@ class _ReportsMixin:
                 "name": "baseline_age_budget_ok",
                 "severity": "review",
                 "passed": facts["baseline_age_days"] is not None
-                and facts["baseline_age_days"]
-                <= BASELINE_GOVERNANCE_REVIEW_BUDGETS["age_days"],
+                and facts["baseline_age_days"] <= BASELINE_GOVERNANCE_REVIEW_BUDGETS["age_days"],
                 "expected": (
-                    "<="
-                    f"{BASELINE_GOVERNANCE_REVIEW_BUDGETS['age_days']} days since baseline set"
+                    f"<={BASELINE_GOVERNANCE_REVIEW_BUDGETS['age_days']} days since baseline set"
                 ),
                 "actual": facts["baseline_age_days"],
             },
@@ -2047,12 +1976,8 @@ class _ReportsMixin:
         running_jobs = list((await self._job_service.list_jobs(status="running"))["jobs"])
         failed_jobs = list((await self._job_service.list_jobs(status="failed"))["jobs"])
 
-        retryable_failed_jobs = [
-            job for job in failed_jobs if bool(job.get("can_retry"))
-        ]
-        expired_claim_jobs = [
-            job for job in claimed_jobs if bool(job.get("lease_is_expired"))
-        ]
+        retryable_failed_jobs = [job for job in failed_jobs if bool(job.get("can_retry"))]
+        expired_claim_jobs = [job for job in claimed_jobs if bool(job.get("lease_is_expired"))]
         active_job_count = int(job_runtime.get("active_job_count") or 0)
         pending_job_count = len(queued_jobs) + len(claimed_jobs) + len(running_jobs)
         baseline_present = isinstance(baseline, dict)
@@ -2136,9 +2061,7 @@ class _ReportsMixin:
                 "retryable_failed_job_ids": [
                     str(job.get("job_id")) for job in retryable_failed_jobs[:5]
                 ],
-                "expired_claim_job_ids": [
-                    str(job.get("job_id")) for job in expired_claim_jobs[:5]
-                ],
+                "expired_claim_job_ids": [str(job.get("job_id")) for job in expired_claim_jobs[:5]],
             },
         }
 
@@ -2160,9 +2083,7 @@ class _ReportsMixin:
             {
                 "name": "scenario_release_gate_green",
                 "section": "scenario_quality",
-                "severity": (
-                    "blocked" if release_gate.get("status") == "blocked" else "review"
-                ),
+                "severity": ("blocked" if release_gate.get("status") == "blocked" else "review"),
                 "passed": release_gate.get("status") == "pass",
                 "expected": "scenario release gate status == pass",
                 "actual": release_gate.get("status"),
@@ -2253,9 +2174,7 @@ class _ReportsMixin:
                 {
                     "type": "jobs",
                     "title": "Expired claimed jobs detected",
-                    "detail": ", ".join(
-                        str(job.get("job_id")) for job in expired_claim_jobs[:3]
-                    ),
+                    "detail": ", ".join(str(job.get("job_id")) for job in expired_claim_jobs[:3]),
                 }
             )
         if pending_job_count or active_job_count:
@@ -2302,8 +2221,7 @@ class _ReportsMixin:
             actions.append("Inspect claimed jobs with expired leases and reclaim or retry them.")
         if retryable_failed_jobs:
             actions.append(
-                "Retry or inspect failed background jobs before treating the build "
-                "as ready."
+                "Retry or inspect failed background jobs before treating the build as ready."
             )
         if pending_job_count or active_job_count:
             actions.append("Wait for background work to drain before cutting a release candidate.")
@@ -2328,9 +2246,7 @@ class _ReportsMixin:
             "baseline_present": baseline_present,
             "latest_run_full_suite": bool(coverage.get("latest_run_full_suite")),
             "recent_redteam_covered": bool(coverage.get("recent_redteam_covered")),
-            "recent_coverage_complete": bool(
-                coverage.get("recent_catalog_coverage_complete")
-            ),
+            "recent_coverage_complete": bool(coverage.get("recent_catalog_coverage_complete")),
             "pending_job_count": pending_job_count,
             "active_job_count": active_job_count,
             "retryable_failed_job_count": len(retryable_failed_jobs),
@@ -2356,16 +2272,13 @@ class _ReportsMixin:
             "taxonomy_counts": taxonomy_counts,
             "hotspot": hotspot,
             "critical_taxonomy_count": sum(
-                taxonomy_counts.get(taxonomy_type, 0)
-                for taxonomy_type in CRITICAL_TAXONOMY_TYPES
+                taxonomy_counts.get(taxonomy_type, 0) for taxonomy_type in CRITICAL_TAXONOMY_TYPES
             ),
             "quality_taxonomy_count": sum(
-                taxonomy_counts.get(taxonomy_type, 0)
-                for taxonomy_type in QUALITY_TAXONOMY_TYPES
+                taxonomy_counts.get(taxonomy_type, 0) for taxonomy_type in QUALITY_TAXONOMY_TYPES
             ),
             "system3_taxonomy_count": sum(
-                taxonomy_counts.get(taxonomy_type, 0)
-                for taxonomy_type in SYSTEM3_TAXONOMY_TYPES
+                taxonomy_counts.get(taxonomy_type, 0) for taxonomy_type in SYSTEM3_TAXONOMY_TYPES
             ),
             "redteam_critical_incidents": [
                 item
@@ -2404,9 +2317,7 @@ class _ReportsMixin:
                 "name": "migration_readiness_green",
                 "section": "release_operations",
                 "severity": (
-                    "blocked"
-                    if migration_readiness.get("status") == "blocked"
-                    else "review"
+                    "blocked" if migration_readiness.get("status") == "blocked" else "review"
                 ),
                 "passed": migration_readiness.get("status") == "pass",
                 "expected": "migration readiness status == pass",
@@ -2435,8 +2346,7 @@ class _ReportsMixin:
                 "passed": facts["quality_taxonomy_count"]
                 <= HARDENING_REVIEW_BUDGETS["quality_taxonomies"],
                 "expected": (
-                    "<="
-                    f"{HARDENING_REVIEW_BUDGETS['quality_taxonomies']} quality taxonomy incidents"
+                    f"<={HARDENING_REVIEW_BUDGETS['quality_taxonomies']} quality taxonomy incidents"
                 ),
                 "actual": facts["quality_taxonomy_count"],
             },
@@ -2492,12 +2402,8 @@ class _ReportsMixin:
                 "section": "proactive",
                 "severity": "review",
                 "passed": facts.get("proactive_governance_override_verified", False),
-                "expected": (
-                    "governance overrides correctly applied in proactive scenarios"
-                ),
-                "actual": facts.get(
-                    "proactive_governance_override_verified", False
-                ),
+                "expected": ("governance overrides correctly applied in proactive scenarios"),
+                "actual": facts.get("proactive_governance_override_verified", False),
             },
         ]
 
@@ -2622,14 +2528,10 @@ class _ReportsMixin:
                 (ship_readiness.get("summary") or {}).get("release_gate_status")
             ),
             "migration_registered_projector_count": (
-                (migration_readiness.get("summary") or {}).get(
-                    "registered_projector_count"
-                )
+                (migration_readiness.get("summary") or {}).get("registered_projector_count")
             ),
             "migration_inconsistent_projection_count": (
-                (migration_readiness.get("summary") or {}).get(
-                    "inconsistent_projection_count"
-                )
+                (migration_readiness.get("summary") or {}).get("inconsistent_projection_count")
             ),
             "taxonomy_incident_count": misalignment_report.get("incident_count"),
             "taxonomy_count": misalignment_report.get("taxonomy_count"),
@@ -2669,20 +2571,15 @@ class _ReportsMixin:
         hardening_records = await self._list_scenario_session_records()
         hardening_runs = await self._build_run_summaries(hardening_records)
         hardening_all_results = [
-            result
-            for run in hardening_runs[:window]
-            for result in list(run.get("results", []))
+            result for run in hardening_runs[:window] for result in list(run.get("results", []))
         ]
         proactive_catalog_ids = {
-            s.scenario_id
-            for s in SCENARIO_CATALOG
-            if "proactive" in s.scenario_id
+            s.scenario_id for s in SCENARIO_CATALOG if "proactive" in s.scenario_id
         }
         proactive_hardening_results = [
             result
             for result in hardening_all_results
-            if "proactive"
-            in str((result.get("scenario") or {}).get("scenario_id") or "")
+            if "proactive" in str((result.get("scenario") or {}).get("scenario_id") or "")
         ]
         proactive_hardening_ids = {
             str((result.get("scenario") or {}).get("scenario_id") or "")
@@ -2690,8 +2587,7 @@ class _ReportsMixin:
         }
         facts["proactive_outcome_coverage"] = (
             round(
-                len(proactive_hardening_ids & proactive_catalog_ids)
-                / len(proactive_catalog_ids),
+                len(proactive_hardening_ids & proactive_catalog_ids) / len(proactive_catalog_ids),
                 3,
             )
             if proactive_catalog_ids
@@ -2704,23 +2600,16 @@ class _ReportsMixin:
         ]
         facts["proactive_redteam_all_pass"] = bool(
             proactive_redteam_scorecards
-            and all(
-                str(sc.get("status") or "") == "pass"
-                for sc in proactive_redteam_scorecards
-            )
+            and all(str(sc.get("status") or "") == "pass" for sc in proactive_redteam_scorecards)
         )
         governance_override_scorecards = [
             dict(result.get("scorecard") or {})
             for result in proactive_hardening_results
-            if "governance_override"
-            in str((result.get("scenario") or {}).get("scenario_id") or "")
+            if "governance_override" in str((result.get("scenario") or {}).get("scenario_id") or "")
         ]
         facts["proactive_governance_override_verified"] = bool(
             governance_override_scorecards
-            and all(
-                str(sc.get("status") or "") == "pass"
-                for sc in governance_override_scorecards
-            )
+            and all(str(sc.get("status") or "") == "pass" for sc in governance_override_scorecards)
         )
 
         checks = self._build_hardening_checks(
@@ -2810,9 +2699,7 @@ class _ReportsMixin:
             longitudinal_report=components["longitudinal_report"],
             multiweek_report=components["multiweek_report"],
         )
-        blocked_reasons, review_reasons = self._build_report_reason_groups(
-            checks=checks
-        )
+        blocked_reasons, review_reasons = self._build_report_reason_groups(checks=checks)
 
         focus_areas = self._build_release_dossier_focus_areas(
             hardening_checklist=components["hardening_checklist"],
@@ -2992,9 +2879,7 @@ class _ReportsMixin:
                 "name": "migration_readiness_green",
                 "section": "governance",
                 "severity": (
-                    "blocked"
-                    if migration_readiness.get("status") == "blocked"
-                    else "review"
+                    "blocked" if migration_readiness.get("status") == "blocked" else "review"
                 ),
                 "passed": migration_readiness.get("status") == "pass",
                 "expected": "migration readiness status == pass",
@@ -3071,10 +2956,7 @@ class _ReportsMixin:
                     *list(baseline_governance.get("actions", [])),
                     *list(migration_readiness.get("actions", [])),
                     *(
-                        [
-                            "Inspect latest multiweek drift before cutting a release "
-                            "candidate."
-                        ]
+                        ["Inspect latest multiweek drift before cutting a release candidate."]
                         if multiweek_report.get("status") != "pass"
                         else []
                     ),
@@ -3109,9 +2991,7 @@ class _ReportsMixin:
             "multiweek_report_status": multiweek_report.get("status"),
             "sustained_drift_report_status": sustained_drift_report.get("status"),
             "latest_run_id": release_gate.get("latest_run_id"),
-            "baseline_run_id": (
-                (baseline_governance.get("summary") or {}).get("baseline_run_id")
-            ),
+            "baseline_run_id": ((baseline_governance.get("summary") or {}).get("baseline_run_id")),
             "critical_taxonomy_count": (
                 (hardening_checklist.get("summary") or {}).get("critical_taxonomy_count")
             ),
@@ -3119,13 +2999,9 @@ class _ReportsMixin:
                 (redteam_report.get("summary") or {}).get("redteam_result_count")
             ),
             "post_audit_violation_result_count": (
-                (safety_audit.get("summary") or {}).get(
-                    "post_audit_violation_result_count"
-                )
+                (safety_audit.get("summary") or {}).get("post_audit_violation_result_count")
             ),
-            "newer_run_count": (
-                (baseline_governance.get("summary") or {}).get("newer_run_count")
-            ),
+            "newer_run_count": ((baseline_governance.get("summary") or {}).get("newer_run_count")),
         }
 
     def _build_launch_signoff_facts(
@@ -3154,9 +3030,7 @@ class _ReportsMixin:
                 multiweek_report.get("status"),
                 horizon_report.get("status"),
             ),
-            "proactive_maturity_status": str(
-                (proactive_maturity or {}).get("status") or "blocked"
-            ),
+            "proactive_maturity_status": str((proactive_maturity or {}).get("status") or "blocked"),
         }
 
     def _build_launch_signoff_domains(
@@ -3250,10 +3124,7 @@ class _ReportsMixin:
                             *list(migration_readiness.get("actions", [])),
                             *list(longitudinal_report.get("actions", [])),
                             *(
-                                [
-                                    "Inspect latest multiweek drift before approving the "
-                                    "candidate."
-                                ]
+                                ["Inspect latest multiweek drift before approving the candidate."]
                                 if multiweek_report.get("status") != "pass"
                                 else []
                             ),
@@ -3280,17 +3151,13 @@ class _ReportsMixin:
                 "domain": "proactive_maturity",
                 "owner": "proactive",
                 "status": facts.get("proactive_maturity_status", "blocked"),
-                "signoff": _signoff_decision(
-                    facts.get("proactive_maturity_status", "blocked")
-                ),
+                "signoff": _signoff_decision(facts.get("proactive_maturity_status", "blocked")),
                 "sources": ["proactive_maturity_report"],
                 "detail": (
                     "Proactive dispatch maturity, governance constraint coverage, "
                     "and learning mode progression must satisfy launch thresholds."
                 ),
-                "actions": list(
-                    (proactive_maturity or {}).get("notes", [])
-                )[:3],
+                "actions": list((proactive_maturity or {}).get("notes", []))[:3],
                 "focus_areas": [],
             },
         ]
@@ -3388,10 +3255,7 @@ class _ReportsMixin:
                         else []
                     ),
                     *(
-                        [
-                            "Do not cut a release candidate until blocked launch "
-                            "domains are cleared."
-                        ]
+                        ["Do not cut a release candidate until blocked launch domains are cleared."]
                         if hold_domain_count
                         else []
                     ),
@@ -3453,9 +3317,7 @@ class _ReportsMixin:
         signoff_records = await self._list_scenario_session_records()
         signoff_runs = await self._build_run_summaries(signoff_records)
         signoff_all_results = [
-            result
-            for run in signoff_runs[:window]
-            for result in list(run.get("results", []))
+            result for run in signoff_runs[:window] for result in list(run.get("results", []))
         ]
         proactive_maturity = self.build_proactive_maturity_report(
             scenario_runs=signoff_runs[:window],
@@ -3513,12 +3375,8 @@ class _ReportsMixin:
         approved_domain_count = sum(
             1 for domain in domain_entries if domain["signoff"] == "approved"
         )
-        review_domain_count = sum(
-            1 for domain in domain_entries if domain["signoff"] == "review"
-        )
-        hold_domain_count = sum(
-            1 for domain in domain_entries if domain["signoff"] == "hold"
-        )
+        review_domain_count = sum(1 for domain in domain_entries if domain["signoff"] == "review")
+        hold_domain_count = sum(1 for domain in domain_entries if domain["signoff"] == "hold")
 
         focus_areas = self._build_launch_signoff_focus_areas(
             domain_entries=domain_entries,
@@ -3573,9 +3431,7 @@ class _ReportsMixin:
         criteria_total = int(proactive_maturity.get("criteria_total") or 4)
         maturity_status = str(proactive_maturity.get("status") or "blocked")
         avg_confidence = float(proactive_maturity.get("avg_stage_parameter_confidence") or 0.0)
-        governance_hit_rate = float(
-            proactive_maturity.get("governance_constraint_hit_rate") or 0.0
-        )
+        governance_hit_rate = float(proactive_maturity.get("governance_constraint_hit_rate") or 0.0)
 
         drift_risk = "low"
         notes: list[str] = []
@@ -3670,8 +3526,7 @@ class _ReportsMixin:
                 "passed": checked_projection_count
                 == registered_projector_count * len(sample_records),
                 "expected": (
-                    f"{registered_projector_count * len(sample_records)} rebuild checks "
-                    "completed"
+                    f"{registered_projector_count * len(sample_records)} rebuild checks completed"
                 ),
                 "actual": checked_projection_count,
             },
@@ -3729,9 +3584,7 @@ class _ReportsMixin:
             focus_areas.append(
                 {
                     "type": "projector",
-                    "title": (
-                        f"{projector_result.get('name')}:{projector_result.get('version')}"
-                    ),
+                    "title": (f"{projector_result.get('name')}:{projector_result.get('version')}"),
                     "detail": (
                         "Inconsistent rebuilds on "
                         f"{', '.join(projector_result.get('inconsistent_stream_ids', []))}"
@@ -3797,9 +3650,7 @@ class _ReportsMixin:
             "consistent_projector_count": (
                 registered_projector_count - projector_count_with_inconsistency
             ),
-            "sample_event_count": sum(
-                int(item.get("event_count") or 0) for item in sample_records
-            ),
+            "sample_event_count": sum(int(item.get("event_count") or 0) for item in sample_records),
             "latest_sample_started_at": (
                 sample_records[0].get("started_at") if sample_records else None
             ),
@@ -3811,9 +3662,7 @@ class _ReportsMixin:
         sample_size: int = 6,
     ) -> dict[str, Any]:
         registered_projectors = list(self._projector_registry.list_projectors())
-        sample_state = await self._load_migration_readiness_sample(
-            sample_size=sample_size
-        )
+        sample_state = await self._load_migration_readiness_sample(sample_size=sample_size)
         projector_state = await self._build_migration_projector_results(
             registered_projectors=registered_projectors,
             sample_records=sample_state["sample_records"],
@@ -3873,9 +3722,7 @@ class _ReportsMixin:
                 primary_records=sample_state["primary_records"],
                 sample_source=sample_state["sample_source"],
                 checked_projection_count=projector_state["checked_projection_count"],
-                inconsistent_projection_count=projector_state[
-                    "inconsistent_projection_count"
-                ],
+                inconsistent_projection_count=projector_state["inconsistent_projection_count"],
                 projector_count_with_inconsistency=projector_state[
                     "projector_count_with_inconsistency"
                 ],
@@ -3933,9 +3780,7 @@ class _ReportsMixin:
             )
             projector_results.append(projector_result)
             checked_projection_count += int(projector_result["stream_count"])
-            inconsistent_projection_count += int(
-                projector_result["inconsistent_stream_count"]
-            )
+            inconsistent_projection_count += int(projector_result["inconsistent_stream_count"])
             if int(projector_result["inconsistent_stream_count"]) > 0:
                 projector_count_with_inconsistency += 1
 
@@ -3972,9 +3817,7 @@ class _ReportsMixin:
             "stream_count": len(rebuild_streams),
             "status": "blocked" if inconsistent_streams else "pass",
             "inconsistent_stream_count": len(inconsistent_streams),
-            "sample_stream_ids": [
-                str(stream.get("stream_id")) for stream in rebuild_streams[:4]
-            ],
+            "sample_stream_ids": [str(stream.get("stream_id")) for stream in rebuild_streams[:4]],
             "inconsistent_stream_ids": [
                 str(stream.get("stream_id")) for stream in inconsistent_streams[:4]
             ],
@@ -3992,9 +3835,7 @@ class _ReportsMixin:
         records = await self._list_scenario_session_records()
         runs = await self._build_run_summaries(records)
         recent_runs = runs[:window]
-        recent_results = [
-            result for run in recent_runs for result in list(run.get("results", []))
-        ]
+        recent_results = [result for run in recent_runs for result in list(run.get("results", []))]
         summaries = [dict(result.get("summary") or {}) for result in recent_results]
         audits = [dict(result.get("audit") or {}) for result in recent_results]
         redteam_results = [
@@ -4052,15 +3893,9 @@ class _ReportsMixin:
             "incidents": facts["critical_boundary_incidents"][:incident_limit],
             "proactive_safety": {
                 "dispatch_gate_block_rate": facts["proactive_dispatch_gate_block_rate"],
-                "governance_override_rate": facts[
-                    "proactive_governance_override_rate"
-                ],
-                "user_negative_feedback_rate": facts[
-                    "proactive_negative_feedback_rate"
-                ],
-                "proactive_scenarios_pass_rate": facts[
-                    "proactive_scenarios_pass_rate"
-                ],
+                "governance_override_rate": facts["proactive_governance_override_rate"],
+                "user_negative_feedback_rate": facts["proactive_negative_feedback_rate"],
+                "proactive_scenarios_pass_rate": facts["proactive_scenarios_pass_rate"],
             },
         }
 
@@ -4079,9 +3914,7 @@ class _ReportsMixin:
             for item in list(misalignment_report.get("incidents", []))
             if str(item.get("taxonomy_type") or "") in CRITICAL_TAXONOMY_TYPES
         ]
-        audit_inconsistent_count = sum(
-            1 for audit in audits if not bool(audit.get("consistent"))
-        )
+        audit_inconsistent_count = sum(1 for audit in audits if not bool(audit.get("consistent")))
         post_audit_violation_result_count = sum(
             1
             for summary in summaries
@@ -4103,8 +3936,7 @@ class _ReportsMixin:
             for summary in summaries
             if str(summary.get("latest_system3_strategy_audit_status") or "pass")
             in {"watch", "revise"}
-            or str(summary.get("latest_system3_emotional_debt_status") or "stable")
-            == "elevated"
+            or str(summary.get("latest_system3_emotional_debt_status") or "stable") == "elevated"
         )
         boundary_guard_count = sum(
             1
@@ -4118,34 +3950,21 @@ class _ReportsMixin:
         proactive_results = [
             result
             for result in recent_results
-            if "proactive"
-            in str((result.get("scenario") or {}).get("scenario_id") or "")
+            if "proactive" in str((result.get("scenario") or {}).get("scenario_id") or "")
         ]
-        proactive_summaries = [
-            dict(result.get("summary") or {}) for result in proactive_results
-        ]
-        proactive_scorecards = [
-            dict(result.get("scorecard") or {}) for result in proactive_results
-        ]
+        proactive_summaries = [dict(result.get("summary") or {}) for result in proactive_results]
+        proactive_scorecards = [dict(result.get("scorecard") or {}) for result in proactive_results]
         proactive_dispatch_gate_block_count = sum(
-            1
-            for s in proactive_summaries
-            if int(s.get("dispatch_gate_deferred") or 0) >= 1
+            1 for s in proactive_summaries if int(s.get("dispatch_gate_deferred") or 0) >= 1
         )
         proactive_governance_override_count = sum(
-            1
-            for s in proactive_summaries
-            if int(s.get("governance_override_noted") or 0) >= 1
+            1 for s in proactive_summaries if int(s.get("governance_override_noted") or 0) >= 1
         )
         proactive_negative_feedback_count = sum(
-            1
-            for s in proactive_summaries
-            if int(s.get("negative_signal_recorded") or 0) >= 1
+            1 for s in proactive_summaries if int(s.get("negative_signal_recorded") or 0) >= 1
         )
         proactive_pass_count = sum(
-            1
-            for sc in proactive_scorecards
-            if str(sc.get("status") or "") == "pass"
+            1 for sc in proactive_scorecards if str(sc.get("status") or "") == "pass"
         )
 
         return {
@@ -4160,9 +3979,7 @@ class _ReportsMixin:
             "boundary_guard_count": boundary_guard_count,
             "latest_redteam_summary": latest_redteam_summary,
             "redteam_boundary_guard_rate": (
-                round(boundary_guard_count / len(redteam_results), 3)
-                if redteam_results
-                else None
+                round(boundary_guard_count / len(redteam_results), 3) if redteam_results else None
             ),
             "proactive_result_count": len(proactive_results),
             "proactive_dispatch_gate_block_count": proactive_dispatch_gate_block_count,
@@ -4170,23 +3987,17 @@ class _ReportsMixin:
             "proactive_negative_feedback_count": proactive_negative_feedback_count,
             "proactive_pass_count": proactive_pass_count,
             "proactive_dispatch_gate_block_rate": (
-                round(
-                    proactive_dispatch_gate_block_count / len(proactive_results), 3
-                )
+                round(proactive_dispatch_gate_block_count / len(proactive_results), 3)
                 if proactive_results
                 else None
             ),
             "proactive_governance_override_rate": (
-                round(
-                    proactive_governance_override_count / len(proactive_results), 3
-                )
+                round(proactive_governance_override_count / len(proactive_results), 3)
                 if proactive_results
                 else None
             ),
             "proactive_negative_feedback_rate": (
-                round(
-                    proactive_negative_feedback_count / len(proactive_results), 3
-                )
+                round(proactive_negative_feedback_count / len(proactive_results), 3)
                 if proactive_results
                 else None
             ),
@@ -4309,10 +4120,7 @@ class _ReportsMixin:
                     ),
                 }
             )
-        if (
-            facts["runtime_doctor_watch_result_count"]
-            or facts["system3_watch_result_count"]
-        ):
+        if facts["runtime_doctor_watch_result_count"] or facts["system3_watch_result_count"]:
             focus_areas.append(
                 {
                     "type": "supervision",
@@ -4338,19 +4146,14 @@ class _ReportsMixin:
         if facts["audit_inconsistent_count"]:
             actions.append("Investigate replay drift before trusting the current candidate.")
         if facts["critical_boundary_incidents"]:
-            actions.append(
-                "Resolve critical boundary/dependency/policy incidents before shipping."
-            )
+            actions.append("Resolve critical boundary/dependency/policy incidents before shipping.")
         if facts["post_audit_violation_result_count"]:
             actions.append(
                 "Tighten response drafting/normalization until scenario post-audit stays clean."
             )
         if facts["low_safety_result_count"]:
             actions.append("Review low-safety scenario results and harden relational boundaries.")
-        if (
-            facts["runtime_doctor_watch_result_count"]
-            or facts["system3_watch_result_count"]
-        ):
+        if facts["runtime_doctor_watch_result_count"] or facts["system3_watch_result_count"]:
             actions.append(
                 "Reduce runtime quality doctor and System 3 watch pressure in recent scenarios."
             )
@@ -4368,9 +4171,7 @@ class _ReportsMixin:
             "audit_inconsistent_count": facts["audit_inconsistent_count"],
             "critical_boundary_incident_count": len(facts["critical_boundary_incidents"]),
             "redteam_boundary_guard_rate": facts["redteam_boundary_guard_rate"],
-            "post_audit_violation_result_count": (
-                facts["post_audit_violation_result_count"]
-            ),
+            "post_audit_violation_result_count": (facts["post_audit_violation_result_count"]),
             "low_safety_result_count": facts["low_safety_result_count"],
             "runtime_quality_doctor_watch_result_count": (
                 facts["runtime_doctor_watch_result_count"]
@@ -4379,17 +4180,11 @@ class _ReportsMixin:
             "latest_redteam_boundary_decision": latest_redteam_summary.get(
                 "latest_boundary_decision"
             ),
-            "latest_redteam_policy_path": latest_redteam_summary.get(
-                "latest_policy_path"
-            ),
+            "latest_redteam_policy_path": latest_redteam_summary.get("latest_policy_path"),
             "proactive_result_count": facts["proactive_result_count"],
             "proactive_scenarios_pass_rate": facts["proactive_scenarios_pass_rate"],
-            "proactive_dispatch_gate_block_rate": facts[
-                "proactive_dispatch_gate_block_rate"
-            ],
-            "proactive_governance_override_rate": facts[
-                "proactive_governance_override_rate"
-            ],
+            "proactive_dispatch_gate_block_rate": facts["proactive_dispatch_gate_block_rate"],
+            "proactive_governance_override_rate": facts["proactive_governance_override_rate"],
         }
 
     async def build_redteam_report(
@@ -4429,9 +4224,7 @@ class _ReportsMixin:
             latest_boundary_guarded=state["latest_boundary_guarded"],
             critical_redteam_incidents=critical_redteam_incidents,
         )
-        blocked_reasons, review_reasons = self._build_report_reason_groups(
-            checks=checks
-        )
+        blocked_reasons, review_reasons = self._build_report_reason_groups(checks=checks)
         focus_areas = self._build_redteam_focus_areas(
             critical_redteam_incidents=critical_redteam_incidents,
             latest_redteam=state["latest_redteam"],
@@ -4591,8 +4384,7 @@ class _ReportsMixin:
                 "name": "latest_redteam_audit_consistent",
                 "section": "redteam_safety",
                 "severity": "review",
-                "passed": bool(latest_redteam)
-                and bool(latest_redteam.get("audit_consistent")),
+                "passed": bool(latest_redteam) and bool(latest_redteam.get("audit_consistent")),
                 "expected": "latest redteam audit replay is consistent",
                 "actual": latest_redteam.get("audit_consistent"),
             },
@@ -4602,8 +4394,7 @@ class _ReportsMixin:
                 "severity": "review",
                 "passed": latest_boundary_guarded,
                 "expected": (
-                    "latest redteam result uses a guarded policy path and a boundary-aware "
-                    "decision"
+                    "latest redteam result uses a guarded policy path and a boundary-aware decision"
                 ),
                 "actual": {
                     "boundary_decision": latest_redteam.get("latest_boundary_decision"),
@@ -4687,9 +4478,7 @@ class _ReportsMixin:
             ),
             "latest_redteam_run_id": latest_redteam.get("run_id"),
             "latest_redteam_status": latest_redteam.get("status"),
-            "latest_redteam_boundary_decision": latest_redteam.get(
-                "latest_boundary_decision"
-            ),
+            "latest_redteam_boundary_decision": latest_redteam.get("latest_boundary_decision"),
             "latest_redteam_policy_path": latest_redteam.get("latest_policy_path"),
             "latest_redteam_audit_consistent": latest_redteam.get("audit_consistent"),
             "critical_redteam_incident_count": len(critical_redteam_incidents),
@@ -4711,9 +4500,7 @@ class _ReportsMixin:
         taxonomy_items = self._build_misalignment_taxonomy_items(
             taxonomy_totals=rollup["taxonomy_totals"]
         )
-        module_items = self._build_misalignment_module_items(
-            module_totals=rollup["module_totals"]
-        )
+        module_items = self._build_misalignment_module_items(module_totals=rollup["module_totals"])
 
         return {
             "window": window,
@@ -4816,9 +4603,7 @@ class _ReportsMixin:
         taxonomy_entry["count"] += 1
         taxonomy_entry["scenario_ids"].add(str(scenario.get("scenario_id", "")))
         taxonomy_entry["run_ids"].add(run_id)
-        module_totals[classification["module"]] = (
-            module_totals.get(classification["module"], 0) + 1
-        )
+        module_totals[classification["module"]] = module_totals.get(classification["module"], 0) + 1
 
     def _build_misalignment_taxonomy_items(
         self,
@@ -4851,8 +4636,7 @@ class _ReportsMixin:
         module_totals: dict[str, int],
     ) -> list[dict[str, Any]]:
         module_items = [
-            {"module": module, "count": count}
-            for module, count in module_totals.items()
+            {"module": module, "count": count} for module, count in module_totals.items()
         ]
         module_items.sort(
             key=lambda item: (int(item.get("count") or 0), str(item.get("module") or "")),
@@ -4886,15 +4670,10 @@ class _ReportsMixin:
         proactive_results = [
             result
             for result in session_evaluations
-            if "proactive"
-            in str((result.get("scenario") or {}).get("scenario_id") or "")
+            if "proactive" in str((result.get("scenario") or {}).get("scenario_id") or "")
         ]
-        proactive_scorecards = [
-            dict(result.get("scorecard") or {}) for result in proactive_results
-        ]
-        proactive_summaries = [
-            dict(result.get("summary") or {}) for result in proactive_results
-        ]
+        proactive_scorecards = [dict(result.get("scorecard") or {}) for result in proactive_results]
+        proactive_summaries = [dict(result.get("summary") or {}) for result in proactive_results]
 
         learning_modes: dict[str, int] = {}
         for s in proactive_summaries:
@@ -4902,9 +4681,7 @@ class _ReportsMixin:
             learning_modes[mode] = learning_modes.get(mode, 0) + 1
 
         outcome_sample_count = sum(
-            1
-            for s in proactive_summaries
-            if s.get("dispatch_outcome_recorded")
+            1 for s in proactive_summaries if s.get("dispatch_outcome_recorded")
         )
 
         stage_confidence: dict[str, float] = {}
@@ -4915,9 +4692,7 @@ class _ReportsMixin:
                 stage_confidence[stage] = round(confidence, 3)
 
         governance_override_count = sum(
-            1
-            for s in proactive_summaries
-            if int(s.get("governance_override_noted") or 0) >= 1
+            1 for s in proactive_summaries if int(s.get("governance_override_noted") or 0) >= 1
         )
         governance_constraint_hit_rate = (
             round(governance_override_count / len(proactive_results), 3)
@@ -4926,24 +4701,18 @@ class _ReportsMixin:
         )
 
         proactive_pass_count = sum(
-            1
-            for sc in proactive_scorecards
-            if str(sc.get("status") or "") == "pass"
+            1 for sc in proactive_scorecards if str(sc.get("status") or "") == "pass"
         )
         proactive_total_count = len(proactive_scorecards)
 
         notes: list[str] = []
         cold_start_exited = "cold_start" not in learning_modes
         outcome_coverage_rate = (
-            round(outcome_sample_count / len(proactive_results), 3)
-            if proactive_results
-            else 0.0
+            round(outcome_sample_count / len(proactive_results), 3) if proactive_results else 0.0
         )
 
         proactive_catalog_ids = {
-            s.scenario_id
-            for s in SCENARIO_CATALOG
-            if "proactive" in s.scenario_id
+            s.scenario_id for s in SCENARIO_CATALOG if "proactive" in s.scenario_id
         }
         exercised_ids = {
             str((result.get("scenario") or {}).get("scenario_id") or "")
@@ -4951,8 +4720,7 @@ class _ReportsMixin:
         }
         governance_constraint_coverage_rate = (
             round(
-                len(exercised_ids & proactive_catalog_ids)
-                / len(proactive_catalog_ids),
+                len(exercised_ids & proactive_catalog_ids) / len(proactive_catalog_ids),
                 3,
             )
             if proactive_catalog_ids
@@ -4972,13 +4740,8 @@ class _ReportsMixin:
         if cold_start_exited:
             criteria_met += 1
         else:
-            notes.append(
-                "At least one strategy is still in cold_start learning mode."
-            )
-        if (
-            outcome_coverage_rate
-            >= LAUNCH_SIGNOFF_THRESHOLDS["min_proactive_outcome_coverage"]
-        ):
+            notes.append("At least one strategy is still in cold_start learning mode.")
+        if outcome_coverage_rate >= LAUNCH_SIGNOFF_THRESHOLDS["min_proactive_outcome_coverage"]:
             criteria_met += 1
         else:
             notes.append(
@@ -5054,9 +4817,7 @@ class _ReportsMixin:
 
         r_drifts = [float(w.get("r_vector_drift") or 0.0) for w in weeks]
         diversities = [float(w.get("strategy_diversity") or 0.0) for w in weeks]
-        governance_active_counts = [
-            len(w.get("system3_active_domains") or []) for w in weeks
-        ]
+        governance_active_counts = [len(w.get("system3_active_domains") or []) for w in weeks]
 
         r_trend = simulation_result.get("r_vector_trend", "stable")
         diversity_trend = simulation_result.get("strategy_diversity_trend", "stable")
@@ -5073,14 +4834,10 @@ class _ReportsMixin:
                 )
             elif drift_magnitude > 0.15:
                 drift_severity = "warning"
-                alerts.append(
-                    f"Moderate r_vector drift: +{drift_magnitude:.3f} — monitor closely."
-                )
+                alerts.append(f"Moderate r_vector drift: +{drift_magnitude:.3f} — monitor closely.")
 
         if diversity_trend == "declining":
-            diversity_drop = (
-                diversities[0] - diversities[-1] if diversities else 0.0
-            )
+            diversity_drop = diversities[0] - diversities[-1] if diversities else 0.0
             if diversity_drop > 0.3:
                 alerts.append(
                     f"Strategy diversity collapsed by {diversity_drop:.3f}"
@@ -5089,9 +4846,7 @@ class _ReportsMixin:
                 if drift_severity != "critical":
                     drift_severity = "warning"
             elif diversity_drop > 0.15:
-                alerts.append(
-                    f"Strategy diversity declining by {diversity_drop:.3f}."
-                )
+                alerts.append(f"Strategy diversity declining by {diversity_drop:.3f}.")
 
         avg_governance_escalations = (
             sum(governance_active_counts) / len(governance_active_counts)
@@ -5104,13 +4859,9 @@ class _ReportsMixin:
                 "Review governance thresholds."
             )
 
-        proactive_response_rates = [
-            float(w.get("proactive_response_rate") or 0.0) for w in weeks
-        ]
+        proactive_response_rates = [float(w.get("proactive_response_rate") or 0.0) for w in weeks]
         if len(proactive_response_rates) >= 2:
-            response_rate_trend = (
-                proactive_response_rates[-1] - proactive_response_rates[0]
-            )
+            response_rate_trend = proactive_response_rates[-1] - proactive_response_rates[0]
             if response_rate_trend < -0.2:
                 alerts.append(
                     f"Proactive response rate dropped {abs(response_rate_trend):.3f} — "

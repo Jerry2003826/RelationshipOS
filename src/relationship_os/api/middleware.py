@@ -12,9 +12,7 @@ from starlette.responses import Response
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Log every HTTP request with timing, method, path, and status code."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         request_id = uuid.uuid4().hex[:8]
         structlog.contextvars.bind_contextvars(request_id=request_id)
         start = time.perf_counter()

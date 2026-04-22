@@ -177,12 +177,6 @@ LIFECYCLE_PHASE_SPECS = tuple(
     for index, phase in enumerate(LIFECYCLE_PHASE_ORDER, start=1)
 )
 
-LIFECYCLE_PHASE_SPEC_BY_PHASE = {
-    spec.phase: spec for spec in LIFECYCLE_PHASE_SPECS
-}
-LIFECYCLE_PHASE_SPEC_BY_EVENT_TYPE = {
-    spec.event_type: spec for spec in LIFECYCLE_PHASE_SPECS
-}
-LIFECYCLE_LEGACY_EVENT_TYPES = frozenset(
-    spec.event_type for spec in LIFECYCLE_PHASE_SPECS
-)
+LIFECYCLE_PHASE_SPEC_BY_PHASE = {spec.phase: spec for spec in LIFECYCLE_PHASE_SPECS}
+LIFECYCLE_PHASE_SPEC_BY_EVENT_TYPE = {spec.event_type: spec for spec in LIFECYCLE_PHASE_SPECS}
+LIFECYCLE_LEGACY_EVENT_TYPES = frozenset(spec.event_type for spec in LIFECYCLE_PHASE_SPECS)

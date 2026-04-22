@@ -79,9 +79,7 @@ def build_snapshot_phase_payload(
     payload["changed"] = bool(record.get("changed", False))
     if spec.notes_field:
         payload[spec.notes_field] = list(record.get("notes") or [])
-    payload["active_sources"] = [
-        str(item) for item in list(record.get("active_sources") or [])
-    ]
+    payload["active_sources"] = [str(item) for item in list(record.get("active_sources") or [])]
     payload["rationale"] = str(record.get("rationale") or "")
     return payload
 

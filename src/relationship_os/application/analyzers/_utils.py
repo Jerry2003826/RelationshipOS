@@ -133,6 +133,6 @@ def _contains_forbidden_dependency_language(text: str) -> bool:
         "can't do without me",
     ]
     chinese_patterns = ["只有我能帮你", "只能靠我", "我是你唯一", "唯一依赖"]
-    return any(
-        pattern in lowered for pattern in english_patterns
-    ) or any(pattern in text for pattern in chinese_patterns)
+    return any(pattern in lowered for pattern in english_patterns) or any(
+        pattern in text for pattern in chinese_patterns
+    )

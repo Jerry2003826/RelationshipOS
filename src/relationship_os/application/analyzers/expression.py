@@ -76,10 +76,7 @@ def build_empowerment_audit(
     if transparency_required and expression_plan.tone != "calibrated_honest":
         flagged_issues.append("transparency_gap")
         recommended_adjustments.append("make uncertainty explicit in the response")
-    if (
-        confidence_assessment.needs_clarification
-        and not expression_plan.include_question
-    ):
+    if confidence_assessment.needs_clarification and not expression_plan.include_question:
         flagged_issues.append("missing_clarification_step")
         recommended_adjustments.append("ask one focused clarifying question")
     if rehearsal_result.projected_risk_level == "high":

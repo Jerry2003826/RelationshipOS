@@ -327,15 +327,9 @@ def _apply_second_touch_orchestration_override(
 
     if primary_source == "aggregate" and aggregate_controller_decision is not None:
         state["selected_strategy_key"] = aggregate_controller_decision.selected_strategy_key
-        state["selected_pressure_mode"] = (
-            aggregate_controller_decision.selected_pressure_mode
-        )
-        state["selected_autonomy_signal"] = (
-            aggregate_controller_decision.selected_autonomy_signal
-        )
-        state["selected_delivery_mode"] = (
-            aggregate_controller_decision.selected_delivery_mode
-        )
+        state["selected_pressure_mode"] = aggregate_controller_decision.selected_pressure_mode
+        state["selected_autonomy_signal"] = aggregate_controller_decision.selected_autonomy_signal
+        state["selected_delivery_mode"] = aggregate_controller_decision.selected_delivery_mode
     elif primary_source == "guidance":
         state["selected_strategy_key"] = (
             "repair_soft_resume_bridge"
@@ -358,14 +352,10 @@ def _apply_second_touch_orchestration_override(
             "repair_soft" if source_state["ritual_low_pressure"] else "gentle_resume"
         )
         state["selected_autonomy_signal"] = (
-            "explicit_no_pressure"
-            if source_state["ritual_low_pressure"]
-            else "light_invitation"
+            "explicit_no_pressure" if source_state["ritual_low_pressure"] else "light_invitation"
         )
         state["selected_delivery_mode"] = source_state["ritual_delivery_mode"]
-        state["controller_notes"].append(
-            f"ritual_somatic:{ritual_somatic_gate['summary']}"
-        )
+        state["controller_notes"].append(f"ritual_somatic:{ritual_somatic_gate['summary']}")
 
 
 def _apply_late_stage_orchestration_override(
@@ -383,9 +373,7 @@ def _apply_late_stage_orchestration_override(
         state["line_additional_delay_seconds"] = max(
             int(state["line_additional_delay_seconds"]), 600
         )
-        state["dispatch_retry_after_seconds"] = max(
-            int(state["dispatch_retry_after_seconds"]), 900
-        )
+        state["dispatch_retry_after_seconds"] = max(int(state["dispatch_retry_after_seconds"]), 900)
     elif source_state["guidance_watch_active"]:
         state["stage_additional_delay_seconds"] = max(
             int(state["stage_additional_delay_seconds"]), 900
@@ -393,9 +381,7 @@ def _apply_late_stage_orchestration_override(
         state["line_additional_delay_seconds"] = max(
             int(state["line_additional_delay_seconds"]), 450
         )
-        state["dispatch_retry_after_seconds"] = max(
-            int(state["dispatch_retry_after_seconds"]), 450
-        )
+        state["dispatch_retry_after_seconds"] = max(int(state["dispatch_retry_after_seconds"]), 450)
 
     if source_state["ritual_recenter_active"]:
         state["stage_additional_delay_seconds"] = max(
@@ -404,9 +390,7 @@ def _apply_late_stage_orchestration_override(
         state["line_additional_delay_seconds"] = max(
             int(state["line_additional_delay_seconds"]), 600
         )
-        state["dispatch_retry_after_seconds"] = max(
-            int(state["dispatch_retry_after_seconds"]), 600
-        )
+        state["dispatch_retry_after_seconds"] = max(int(state["dispatch_retry_after_seconds"]), 600)
     elif source_state["ritual_watch_active"]:
         state["stage_additional_delay_seconds"] = max(
             int(state["stage_additional_delay_seconds"]), 600
@@ -414,9 +398,7 @@ def _apply_late_stage_orchestration_override(
         state["line_additional_delay_seconds"] = max(
             int(state["line_additional_delay_seconds"]), 300
         )
-        state["dispatch_retry_after_seconds"] = max(
-            int(state["dispatch_retry_after_seconds"]), 300
-        )
+        state["dispatch_retry_after_seconds"] = max(int(state["dispatch_retry_after_seconds"]), 300)
 
     state["selected_strategy_key"] = "continuity_soft_ping"
     state["selected_pressure_mode"] = "archive_light_presence"
@@ -425,9 +407,7 @@ def _apply_late_stage_orchestration_override(
     if primary_source == "guidance":
         state["controller_notes"].append(f"guidance:{guidance_gate['summary']}")
     elif primary_source == "ritual_somatic":
-        state["controller_notes"].append(
-            f"ritual_somatic:{ritual_somatic_gate['summary']}"
-        )
+        state["controller_notes"].append(f"ritual_somatic:{ritual_somatic_gate['summary']}")
 
 
 def build_proactive_orchestration_controller_decision(
@@ -513,11 +493,9 @@ def build_proactive_orchestration_controller_decision(
     )
     primary_source = (
         "aggregate"
-        if source_state["aggregate_recenter_active"]
-        or source_state["aggregate_watch_active"]
+        if source_state["aggregate_recenter_active"] or source_state["aggregate_watch_active"]
         else "guidance"
-        if source_state["guidance_recenter_active"]
-        or source_state["guidance_watch_active"]
+        if source_state["guidance_recenter_active"] or source_state["guidance_watch_active"]
         else "ritual_somatic"
     )
     controller_key = (

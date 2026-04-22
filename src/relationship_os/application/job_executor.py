@@ -100,16 +100,12 @@ class JobExecutor:
             for job in failed["jobs"]:
                 if not bool(job.get("can_retry")):
                     continue
-                retried = await self._job_service.retry_job_for_recovery(
-                    job_id=str(job["job_id"])
-                )
+                retried = await self._job_service.retry_job_for_recovery(job_id=str(job["job_id"]))
                 retried_job_ids.append(str(retried["job_id"]))
 
         refreshed_candidates: list[dict[str, Any]] = []
         for status in RECOVERY_STATUSES:
-            refreshed_candidates.extend(
-                (await self._job_service.list_jobs(status=status))["jobs"]
-            )
+            refreshed_candidates.extend((await self._job_service.list_jobs(status=status))["jobs"])
         for job in refreshed_candidates:
             job_id = str(job["job_id"])
             if await self.schedule_job(job_id=job_id):
@@ -166,9 +162,7 @@ class JobExecutor:
     async def get_runtime_state(self) -> dict[str, Any]:
         async with self._lock:
             active_job_ids = [
-                job_id
-                for job_id, task in self._active_tasks.items()
-                if not task.done()
+                job_id for job_id, task in self._active_tasks.items() if not task.done()
             ]
             poller_running = self._poller_task is not None and not self._poller_task.done()
         return {

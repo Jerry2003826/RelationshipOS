@@ -235,9 +235,7 @@ def build_offline_consolidation_report(
 
     turn_count = int(summary.get("turn_count", 0))
     latest_strategy = (
-        summary.get("latest_strategy")
-        or session_directive.get("next_action")
-        or "observe"
+        summary.get("latest_strategy") or session_directive.get("next_action") or "observe"
     )
     topic = str(context_frame.get("topic", "general"))
 

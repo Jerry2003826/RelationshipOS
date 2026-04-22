@@ -1,0 +1,162 @@
+# Conversation-continuity lexicon (zh).
+# Positive signal for LIGHT_RECALL: the user is updating the AI on
+# events or referring to something the AI already knows, but is NOT
+# asking for analysis. This bucket catches the "casual update / shared
+# history" register that competes with DEEP_THINK's planning register.
+
+version: 1
+language: zh
+entries:
+  # update / status markers
+  - {form: "又",           weight: 0.40}
+  - {form: "终于",         weight: 0.55}
+  - {form: "刚",           weight: 0.35}
+  - {form: "刚才",         weight: 0.35}
+  - {form: "刚刚",         weight: 0.45}
+  - {form: "今天又",       weight: 0.75}
+  - {form: "今天终于",     weight: 0.80}
+  - {form: "又开始",       weight: 0.65}
+  - {form: "还是",         weight: 0.30}
+  - {form: "又一次",       weight: 0.70}
+  - {form: "再一次",       weight: 0.65}
+
+  # outcome / resolution markers
+  - {form: "搞定了",       weight: 0.75}
+  - {form: "办好了",       weight: 0.75}
+  - {form: "办成了",       weight: 0.75}
+  - {form: "做完了",       weight: 0.70}
+  - {form: "搞砸了",       weight: 0.70}
+  - {form: "弄丢了",       weight: 0.65}
+  - {form: "没过",         weight: 0.55}
+  - {form: "过了",         weight: 0.50}
+  - {form: "拿到了",       weight: 0.70}
+  - {form: "拒了",         weight: 0.60}
+  - {form: "吹了",         weight: 0.65}
+  - {form: "拖着",         weight: 0.55}
+  - {form: "没成",         weight: 0.65}
+  - {form: "成了",         weight: 0.55}
+
+  # event anchors
+  - {form: "刚下班",       weight: 0.85}
+  - {form: "刚起床",       weight: 0.75}
+  - {form: "刚到家",       weight: 0.80}
+  - {form: "到家了",       weight: 0.75}
+  - {form: "落地了",       weight: 0.85}
+  - {form: "在机场",       weight: 0.80}
+  - {form: "回家路上",     weight: 0.80}
+  - {form: "面试完",       weight: 0.85}
+  - {form: "面试了",       weight: 0.80}
+  - {form: "开完会",       weight: 0.80}
+  - {form: "开完",         weight: 0.65}
+  - {form: "考完",         weight: 0.80}
+  - {form: "打完针",       weight: 0.80}
+  - {form: "做完体检",     weight: 0.85}
+  - {form: "体检结果",     weight: 0.85}
+
+  # reply-to-prior-advice markers (very strong)
+  - {form: "按你说的",     weight: 0.95}
+  - {form: "按照你说的",   weight: 0.95}
+  - {form: "听了你的",     weight: 0.95}
+  - {form: "采纳了你",     weight: 0.95}
+  - {form: "照你之前说",   weight: 0.95}
+  - {form: "你上次说的",   weight: 0.90}
+  - {form: "你之前让我",   weight: 0.90}
+  - {form: "你说过要",     weight: 0.90}
+  - {form: "你建议的",     weight: 0.85}
+  - {form: "没听你",       weight: 0.85}
+  - {form: "当时没听",     weight: 0.85}
+  - {form: "你预言",       weight: 0.85}
+  - {form: "被你说中",     weight: 0.90}
+  - {form: "你真的懂",     weight: 0.70}
+  - {form: "还是你懂我",   weight: 0.85}
+  - {form: "多亏你",       weight: 0.80}
+  - {form: "幸亏有你",     weight: 0.80}
+
+  # relational / bond markers
+  - {form: "咱俩",         weight: 0.60}
+  - {form: "我们之间",     weight: 0.70}
+  - {form: "认识多久",     weight: 0.80}
+  - {form: "还会记得我",   weight: 0.90}
+  - {form: "还认得我",     weight: 0.85}
+
+  # sharing intent (short-form, not a deep request)
+  - {form: "跟你说",       weight: 0.45}
+  - {form: "告诉你",       weight: 0.45}
+  - {form: "给你讲",       weight: 0.55}
+  - {form: "跟你分享",     weight: 0.70}
+  - {form: "讲个好玩的",   weight: 0.65}
+  - {form: "跟你说件",     weight: 0.60}
+  - {form: "给你看看",     weight: 0.70}
+  - {form: "想你了",       weight: 0.75}
+  - {form: "有点想",       weight: 0.55}
+  - {form: "突然想到你",   weight: 0.90}
+  - {form: "陪着我",       weight: 0.75}
+  - {form: "谢谢你",       weight: 0.60}
+
+  # generic time anchors (casual update register)
+  - {form: "最近",         weight: 0.30}
+  - {form: "这几天",       weight: 0.50}
+  - {form: "前几天",       weight: 0.55}
+  - {form: "上周",         weight: 0.45}
+  - {form: "上个月",       weight: 0.45}
+  - {form: "昨天",         weight: 0.35}
+  - {form: "今天",         weight: 0.30}
+  - {form: "刚才又",       weight: 0.75}
+  - {form: "加班到",       weight: 0.75}
+  - {form: "今晚",         weight: 0.35}
+  - {form: "到现在",       weight: 0.40}
+
+  # casual outcome verbs (abbreviated)
+  - {form: "搞定",         weight: 0.60}
+  - {form: "投了",         weight: 0.55}
+  - {form: "读完",         weight: 0.60}
+  - {form: "看完",         weight: 0.55}
+  - {form: "买到了",       weight: 0.70}
+  - {form: "买了",         weight: 0.45}
+  - {form: "涨工资",       weight: 0.80}
+  - {form: "拿到",         weight: 0.55}
+  - {form: "签了",         weight: 0.65}
+  - {form: "搬进",         weight: 0.75}
+  - {form: "搬家",         weight: 0.70}
+  - {form: "上线了",       weight: 0.75}
+  - {form: "破戒",         weight: 0.80}
+  - {form: "冷战",         weight: 0.75}
+  - {form: "请假",         weight: 0.55}
+  - {form: "咨询了",       weight: 0.75}
+  - {form: "没回复",       weight: 0.65}
+
+  # simple state / low-arousal mood reports (LIGHT_RECALL, not DEEP)
+  - {form: "有点累",       weight: 0.60}
+  - {form: "挺累",         weight: 0.55}
+  - {form: "挺好",         weight: 0.50}
+  - {form: "还不错",       weight: 0.55}
+  - {form: "挺投机",       weight: 0.65}
+  - {form: "暖暖的",       weight: 0.70}
+  - {form: "心里暖",       weight: 0.70}
+  - {form: "没啥事",       weight: 0.55}
+  - {form: "没啥",         weight: 0.40}
+  - {form: "失眠",         weight: 0.50}
+  - {form: "多梦",         weight: 0.55}
+  - {form: "不想说话",     weight: 0.55}
+  - {form: "一整天没",     weight: 0.65}
+  - {form: "想吃",         weight: 0.45}
+  - {form: "需要一个拥抱", weight: 0.75}
+  - {form: "想被",         weight: 0.55}
+  - {form: "煎糊",         weight: 0.75}
+  - {form: "寄来的",       weight: 0.75}
+  - {form: "收到意外",     weight: 0.80}
+  - {form: "恍惚",         weight: 0.70}
+  - {form: "朋友圈",       weight: 0.55}
+  - {form: "拍的照片",     weight: 0.65}
+
+  # soft checks (meta, LIGHT tier)
+  - {form: "还在吗",       weight: 0.75}
+  - {form: "还记得",       weight: 0.75}
+  - {form: "能问你",       weight: 0.55}
+  - {form: "能不能问",     weight: 0.55}
+  - {form: "你明白我",     weight: 0.60}
+  - {form: "你不是说过",   weight: 0.85}
+  - {form: "你说过类似",   weight: 0.85}
+  - {form: "我现在懂",     weight: 0.75}
+  - {form: "我懂你",       weight: 0.55}
+  - {form: "你说的是对的", weight: 0.85}

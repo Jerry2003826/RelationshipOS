@@ -42,4 +42,3 @@ class StoredEvent:
             metadata=dict(event.metadata),
             occurred_at=utc_now(),
         )
-

@@ -39,8 +39,7 @@ def test_session_memory_projection_tracks_layered_memory_across_turns() -> None:
     assert state["working_memory"]["current"]
     assert state["episodic_memory"]["episode_count"] == 2
     assert any(
-        concept["value"] == "topic:planning"
-        for concept in state["semantic_memory"]["concepts"]
+        concept["value"] == "topic:planning" for concept in state["semantic_memory"]["concepts"]
     )
     assert state["relational_memory"]["signal_count"] >= 1
     assert state["reflective_memory"]["insight_count"] >= 1
@@ -119,8 +118,7 @@ def test_session_memory_recall_filters_context_mismatches_when_requested() -> No
     assert recall["integrity_summary"]["filtered_count"] >= 1
     assert recall["filtered_results"]
     assert any(
-        "topic_mismatch" in item["integrity"]["flags"]
-        for item in recall["filtered_results"]
+        "topic_mismatch" in item["integrity"]["flags"] for item in recall["filtered_results"]
     )
 
 
@@ -152,21 +150,15 @@ def test_session_memory_projection_tracks_controlled_forgetting_after_history_li
     assert state["forgetting_turn_count"] >= 1
     assert state["total_evicted_count"] >= 1
     assert state["last_forgetting"]["layers"]["working_memory"]["evicted_count"] >= 1
-    assert (
-        evaluation["summary"]["memory_forgetting_turn_count"] >= 1
-    )
-    assert (
-        evaluation["summary"]["memory_forgetting_evicted_count"] >= 1
-    )
+    assert evaluation["summary"]["memory_forgetting_turn_count"] >= 1
+    assert evaluation["summary"]["memory_forgetting_evicted_count"] >= 1
 
 
 def test_pinned_emotional_memory_survives_when_history_overflows() -> None:
     with TestClient(create_app()) as client:
         first_response = client.post(
             "/api/v1/sessions/pinned-memory-session/turns",
-            json={
-                "content": "I feel anxious and alone, but I still want to keep the plan moving."
-            },
+            json={"content": "I feel anxious and alone, but I still want to keep the plan moving."},
         )
         assert first_response.status_code == 201
 
@@ -222,9 +214,7 @@ def test_person_memory_recall_enters_foundation_across_sessions() -> None:
         body = second_turn.json()
 
     memory_recall_event = next(
-        event
-        for event in body["events"]
-        if event["event_type"] == "system.memory_recall.performed"
+        event for event in body["events"] if event["event_type"] == "system.memory_recall.performed"
     )
     recall = memory_recall_event["payload"]
     assert recall["recall_count"] >= 1
@@ -269,15 +259,12 @@ def test_aliyun_text_embedder_batches_requests_to_provider_limit(
         dimensions=0,
     )
 
-    vectors = asyncio.run(
-        embedder.embed_texts([f"memory item {index}" for index in range(23)])
-    )
+    vectors = asyncio.run(embedder.embed_texts([f"memory item {index}" for index in range(23)]))
 
     assert len(vectors) == 23
     assert [len(request["texts"]) for request in requests] == [10, 10, 3]
     assert requests[0]["url"] == (
-        "https://dashscope.aliyuncs.com/api/v1"
-        "/services/embeddings/text-embedding/text-embedding"
+        "https://dashscope.aliyuncs.com/api/v1/services/embeddings/text-embedding/text-embedding"
     )
 
 
@@ -465,27 +452,42 @@ def test_memory_service_detects_query_echo() -> None:
 
 def test_person_memory_recall_filters_question_echo_from_results() -> None:
     with TestClient(create_app()) as client:
-        assert client.post(
-            "/api/v1/sessions",
-            json={"session_id": "echo-memory-a", "user_id": "echo-user"},
-        ).status_code == 201
-        assert client.post(
-            "/api/v1/sessions/echo-memory-a/turns",
-            json={"content": "I grew up in Austin."},
-        ).status_code == 201
-        assert client.post(
-            "/api/v1/sessions/echo-memory-a/turns",
-            json={"content": "I have a golden retriever named Maple."},
-        ).status_code == 201
+        assert (
+            client.post(
+                "/api/v1/sessions",
+                json={"session_id": "echo-memory-a", "user_id": "echo-user"},
+            ).status_code
+            == 201
+        )
+        assert (
+            client.post(
+                "/api/v1/sessions/echo-memory-a/turns",
+                json={"content": "I grew up in Austin."},
+            ).status_code
+            == 201
+        )
+        assert (
+            client.post(
+                "/api/v1/sessions/echo-memory-a/turns",
+                json={"content": "I have a golden retriever named Maple."},
+            ).status_code
+            == 201
+        )
 
-        assert client.post(
-            "/api/v1/sessions",
-            json={"session_id": "echo-memory-b", "user_id": "echo-user"},
-        ).status_code == 201
-        assert client.post(
-            "/api/v1/sessions/echo-memory-b/turns",
-            json={"content": "Hey, I'm back after a few days."},
-        ).status_code == 201
+        assert (
+            client.post(
+                "/api/v1/sessions",
+                json={"session_id": "echo-memory-b", "user_id": "echo-user"},
+            ).status_code
+            == 201
+        )
+        assert (
+            client.post(
+                "/api/v1/sessions/echo-memory-b/turns",
+                json={"content": "Hey, I'm back after a few days."},
+            ).status_code
+            == 201
+        )
         query = "Remind me where I grew up and my dog's name."
         response = client.post(
             "/api/v1/sessions/echo-memory-b/turns",
@@ -495,9 +497,7 @@ def test_person_memory_recall_filters_question_echo_from_results() -> None:
         body = response.json()
 
     memory_recall_event = next(
-        event
-        for event in body["events"]
-        if event["event_type"] == "system.memory_recall.performed"
+        event for event in body["events"] if event["event_type"] == "system.memory_recall.performed"
     )
     recall = memory_recall_event["payload"]
     lowered_query = query.casefold()
@@ -688,9 +688,7 @@ def test_memory_service_index_record_marks_factual_candidate_metadata() -> None:
     )
 
     assert factual_record.metadata["factual_candidate"] is True
-    assert factual_record.metadata["fact_id"].startswith(
-        "user:user-1:i grew up in austin"
-    )
+    assert factual_record.metadata["fact_id"].startswith("user:user-1:i grew up in austin")
     assert factual_record.metadata["source_version"] == 3
     assert relational_record.metadata["factual_candidate"] is False
     assert relational_record.metadata["fact_id"] is None

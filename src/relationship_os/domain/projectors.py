@@ -14,11 +14,9 @@ class Projector(Protocol[ProjectionStateT]):
     name: str
     version: str
 
-    def initial_state(self) -> ProjectionStateT:
-        ...
+    def initial_state(self) -> ProjectionStateT: ...
 
-    def apply(self, state: ProjectionStateT, event: StoredEvent) -> ProjectionStateT:
-        ...
+    def apply(self, state: ProjectionStateT, event: StoredEvent) -> ProjectionStateT: ...
 
 
 @dataclass(slots=True)
@@ -40,6 +38,5 @@ class VersionedProjectorRegistry:
 
     def list_projectors(self) -> list[dict[str, str]]:
         return [
-            {"name": name, "version": version}
-            for name, version in sorted(self._projectors.keys())
+            {"name": name, "version": version} for name, version in sorted(self._projectors.keys())
         ]

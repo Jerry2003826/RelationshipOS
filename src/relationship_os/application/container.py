@@ -246,9 +246,7 @@ def build_container(settings: Settings) -> RuntimeContainer:
         llm_client=llm_client,
         llm_model=settings.llm_model,
         llm_temperature=settings.llm_temperature,
-        runtime_quality_doctor_interval_turns=(
-            settings.runtime_quality_doctor_interval_turns
-        ),
+        runtime_quality_doctor_interval_turns=(settings.runtime_quality_doctor_interval_turns),
         runtime_quality_doctor_window_turns=settings.runtime_quality_doctor_window_turns,
         runtime_projector_version=settings.default_projector_version,
         persona_text=persona_text,

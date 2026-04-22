@@ -121,9 +121,7 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
         event: StoredEvent,
     ) -> dict[str, Any]:
         next_state["last_write_guard"] = dict(event.payload)
-        next_state["write_guard_blocked_total"] += int(
-            event.payload.get("blocked_count", 0)
-        )
+        next_state["write_guard_blocked_total"] += int(event.payload.get("blocked_count", 0))
         return next_state
 
     def _apply_retention_policy(
@@ -159,9 +157,7 @@ class SessionMemoryProjector(Projector[dict[str, Any]]):
             semantic_items=layer_items["semantic_memory"],
             relational_items=layer_items["relational_memory"],
         )
-        retention_lookups = self._build_memory_bundle_retention_lookups(
-            next_state=next_state
-        )
+        retention_lookups = self._build_memory_bundle_retention_lookups(next_state=next_state)
         working_retention_summary = _summarize_sequence_retention(
             items=layer_items["working_memory"],
             retention_lookup=retention_lookups["working_memory"],

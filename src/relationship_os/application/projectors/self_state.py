@@ -20,9 +20,7 @@ _PET_PATTERNS = (
     re.compile(
         r"(?:我那只|我的)?(?P<kind>猫|狗|宠物)[^。！？!?,，]{0,12}?叫(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})"
     ),
-    re.compile(
-        r"(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})是(?:我|她|他)那只(?P<kind>猫|狗|宠物)"
-    ),
+    re.compile(r"(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})是(?:我|她|他)那只(?P<kind>猫|狗|宠物)"),
     re.compile(r"I have a .*? named (?P<name>[A-Za-z][A-Za-z\\s-]{0,20})", re.IGNORECASE),
 )
 _DRINK_TOKENS = ("拿铁", "咖啡", "奶茶", "茶", "美式", "卡布奇诺", "榛子", "drink")
@@ -151,12 +149,9 @@ def _extract_fact_slot_digest(
                 if not drink_preference:
                     drink_preference = text.strip("。！？!?,， ")
         if not communication_preference and any(token in text for token in _COMMUNICATION_TOKENS):
-            if (
-                ("语音" in text or "长语音" in text or "语音条" in text)
-                and any(
-                    token in text
-                    for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "太长")
-                )
+            if ("语音" in text or "长语音" in text or "语音条" in text) and any(
+                token in text
+                for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "太长")
             ):
                 communication_preference = "别发太长语音"
             elif "大道理" in text:
@@ -176,9 +171,7 @@ def _extract_fact_slot_digest(
     if not drink_preference:
         drink_preference = str(previous.get("drink_preference", "") or "").strip()
     if not communication_preference:
-        communication_preference = str(
-            previous.get("communication_preference", "") or ""
-        ).strip()
+        communication_preference = str(previous.get("communication_preference", "") or "").strip()
     living_facts = _merge_unique_strings(
         living_facts,
         list(previous.get("living_facts") or []),
@@ -188,14 +181,14 @@ def _extract_fact_slot_digest(
     stable_slots = _merge_unique_strings(
         list(previous.get("stable_slots") or []),
         [
-        slot
-        for slot, value in (
-            ("hometown", hometown),
-            ("pet", pet_name),
-            ("drink_preference", drink_preference),
-            ("communication_preference", communication_preference),
-        )
-        if value
+            slot
+            for slot, value in (
+                ("hometown", hometown),
+                ("pet", pet_name),
+                ("drink_preference", drink_preference),
+                ("communication_preference", communication_preference),
+            )
+            if value
         ],
         limit=6,
     )
@@ -342,9 +335,7 @@ def _build_probe_snapshot(
         "relationship_snapshot": {
             "signals": list(relationship_digest.get("signals") or [])[:6],
             "markers": list(relationship_digest.get("markers") or [])[:6],
-            "interaction_band": str(
-                relationship_digest.get("interaction_band", "") or ""
-            ).strip(),
+            "interaction_band": str(relationship_digest.get("interaction_band", "") or "").strip(),
             "total_interactions": int(relationship_digest.get("total_interactions", 0) or 0),
         },
         "social_snapshot": {
@@ -467,15 +458,13 @@ class SelfStateProjector(Projector[dict[str, Any]]):
             None,
         )
         if isinstance(existing, dict):
-            summary_entry["last_topic"] = (
-                summary_entry.get("last_topic") or existing.get("last_topic")
+            summary_entry["last_topic"] = summary_entry.get("last_topic") or existing.get(
+                "last_topic"
             )
-            summary_entry["emotional_tone"] = (
-                summary_entry.get("emotional_tone") or existing.get("emotional_tone")
+            summary_entry["emotional_tone"] = summary_entry.get("emotional_tone") or existing.get(
+                "emotional_tone"
             )
-            summary_entry["my_stance"] = (
-                summary_entry.get("my_stance") or existing.get("my_stance")
-            )
+            summary_entry["my_stance"] = summary_entry.get("my_stance") or existing.get("my_stance")
             summary_entry["user_state_markers"] = _merge_unique_texts(
                 list(existing.get("user_state_markers") or []),
                 list(summary_entry.get("user_state_markers") or []),

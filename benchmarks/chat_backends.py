@@ -30,27 +30,15 @@ def resolve_benchmark_api_key(
     default_api_key: str = "",
 ) -> str:
     provider_name = (
-        provider or os.getenv("BENCHMARK_CHAT_PROVIDER", "") or "litellm"
-    ).strip().casefold()
+        (provider or os.getenv("BENCHMARK_CHAT_PROVIDER", "") or "litellm").strip().casefold()
+    )
     benchmark_key = os.getenv("BENCHMARK_CHAT_API_KEY", "").strip()
     minimax_key = os.getenv("MINIMAX_API_KEY", "").strip()
     relationship_key = os.getenv("RELATIONSHIP_OS_LLM_API_KEY", "").strip()
     openai_key = os.getenv("OPENAI_API_KEY", "").strip()
     if provider_name == "minimax":
-        return (
-            benchmark_key
-            or minimax_key
-            or relationship_key
-            or openai_key
-            or default_api_key
-        )
-    return (
-        benchmark_key
-        or relationship_key
-        or openai_key
-        or minimax_key
-        or default_api_key
-    )
+        return benchmark_key or minimax_key or relationship_key or openai_key or default_api_key
+    return benchmark_key or relationship_key or openai_key or minimax_key or default_api_key
 
 
 def resolve_benchmark_api_base(
@@ -59,19 +47,15 @@ def resolve_benchmark_api_base(
     default_api_base: str = "",
 ) -> str:
     provider_name = (
-        provider or os.getenv("BENCHMARK_CHAT_PROVIDER", "") or "litellm"
-    ).strip().casefold()
+        (provider or os.getenv("BENCHMARK_CHAT_PROVIDER", "") or "litellm").strip().casefold()
+    )
     benchmark_base = os.getenv("BENCHMARK_CHAT_API_BASE", "").strip()
     relationship_base = os.getenv("RELATIONSHIP_OS_LLM_API_BASE", "").strip()
     openai_base = os.getenv("OPENAI_API_BASE", "").strip()
     minimax_base = os.getenv("MINIMAX_API_BASE", "").strip()
     if provider_name == "minimax":
         return (
-            benchmark_base
-            or minimax_base
-            or relationship_base
-            or openai_base
-            or default_api_base
+            benchmark_base or minimax_base or relationship_base or openai_base or default_api_base
         )
     return benchmark_base or relationship_base or openai_base or minimax_base or default_api_base
 
@@ -100,8 +84,7 @@ class ChatBackendConfig:
         max_tokens: int = 512,
     ) -> ChatBackendConfig:
         provider = (
-            os.getenv("BENCHMARK_CHAT_PROVIDER", default_provider).strip()
-            or default_provider
+            os.getenv("BENCHMARK_CHAT_PROVIDER", default_provider).strip() or default_provider
         )
         model = os.getenv("BENCHMARK_CHAT_MODEL", default_model).strip() or default_model
         api_base = resolve_benchmark_api_base(

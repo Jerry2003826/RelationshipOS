@@ -200,15 +200,9 @@ def test_build_system3_snapshot_model_projects_expected_fields() -> None:
                 state[f"{domain}_governance_trigger"] = f"{domain}_trigger"
                 state[f"{domain}_governance_notes"] = [f"{domain}_note"]
                 state[f"{domain}_governance_trajectory_status"] = "recovering"
-                state[f"{domain}_governance_trajectory_target"] = (
-                    f"{domain}_trajectory_target"
-                )
-                state[f"{domain}_governance_trajectory_trigger"] = (
-                    f"{domain}_trajectory_trigger"
-                )
-                state[f"{domain}_governance_trajectory_notes"] = [
-                    f"{domain}_trajectory_note"
-                ]
+                state[f"{domain}_governance_trajectory_target"] = f"{domain}_trajectory_target"
+                state[f"{domain}_governance_trajectory_trigger"] = f"{domain}_trajectory_trigger"
+                state[f"{domain}_governance_trajectory_notes"] = [f"{domain}_trajectory_note"]
 
             snapshot = handler._build_system3_snapshot_model(state)
 
@@ -308,30 +302,38 @@ def test_build_system3_snapshot_model_projects_expected_fields() -> None:
                 "progress",
                 "stability",
             ):
-                assert getattr(snapshot, f"{domain}_governance_status") == state[
-                    f"{domain}_governance_status"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_target") == state[
-                    f"{domain}_governance_target"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_trigger") == state[
-                    f"{domain}_governance_trigger"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_notes") == state[
-                    f"{domain}_governance_notes"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_trajectory_status") == state[
-                    f"{domain}_governance_trajectory_status"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_trajectory_target") == state[
-                    f"{domain}_governance_trajectory_target"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_trajectory_trigger") == state[
-                    f"{domain}_governance_trajectory_trigger"
-                ]
-                assert getattr(snapshot, f"{domain}_governance_trajectory_notes") == state[
-                    f"{domain}_governance_trajectory_notes"
-                ]
+                assert (
+                    getattr(snapshot, f"{domain}_governance_status")
+                    == state[f"{domain}_governance_status"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_target")
+                    == state[f"{domain}_governance_target"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_trigger")
+                    == state[f"{domain}_governance_trigger"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_notes")
+                    == state[f"{domain}_governance_notes"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_trajectory_status")
+                    == state[f"{domain}_governance_trajectory_status"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_trajectory_target")
+                    == state[f"{domain}_governance_trajectory_target"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_trajectory_trigger")
+                    == state[f"{domain}_governance_trajectory_trigger"]
+                )
+                assert (
+                    getattr(snapshot, f"{domain}_governance_trajectory_notes")
+                    == state[f"{domain}_governance_trajectory_notes"]
+                )
         finally:
             await container.shutdown()
 

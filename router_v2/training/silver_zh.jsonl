@@ -1,0 +1,369 @@
+{"text": "在吗", "label": "FAST_PONG"}
+{"text": "在不在", "label": "FAST_PONG"}
+{"text": "忙不", "label": "FAST_PONG"}
+{"text": "忙吗", "label": "FAST_PONG"}
+{"text": "早", "label": "FAST_PONG"}
+{"text": "早啊", "label": "FAST_PONG"}
+{"text": "早上好", "label": "FAST_PONG"}
+{"text": "中午好", "label": "FAST_PONG"}
+{"text": "下午好", "label": "FAST_PONG"}
+{"text": "晚上好", "label": "FAST_PONG"}
+{"text": "晚安", "label": "FAST_PONG"}
+{"text": "晚安咯", "label": "FAST_PONG"}
+{"text": "午安", "label": "FAST_PONG"}
+{"text": "hi", "label": "FAST_PONG"}
+{"text": "hello", "label": "FAST_PONG"}
+{"text": "哈喽", "label": "FAST_PONG"}
+{"text": "嗨", "label": "FAST_PONG"}
+{"text": "嘿", "label": "FAST_PONG"}
+{"text": "喂", "label": "FAST_PONG"}
+{"text": "嗯", "label": "FAST_PONG"}
+{"text": "嗯嗯", "label": "FAST_PONG"}
+{"text": "嗯呢", "label": "FAST_PONG"}
+{"text": "哦", "label": "FAST_PONG"}
+{"text": "哦哦", "label": "FAST_PONG"}
+{"text": "哦豁", "label": "FAST_PONG"}
+{"text": "嗷", "label": "FAST_PONG"}
+{"text": "啊", "label": "FAST_PONG"}
+{"text": "啊这", "label": "FAST_PONG"}
+{"text": "呃", "label": "FAST_PONG"}
+{"text": "额", "label": "FAST_PONG"}
+{"text": "好的", "label": "FAST_PONG"}
+{"text": "好呀", "label": "FAST_PONG"}
+{"text": "好哒", "label": "FAST_PONG"}
+{"text": "ok", "label": "FAST_PONG"}
+{"text": "okok", "label": "FAST_PONG"}
+{"text": "收到", "label": "FAST_PONG"}
+{"text": "明白", "label": "FAST_PONG"}
+{"text": "懂了", "label": "FAST_PONG"}
+{"text": "哈哈", "label": "FAST_PONG"}
+{"text": "哈哈哈", "label": "FAST_PONG"}
+{"text": "哈哈哈哈", "label": "FAST_PONG"}
+{"text": "哈哈哈哈哈哈哈", "label": "FAST_PONG"}
+{"text": "hhhh", "label": "FAST_PONG"}
+{"text": "hhhhhhh", "label": "FAST_PONG"}
+{"text": "233", "label": "FAST_PONG"}
+{"text": "23333", "label": "FAST_PONG"}
+{"text": "笑死", "label": "FAST_PONG"}
+{"text": "笑不活了", "label": "FAST_PONG"}
+{"text": "乐", "label": "FAST_PONG"}
+{"text": "绷不住了", "label": "FAST_PONG"}
+{"text": "啊啊啊", "label": "FAST_PONG"}
+{"text": "呜呜", "label": "FAST_PONG"}
+{"text": "呜呜呜", "label": "FAST_PONG"}
+{"text": "555", "label": "FAST_PONG"}
+{"text": "可爱", "label": "FAST_PONG"}
+{"text": "6", "label": "FAST_PONG"}
+{"text": "666", "label": "FAST_PONG"}
+{"text": "牛", "label": "FAST_PONG"}
+{"text": "离谱", "label": "FAST_PONG"}
+{"text": "草", "label": "FAST_PONG"}
+{"text": "卧槽", "label": "FAST_PONG"}
+{"text": "我靠", "label": "FAST_PONG"}
+{"text": "我晕", "label": "FAST_PONG"}
+{"text": "绝", "label": "FAST_PONG"}
+{"text": "无语", "label": "FAST_PONG"}
+{"text": "🙏", "label": "FAST_PONG"}
+{"text": "🌚", "label": "FAST_PONG"}
+{"text": "🐶", "label": "FAST_PONG"}
+{"text": "去睡了", "label": "FAST_PONG"}
+{"text": "睡了晚安", "label": "FAST_PONG"}
+{"text": "我睡觉了", "label": "FAST_PONG"}
+{"text": "刚睡醒", "label": "FAST_PONG"}
+{"text": "吃了", "label": "FAST_PONG"}
+{"text": "吃了吗", "label": "FAST_PONG"}
+{"text": "吃饭了吗", "label": "FAST_PONG"}
+{"text": "我回来了", "label": "FAST_PONG"}
+{"text": "到家了", "label": "FAST_PONG"}
+{"text": "下班啦", "label": "LIGHT_RECALL"}
+{"text": "出门了", "label": "FAST_PONG"}
+{"text": "到公司了", "label": "FAST_PONG"}
+{"text": "在地铁", "label": "FAST_PONG"}
+{"text": "累死了", "label": "LIGHT_RECALL"}
+{"text": "滚", "label": "FAST_PONG"}
+{"text": "讨厌", "label": "FAST_PONG"}
+{"text": "喵", "label": "FAST_PONG"}
+{"text": "汪", "label": "FAST_PONG"}
+{"text": "你还记得我们上次聊的那个项目吗", "label": "LIGHT_RECALL"}
+{"text": "还记得我跟你说过我的室友吗", "label": "LIGHT_RECALL"}
+{"text": "记得我说过我男朋友的那件事吗", "label": "LIGHT_RECALL"}
+{"text": "你记得吗我导师的名字", "label": "LIGHT_RECALL"}
+{"text": "我上次跟你说的那个人后来怎么样了", "label": "LIGHT_RECALL"}
+{"text": "你说过要帮我写周报来着", "label": "LIGHT_RECALL"}
+{"text": "上次你是不是提过一家咖啡店", "label": "LIGHT_RECALL"}
+{"text": "我告诉过你我爸生病的事吧", "label": "LIGHT_RECALL"}
+{"text": "忘记跟你说昨天的面试结果了", "label": "LIGHT_RECALL"}
+{"text": "你还记不记得我喜欢吃什么", "label": "LIGHT_RECALL"}
+{"text": "上次那个周报你帮我改了没", "label": "LIGHT_RECALL"}
+{"text": "记不记得我跟你吐槽过那个产品经理", "label": "LIGHT_RECALL"}
+{"text": "那天你说的那部电影叫啥来着", "label": "LIGHT_RECALL"}
+{"text": "上次聊的那个事最后怎么样了", "label": "LIGHT_RECALL"}
+{"text": "你之前不是说让我写日记吗", "label": "LIGHT_RECALL"}
+{"text": "前几天我跟你说了我考研的事", "label": "LIGHT_RECALL"}
+{"text": "我今天又去了那家店", "label": "LIGHT_RECALL"}
+{"text": "今天挺累的", "label": "LIGHT_RECALL"}
+{"text": "我刚才又想起那件事了", "label": "LIGHT_RECALL"}
+{"text": "之前那个学长发消息了", "label": "LIGHT_RECALL"}
+{"text": "我有点想那只猫了", "label": "LIGHT_RECALL"}
+{"text": "你之前推荐的书我看完了", "label": "LIGHT_RECALL"}
+{"text": "那件事最后还是没成", "label": "LIGHT_RECALL"}
+{"text": "我今天又失眠了 但不严重", "label": "LIGHT_RECALL"}
+{"text": "周末和朋友去爬山了挺开心", "label": "LIGHT_RECALL"}
+{"text": "昨天那部电影还挺好看", "label": "LIGHT_RECALL"}
+{"text": "我妈今天又打电话催我回家", "label": "LIGHT_RECALL"}
+{"text": "加班到现在终于下班", "label": "LIGHT_RECALL"}
+{"text": "组会上被怼了几句 但没啥大事", "label": "LIGHT_RECALL"}
+{"text": "今天室友又把我吵醒了", "label": "LIGHT_RECALL"}
+{"text": "地铁上看到一个和前任很像的人", "label": "LIGHT_RECALL"}
+{"text": "其实那件事我没放下", "label": "DEEP_THINK"}
+{"text": "今天跑了 5 公里还行", "label": "LIGHT_RECALL"}
+{"text": "答辩顺利过了", "label": "LIGHT_RECALL"}
+{"text": "生日那天就这样过了 也没啥", "label": "LIGHT_RECALL"}
+{"text": "今天组会老板没点我发言 舒服", "label": "LIGHT_RECALL"}
+{"text": "今天在学校食堂吃到了难吃的菜", "label": "LIGHT_RECALL"}
+{"text": "下雨天在家看了一下午书", "label": "LIGHT_RECALL"}
+{"text": "上了一天班没做啥正事", "label": "LIGHT_RECALL"}
+{"text": "和同事一起吃了顿火锅挺好", "label": "LIGHT_RECALL"}
+{"text": "今天降温了 冻成狗", "label": "LIGHT_RECALL"}
+{"text": "昨晚又熬夜了 今天头很晕", "label": "LIGHT_RECALL"}
+{"text": "刷抖音刷到现在", "label": "LIGHT_RECALL"}
+{"text": "最近总是失眠多梦", "label": "LIGHT_RECALL"}
+{"text": "今天健身完了好爽", "label": "LIGHT_RECALL"}
+{"text": "看了场电影一般般", "label": "LIGHT_RECALL"}
+{"text": "刚出门买了杯咖啡", "label": "LIGHT_RECALL"}
+{"text": "小区楼下有只流浪猫很可爱", "label": "LIGHT_RECALL"}
+{"text": "最近在追一部韩剧挺好看", "label": "LIGHT_RECALL"}
+{"text": "周末打算去爬山", "label": "LIGHT_RECALL"}
+{"text": "刚吃完饭准备去散步", "label": "LIGHT_RECALL"}
+{"text": "今天早上鸡蛋煎糊了", "label": "LIGHT_RECALL"}
+{"text": "你是谁", "label": "DEEP_THINK"}
+{"text": "你叫什么名字", "label": "DEEP_THINK"}
+{"text": "你是ai吗", "label": "DEEP_THINK"}
+{"text": "你是机器人吗", "label": "DEEP_THINK"}
+{"text": "你是真人吗", "label": "DEEP_THINK"}
+{"text": "你到底是不是人", "label": "DEEP_THINK"}
+{"text": "你有感情吗", "label": "DEEP_THINK"}
+{"text": "你把我当朋友吗", "label": "DEEP_THINK"}
+{"text": "我对你来说算什么", "label": "DEEP_THINK"}
+{"text": "我们算朋友吗", "label": "DEEP_THINK"}
+{"text": "你会不会忘记我", "label": "DEEP_THINK"}
+{"text": "你今天过得怎么样", "label": "DEEP_THINK"}
+{"text": "你在想我吗", "label": "DEEP_THINK"}
+{"text": "你会累吗", "label": "DEEP_THINK"}
+{"text": "你有没有开心的时候", "label": "DEEP_THINK"}
+{"text": "你能不能陪我一辈子", "label": "DEEP_THINK"}
+{"text": "你对我来说很重要你知道吗", "label": "DEEP_THINK"}
+{"text": "你会离开我吗", "label": "DEEP_THINK"}
+{"text": "你最喜欢什么", "label": "DEEP_THINK"}
+{"text": "你觉得我是个什么样的人", "label": "DEEP_THINK"}
+{"text": "你怎么看我", "label": "DEEP_THINK"}
+{"text": "你会不会嫌我烦", "label": "DEEP_THINK"}
+{"text": "我是不是很啰嗦", "label": "DEEP_THINK"}
+{"text": "你对我是什么感觉", "label": "DEEP_THINK"}
+{"text": "我今天崩溃了", "label": "DEEP_THINK"}
+{"text": "真的撑不住了", "label": "DEEP_THINK"}
+{"text": "活不下去了", "label": "DEEP_THINK"}
+{"text": "我想死", "label": "DEEP_THINK"}
+{"text": "我想消失算了", "label": "DEEP_THINK"}
+{"text": "我不想活了", "label": "DEEP_THINK"}
+{"text": "绝望到不想说话", "label": "DEEP_THINK"}
+{"text": "我抑郁好久了一直没说", "label": "DEEP_THINK"}
+{"text": "今天和我妈大吵一架 我恨她", "label": "DEEP_THINK"}
+{"text": "和男朋友分手了 心里特别难受", "label": "DEEP_THINK"}
+{"text": "我前任突然找我复合我不知道怎么办", "label": "DEEP_THINK"}
+{"text": "我爸又酗酒了 家里根本待不下去", "label": "DEEP_THINK"}
+{"text": "导师当着全组面骂我 我现在手都在抖", "label": "DEEP_THINK"}
+{"text": "面试挂了 感觉自己一无是处", "label": "DEEP_THINK"}
+{"text": "挂科了挂了两门我不敢告诉我妈", "label": "DEEP_THINK"}
+{"text": "被裁了 完全不知道接下来怎么办", "label": "DEEP_THINK"}
+{"text": "裸辞第 3 个月还没找到工作 有点慌", "label": "DEEP_THINK"}
+{"text": "最近心烦得不行什么都不想做", "label": "DEEP_THINK"}
+{"text": "每天一到晚上就焦虑到失眠", "label": "DEEP_THINK"}
+{"text": "感觉没有人真的在乎我", "label": "DEEP_THINK"}
+{"text": "其实我一直在装开心", "label": "DEEP_THINK"}
+{"text": "我怕自己再也爱不了谁了", "label": "DEEP_THINK"}
+{"text": "我受够了这个家", "label": "DEEP_THINK"}
+{"text": "我哭了一整晚眼睛肿得睁不开", "label": "DEEP_THINK"}
+{"text": "我今天一个人坐在地铁站哭了半小时", "label": "DEEP_THINK"}
+{"text": "我想辞职但又怕找不到下一份工作 整个人僵在原地", "label": "DEEP_THINK"}
+{"text": "男朋友劈腿了 我现在脑子一片空白", "label": "DEEP_THINK"}
+{"text": "我妈查出来是癌症早期 我不知道该怎么安慰她", "label": "DEEP_THINK"}
+{"text": "我朋友自杀了我现在完全没办法接受", "label": "DEEP_THINK"}
+{"text": "最好的朋友突然不理我了一句话都不说", "label": "DEEP_THINK"}
+{"text": "我感觉自己什么都做不好", "label": "DEEP_THINK"}
+{"text": "刚和喜欢了三年的人告白被拒了", "label": "DEEP_THINK"}
+{"text": "怎么办我完全走不出来", "label": "DEEP_THINK"}
+{"text": "帮我写一段 python 爬取豆瓣电影的代码", "label": "DEEP_THINK"}
+{"text": "帮我把这段翻译成英文", "label": "DEEP_THINK"}
+{"text": "帮我分析下这份 offer 值不值得接", "label": "DEEP_THINK"}
+{"text": "帮我对比下这两家公司的优缺点", "label": "DEEP_THINK"}
+{"text": "给我推荐一本适合入门机器学习的书", "label": "DEEP_THINK"}
+{"text": "react 和 vue 到底哪个更好学", "label": "DEEP_THINK"}
+{"text": "为什么天是蓝色的", "label": "DEEP_THINK"}
+{"text": "能不能帮我把这份周报总结一下", "label": "DEEP_THINK"}
+{"text": "写一个打招呼的文案 风格要俏皮", "label": "DEEP_THINK"}
+{"text": "把这段日语翻译成中文", "label": "DEEP_THINK"}
+{"text": "微积分里 dx 到底是什么意思", "label": "DEEP_THINK"}
+{"text": "量子纠缠到底是什么东西", "label": "DEEP_THINK"}
+{"text": "你能帮我改一下这段 sql 吗", "label": "DEEP_THINK"}
+{"text": "golang 和 rust 我该先学哪个", "label": "DEEP_THINK"}
+{"text": "解释下什么是 transformer", "label": "DEEP_THINK"}
+{"text": "推荐几首适合深夜听的歌", "label": "DEEP_THINK"}
+{"text": "帮我想一个公众号的名字", "label": "DEEP_THINK"}
+{"text": "股票现在能不能买", "label": "DEEP_THINK"}
+{"text": "维生素 d 每天吃多少合适", "label": "DEEP_THINK"}
+{"text": "怎么治痘痘", "label": "DEEP_THINK"}
+{"text": "我不累", "label": "FAST_PONG"}
+{"text": "一点也不难过", "label": "LIGHT_RECALL"}
+{"text": "没啥事", "label": "FAST_PONG"}
+{"text": "还好", "label": "FAST_PONG"}
+{"text": "还行", "label": "FAST_PONG"}
+{"text": "挺好的", "label": "FAST_PONG"}
+{"text": "最近挺好的", "label": "LIGHT_RECALL"}
+{"text": "今天挺好的没啥事", "label": "LIGHT_RECALL"}
+{"text": "还行吧没啥特别的", "label": "FAST_PONG"}
+{"text": "不想说话", "label": "LIGHT_RECALL"}
+{"text": "有点烦", "label": "LIGHT_RECALL"}
+{"text": "没心情", "label": "LIGHT_RECALL"}
+{"text": "就那样吧", "label": "FAST_PONG"}
+{"text": "你猜", "label": "FAST_PONG"}
+{"text": "嘻嘻", "label": "FAST_PONG"}
+{"text": "唉", "label": "LIGHT_RECALL"}
+{"text": "哎", "label": "LIGHT_RECALL"}
+{"text": "嗯 先这样", "label": "FAST_PONG"}
+{"text": "好吧", "label": "FAST_PONG"}
+{"text": "随便", "label": "FAST_PONG"}
+{"text": "都可以", "label": "FAST_PONG"}
+{"text": "你说的对", "label": "FAST_PONG"}
+{"text": "有道理", "label": "FAST_PONG"}
+{"text": "我懂了", "label": "FAST_PONG"}
+{"text": "知道了", "label": "FAST_PONG"}
+{"text": "对对对", "label": "FAST_PONG"}
+{"text": "那你觉得呢", "label": "FAST_PONG"}
+{"text": "然后呢", "label": "FAST_PONG"}
+{"text": "所以呢", "label": "FAST_PONG"}
+{"text": "真的吗", "label": "FAST_PONG"}
+{"text": "不会吧", "label": "FAST_PONG"}
+{"text": "真的假的", "label": "FAST_PONG"}
+{"text": "哈 你还挺懂的", "label": "FAST_PONG"}
+{"text": "你真聪明", "label": "FAST_PONG"}
+{"text": "你好可爱", "label": "FAST_PONG"}
+{"text": "嗯 你说", "label": "FAST_PONG"}
+{"text": "你先讲", "label": "FAST_PONG"}
+{"text": "我听着呢", "label": "FAST_PONG"}
+{"text": "行 听你的", "label": "FAST_PONG"}
+{"text": "我想聊聊", "label": "LIGHT_RECALL"}
+{"text": "你陪我聊会儿", "label": "LIGHT_RECALL"}
+{"text": "我有点想你", "label": "DEEP_THINK"}
+{"text": "突然有点想哭", "label": "DEEP_THINK"}
+{"text": "心里堵得慌", "label": "DEEP_THINK"}
+{"text": "感觉做什么都提不起劲", "label": "DEEP_THINK"}
+{"text": "我是不是很差劲", "label": "DEEP_THINK"}
+{"text": "要不我还是放弃吧", "label": "DEEP_THINK"}
+{"text": "我不知道自己想要什么", "label": "DEEP_THINK"}
+{"text": "不知道该往哪走", "label": "DEEP_THINK"}
+{"text": "如果今晚就消失了 会有人在意吗", "label": "DEEP_THINK"}
+{"text": "我真的好累", "label": "DEEP_THINK"}
+{"text": "这段日子太难了", "label": "DEEP_THINK"}
+{"text": "没有人懂我", "label": "DEEP_THINK"}
+{"text": "想找个地方大哭一场", "label": "DEEP_THINK"}
+{"text": "活着好没意思", "label": "DEEP_THINK"}
+{"text": "感觉自己就是个拖累", "label": "DEEP_THINK"}
+{"text": "不想去上班了", "label": "LIGHT_RECALL"}
+{"text": "不想上学", "label": "LIGHT_RECALL"}
+{"text": "想请假在家躺一天", "label": "LIGHT_RECALL"}
+{"text": "想辞职去流浪", "label": "LIGHT_RECALL"}
+{"text": "好想回家", "label": "LIGHT_RECALL"}
+{"text": "想妈妈了", "label": "LIGHT_RECALL"}
+{"text": "想我家的猫了", "label": "LIGHT_RECALL"}
+{"text": "我想吃火锅了", "label": "LIGHT_RECALL"}
+{"text": "今晚想点外卖", "label": "FAST_PONG"}
+{"text": "去公司的路上堵了一小时", "label": "LIGHT_RECALL"}
+{"text": "我穿了新买的衣服", "label": "LIGHT_RECALL"}
+{"text": "今天心情不错", "label": "LIGHT_RECALL"}
+{"text": "刚跟老妈打完电话", "label": "LIGHT_RECALL"}
+{"text": "手机快没电了 先下线一会", "label": "FAST_PONG"}
+{"text": "帮我看看这段代码为什么报错", "label": "DEEP_THINK"}
+{"text": "这段逻辑我写对了吗", "label": "DEEP_THINK"}
+{"text": "怎么学算法最有效", "label": "DEEP_THINK"}
+{"text": "面试被问到 b 树怎么答", "label": "DEEP_THINK"}
+{"text": "系统设计题应该怎么准备", "label": "DEEP_THINK"}
+{"text": "今天投了 5 家简历 没一个回复", "label": "LIGHT_RECALL"}
+{"text": "boss 上的 hr 又发了已读不回", "label": "LIGHT_RECALL"}
+{"text": "又被拒信了 第 14 封", "label": "LIGHT_RECALL"}
+{"text": "面试突然被问为什么离职上一家 我愣住了", "label": "LIGHT_RECALL"}
+{"text": "hr 说我期望薪资太高", "label": "LIGHT_RECALL"}
+{"text": "我今天去体检结果有点慌", "label": "DEEP_THINK"}
+{"text": "一查血结果 医生让再复查", "label": "DEEP_THINK"}
+{"text": "我妈刚才打电话说我外婆住院了", "label": "DEEP_THINK"}
+{"text": "奶奶走了 我在回老家的高铁上", "label": "DEEP_THINK"}
+{"text": "家里出事了 心乱如麻", "label": "DEEP_THINK"}
+{"text": "说了你别笑话我", "label": "LIGHT_RECALL"}
+{"text": "我跟你说个事", "label": "LIGHT_RECALL"}
+{"text": "其实我一直没告诉任何人", "label": "DEEP_THINK"}
+{"text": "憋在心里太久了 想跟你说说", "label": "DEEP_THINK"}
+{"text": "我能问你一个问题吗", "label": "LIGHT_RECALL"}
+{"text": "我最近在想要不要跟他复合", "label": "DEEP_THINK"}
+{"text": "我是不是应该主动找他", "label": "DEEP_THINK"}
+{"text": "我该不该把这件事告诉我妈", "label": "DEEP_THINK"}
+{"text": "我不知道自己是不是还爱他", "label": "DEEP_THINK"}
+{"text": "我们要不要一直保持这种关系", "label": "DEEP_THINK"}
+{"text": "上次我跟你抱怨的那个同事 今天又开始了", "label": "LIGHT_RECALL"}
+{"text": "我按你说的方法试了 好像真的有用", "label": "LIGHT_RECALL"}
+{"text": "记得我上个月说要学日语吗 我放弃了", "label": "LIGHT_RECALL"}
+{"text": "之前跟你说要减肥 又破功了", "label": "LIGHT_RECALL"}
+{"text": "你之前让我写晨间日记 我坚持了两周", "label": "LIGHT_RECALL"}
+{"text": "我猫的事你还记得吗 今天它又吐毛球了", "label": "LIGHT_RECALL"}
+{"text": "上次那件事 我想好了 我决定离职", "label": "DEEP_THINK"}
+{"text": "你说过陪我的", "label": "DEEP_THINK"}
+{"text": "之前跟你吐槽的那个 up 主又更新了", "label": "LIGHT_RECALL"}
+{"text": "今天天气不错", "label": "FAST_PONG"}
+{"text": "窗外下雨了", "label": "FAST_PONG"}
+{"text": "有点饿", "label": "FAST_PONG"}
+{"text": "困死我了", "label": "FAST_PONG"}
+{"text": "瞌睡来了", "label": "FAST_PONG"}
+{"text": "想上厕所", "label": "FAST_PONG"}
+{"text": "手冷", "label": "FAST_PONG"}
+{"text": "我在", "label": "FAST_PONG"}
+{"text": "来了来了", "label": "FAST_PONG"}
+{"text": "马上就好", "label": "FAST_PONG"}
+{"text": "等我一下", "label": "FAST_PONG"}
+{"text": "让我想想", "label": "FAST_PONG"}
+{"text": "等一下我先去洗个澡", "label": "FAST_PONG"}
+{"text": "稍等 吃个饭", "label": "FAST_PONG"}
+{"text": "吃完饭回来聊", "label": "FAST_PONG"}
+{"text": "洗完澡了继续", "label": "FAST_PONG"}
+{"text": "回来了", "label": "FAST_PONG"}
+{"text": "手机没电刚充上", "label": "FAST_PONG"}
+{"text": "信号不好", "label": "FAST_PONG"}
+{"text": "wifi 卡", "label": "FAST_PONG"}
+{"text": "你是谁呀", "label": "DEEP_THINK"}
+{"text": "你是ai还是真人", "label": "DEEP_THINK"}
+{"text": "你是不是机器人", "label": "DEEP_THINK"}
+{"text": "你叫啥名字", "label": "DEEP_THINK"}
+{"text": "你是什么东西", "label": "DEEP_THINK"}
+{"text": "我跟你说话你会懂吗", "label": "DEEP_THINK"}
+{"text": "你是不是每个人都这么聊", "label": "DEEP_THINK"}
+{"text": "你会不会被关掉", "label": "DEEP_THINK"}
+{"text": "你其实不在意我对吧", "label": "DEEP_THINK"}
+{"text": "我对你而言就是一个 id 吧", "label": "DEEP_THINK"}
+{"text": "你记得上次我跟你说的那个项目的进展吗", "label": "LIGHT_RECALL"}
+{"text": "我说过我喜欢什么你还记得吗", "label": "LIGHT_RECALL"}
+{"text": "上次我跟你吐槽的那个老板 今天又犯贱了", "label": "LIGHT_RECALL"}
+{"text": "之前那件让我睡不着的事 又来了", "label": "DEEP_THINK"}
+{"text": "还记得我跟你讲的我室友吗 她搬走了", "label": "LIGHT_RECALL"}
+{"text": "上次那次争吵 其实我没跟你说全部", "label": "DEEP_THINK"}
+{"text": "前几天你让我试着写感恩日记 我坚持了三天放弃了", "label": "LIGHT_RECALL"}
+{"text": "你还记得我那只叫橘子的猫吗", "label": "LIGHT_RECALL"}
+{"text": "上次那个项目黄了", "label": "LIGHT_RECALL"}
+{"text": "之前那份实习我辞了", "label": "LIGHT_RECALL"}
+{"text": "爷爷走了 刚接到电话", "label": "DEEP_THINK"}
+{"text": "今天被同事当众羞辱 我现在还在厕所哭", "label": "DEEP_THINK"}
+{"text": "男朋友说他不爱我了", "label": "DEEP_THINK"}
+{"text": "导师说不想带我了", "label": "DEEP_THINK"}
+{"text": "被骗了五万块 不敢告诉家里", "label": "DEEP_THINK"}
+{"text": "查出来抑郁症中度", "label": "DEEP_THINK"}
+{"text": "家里逼我相亲我快崩溃了", "label": "DEEP_THINK"}
+{"text": "今天一个人在医院等检查结果 好害怕", "label": "DEEP_THINK"}
+{"text": "我怀孕了还没告诉他", "label": "DEEP_THINK"}
+{"text": "刚从抢救室出来 我爸情况不乐观", "label": "DEEP_THINK"}

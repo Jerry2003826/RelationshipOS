@@ -200,15 +200,11 @@ def build_proactive_scheduling_plan(
             min_seconds_since_last_outbound,
             30 * 60,
         )
-        scheduling_notes.append(
-            f"somatic_followup:{somatic_orchestration_plan.followup_style}"
-        )
+        scheduling_notes.append(f"somatic_followup:{somatic_orchestration_plan.followup_style}")
 
     if proactive_cadence_plan.close_after_stage_index > 1:
         stage_spacing_mode = "multi_touch_low_pressure"
-        scheduling_notes.append(
-            f"cadence:{proactive_cadence_plan.cadence_key}"
-        )
+        scheduling_notes.append(f"cadence:{proactive_cadence_plan.cadence_key}")
 
     first_touch_extra_delay_seconds = max(
         0,
@@ -216,9 +212,7 @@ def build_proactive_scheduling_plan(
     )
 
     if stage_parameter_profiles:
-        first_touch_profile = _find_stage_profile(
-            stage_parameter_profiles, "first_touch"
-        )
+        first_touch_profile = _find_stage_profile(stage_parameter_profiles, "first_touch")
         if first_touch_profile and float(first_touch_profile.get("confidence", 0)) > 0.3:
             learned_delay = int(first_touch_profile.get("learned_extra_delay_seconds", 0))
             if learned_delay > 0:
@@ -334,9 +328,7 @@ def build_proactive_orchestration_plan(
             allow_somatic_carryover = False
 
         if stage_parameter_profiles:
-            stage_profile = _find_stage_profile(
-                stage_parameter_profiles, stage_label
-            )
+            stage_profile = _find_stage_profile(stage_parameter_profiles, stage_label)
             if stage_profile and float(stage_profile.get("confidence", 0)) > 0.3:
                 learned_dm = str(stage_profile.get("learned_delivery_mode") or "none")
                 if learned_dm != "none":
@@ -441,10 +433,7 @@ def build_proactive_actuation_plan(
                 continuity_anchor = "shared_context_resume"
             if stage_directive.delivery_mode == "two_part_sequence":
                 bridge_move = "resume_the_open_loop"
-        elif (
-            not actuation_from_preset
-            and stage_directive.stage_label == "second_touch"
-        ):
+        elif not actuation_from_preset and stage_directive.stage_label == "second_touch":
             opening_move = (
                 "attunement_repair"
                 if session_ritual_plan.closing_move == "repair_soft_close"
@@ -467,8 +456,7 @@ def build_proactive_actuation_plan(
                 followup_style = "none"
         elif (
             not actuation_from_preset
-            and stage_directive.stage_label
-            == proactive_orchestration_plan.close_loop_stage
+            and stage_directive.stage_label == proactive_orchestration_plan.close_loop_stage
         ):
             opening_move = (
                 "attunement_repair"
@@ -557,9 +545,7 @@ def build_proactive_progression_plan(
         elif stage_label == "second_touch":
             max_overdue_seconds = max(stage_interval, 8 * 3600)
             on_expired = "jump_to_close_loop"
-            rationale = (
-                "If the second touch also goes stale, skip forward to a gentle close loop."
-            )
+            rationale = "If the second touch also goes stale, skip forward to a gentle close loop."
 
         if stage_label == close_loop_stage:
             max_overdue_seconds = max(stage_interval, 12 * 3600)
@@ -609,11 +595,7 @@ def build_proactive_guardrail_plan(
     stage_intervals = list(proactive_cadence_plan.stage_intervals_seconds or [0])
     max_dispatch_count = max(
         1,
-        int(
-            proactive_cadence_plan.close_after_stage_index
-            or len(stage_labels)
-            or 1
-        ),
+        int(proactive_cadence_plan.close_after_stage_index or len(stage_labels) or 1),
     )
     hard_stop_conditions: list[str] = []
     guidance_low_pressure = guidance_plan.handoff_mode in {

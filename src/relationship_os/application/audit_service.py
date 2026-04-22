@@ -137,9 +137,7 @@ class AuditService:
         resolved_version = projector_version or self._runtime_projector_version
         event_type_counts = Counter(event.event_type for event in events)
         lifecycle_snapshot_count = sum(
-            1
-            for event in events
-            if event.event_type == PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED
+            1 for event in events if event.event_type == PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED
         )
         payload: dict[str, Any] = {
             "session_id": session_id,

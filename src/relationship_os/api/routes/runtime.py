@@ -16,17 +16,12 @@ def _public_projectors(container: RuntimeContainer) -> list[dict[str, str]]:
         name = str(projector.get("name") or "")
         version = str(projector.get("version") or "")
         current = preferred_by_name.get(name)
-        if current is None or (
-            current.get("version") != "v1" and version == "v1"
-        ):
+        if current is None or (current.get("version") != "v1" and version == "v1"):
             preferred_by_name[name] = {
                 "name": name,
                 "version": version,
             }
-    return [
-        preferred_by_name[name]
-        for name in sorted(preferred_by_name)
-    ]
+    return [preferred_by_name[name] for name in sorted(preferred_by_name)]
 
 
 async def build_runtime_overview_payload(

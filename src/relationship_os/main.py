@@ -45,9 +45,7 @@ async def lifespan(app: FastAPI):
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Inject standard security response headers."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
@@ -67,11 +65,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.state.container = container
 
-    origins = [
-        o.strip()
-        for o in resolved_settings.cors_origins.split(",")
-        if o.strip()
-    ]
+    origins = [o.strip() for o in resolved_settings.cors_origins.split(",") if o.strip()]
     if origins:
         app.add_middleware(
             CORSMiddleware,

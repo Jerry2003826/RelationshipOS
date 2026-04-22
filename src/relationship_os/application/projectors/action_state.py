@@ -82,4 +82,3 @@ class ActionStateProjector(Projector[dict[str, Any]]):
             }
 
         return state
-

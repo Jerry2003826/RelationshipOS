@@ -177,9 +177,7 @@ _MODE_NOTE_PHASES = frozenset(
 
 def _buffer_case(phase: str) -> _PostDispatchCaseSpec:
     decision = (
-        "buffer_current_lifecycle_stage"
-        if phase == "activation"
-        else f"buffer_lifecycle_{phase}"
+        "buffer_current_lifecycle_stage" if phase == "activation" else f"buffer_lifecycle_{phase}"
     )
     return _PostDispatchCaseSpec(
         mode=f"buffered_lifecycle_{phase}",
@@ -357,18 +355,10 @@ def build_proactive_lifecycle_snapshot(
         stage_count=_optional_int(top_level.get("stage_count")),
         dispatched=bool(top_level.get("dispatched")),
         message_event_count=int(top_level.get("message_event_count") or 0),
-        selected_strategy_key=str(
-            top_level.get("selected_strategy_key") or "none"
-        ),
-        selected_pressure_mode=str(
-            top_level.get("selected_pressure_mode") or "none"
-        ),
-        selected_autonomy_signal=str(
-            top_level.get("selected_autonomy_signal") or "none"
-        ),
-        selected_delivery_mode=str(
-            top_level.get("selected_delivery_mode") or "none"
-        ),
+        selected_strategy_key=str(top_level.get("selected_strategy_key") or "none"),
+        selected_pressure_mode=str(top_level.get("selected_pressure_mode") or "none"),
+        selected_autonomy_signal=str(top_level.get("selected_autonomy_signal") or "none"),
+        selected_delivery_mode=str(top_level.get("selected_delivery_mode") or "none"),
         primary_source=str(top_level.get("primary_source") or "lifecycle"),
         phases=phase_records,
     )
@@ -389,9 +379,7 @@ def _build_post_dispatch_decision(
     spec = _POST_DISPATCH_SPECS[phase]
     payload = _decision_payload(previous_decision)
     case_name = _resolve_case_name(phase=phase, payload=payload)
-    if phase == "activation" and case_name == "active" and not payload.get(
-        "next_stage_label"
-    ):
+    if phase == "activation" and case_name == "active" and not payload.get("next_stage_label"):
         case_name = "retire"
     case = getattr(spec, case_name)
     current_stage_label = str(payload.get("current_stage_label") or "unknown")
@@ -405,9 +393,7 @@ def _build_post_dispatch_decision(
         int(payload.get("additional_delay_seconds") or 0),
     )
     next_stage_label = _optional_str(payload.get("next_stage_label"))
-    active_stage_label = _optional_str(
-        payload.get("active_stage_label")
-    ) or current_stage_label
+    active_stage_label = _optional_str(payload.get("active_stage_label")) or current_stage_label
     remaining_stage_count = max(
         0,
         int(payload.get("remaining_stage_count") or 0),
@@ -422,10 +408,7 @@ def _build_post_dispatch_decision(
         next_stage_label = None
         remaining_stage_count = 0
 
-    notes = [
-        str(item)
-        for item in list(payload.get(f"{previous_phase}_notes") or [])
-    ]
+    notes = [str(item) for item in list(payload.get(f"{previous_phase}_notes") or [])]
     if spec.mode_note_from_previous and previous_mode:
         notes.append(f"{previous_phase}:{previous_mode}")
     if line_state:
@@ -542,10 +525,7 @@ def _build_phase_rationale(
     previous_phase: str,
     decision: str,
 ) -> str:
-    return (
-        f"The proactive lifecycle {phase} projects the {previous_phase} posture "
-        f"into {decision}."
-    )
+    return f"The proactive lifecycle {phase} projects the {previous_phase} posture into {decision}."
 
 
 def _build_phase_record(
@@ -583,9 +563,7 @@ def _build_phase_record(
         actionability=_optional_str(payload.get("actionability")),
         changed=bool(payload.get("changed", False)),
         notes=[str(item) for item in notes],
-        active_sources=[
-            str(item) for item in list(payload.get("active_sources") or [])
-        ],
+        active_sources=[str(item) for item in list(payload.get("active_sources") or [])],
         rationale=str(payload.get("rationale") or ""),
         attrs=attrs,
     )

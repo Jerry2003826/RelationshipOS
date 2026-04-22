@@ -112,4 +112,3 @@ class ExecutionReceipt:
     adapter: str
     result: dict[str, Any] = field(default_factory=dict)
     occurred_at: str | None = None
-

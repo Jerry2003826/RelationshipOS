@@ -61,21 +61,13 @@ def test_policy_registry_merges_rendering_profile_runtime_behavior(tmp_path) -> 
         json.dumps(
             {
                 "version": "rendering-v1",
-                "runtime_behavior": {
-                    "edge_routing": {"large_user_message_threshold": 600}
-                },
+                "runtime_behavior": {"edge_routing": {"large_user_message_threshold": 600}},
             }
         ),
         encoding="utf-8",
     )
     (policies / "rendering" / "profiles" / "edge_desktop_4b.json").write_text(
-        json.dumps(
-            {
-                "runtime_behavior": {
-                    "edge_routing": {"large_user_message_threshold": 420}
-                }
-            }
-        ),
+        json.dumps({"runtime_behavior": {"edge_routing": {"large_user_message_threshold": 420}}}),
         encoding="utf-8",
     )
 
@@ -137,8 +129,5 @@ def test_policy_registry_loads_friend_chat_profile_from_repo() -> None:
     assert compiled.rendering_policy["response_rendering"]["defaults"]["max_sentences"] == 3
     assert compiled.persona_policy["action_policy"]["max_actions_per_turn"] == 0
     assert (
-        compiled.conscience_policy["mode_configs"]["partial_reveal"][
-            "allowed_fact_count_cap"
-        ]
-        == 1
+        compiled.conscience_policy["mode_configs"]["partial_reveal"]["allowed_fact_count_cap"] == 1
     )

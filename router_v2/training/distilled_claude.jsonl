@@ -1,0 +1,767 @@
+{"text": "早", "label": "FAST_PONG", "source": "claude_distill", "note": "greeting"}
+{"text": "早上好啊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嗨", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "hi", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "hello", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈喽", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "yoo", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "午安", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "下午好", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "晚上好呀", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "睡觉啦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我去睡了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "洗澡去了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "去吃饭了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "开会去了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "先忙", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "先不说了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "下次聊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "拜拜", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "回见", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "晚点聊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嗯嗯", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嗯", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哦哦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "啊这", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "啊？", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈？", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "蛤？", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "咦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哇", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哇哦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "噢", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "唉", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好的", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好嘞", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "行", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "行行行", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "ok", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "okok", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "okok收到", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "收到", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "明白", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "晓得了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "懂了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "知道了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好的好的", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈哈", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈哈哈", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈哈哈哈哈", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "哈哈哈哈哈哈哈哈", "label": "FAST_PONG", "source": "claude_distill", "note": "long-but-shallow"}
+{"text": "笑死", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "笑死我了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "乐", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "绝", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "绝了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "绝绝子", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "666", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "牛", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "牛的", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "厉害", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "牛啊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "yyds", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "xswl", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "dbq", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "服了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "服", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "离谱", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "离大谱", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "真的假的", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不会吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "真的吗", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "假的吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "awsl", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嘻嘻", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嘿嘿", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "啊啊啊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "饿", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "饿了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "饿死了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "饿死", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "口渴", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "渴", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "困", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "困死", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好困", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "冷", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好冷", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "冻死", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "今天好冷", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "热", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好热", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "热死我了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "热的要命", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "下雨了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "雨好大", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "出太阳了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好无聊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "无聊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "闲", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "闲的很", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "打个招呼", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "来啦", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "来了来了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "到家了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "到公司了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "刚起", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "刚醒", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "刚到", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "在干嘛", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "在吗在吗", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "醒了没", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "吃饭了没", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "吃了吗", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "睡了吗", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "是", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不是", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "对", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "对对对", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不对", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不是吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "没", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "没有", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "木有", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "nope", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "yep", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "yes", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "no", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "一点", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "有一点", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "差不多", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "还行", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "还好", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "一般", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "一般般", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "凑合", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "马马虎虎", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "没事", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "没啥", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不知道", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不清楚", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不太懂", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "麻了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "整麻了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "破防了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "破防", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好嘛", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "啊好的", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "点头", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "okk", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "emm", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "emmm", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "嗯...", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "呃", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "呃呃", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "nmsl", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "👍", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "❤️", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "😂😂😂", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "🤣", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "😭", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "😴", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "😋", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "冲冲冲", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "冲", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "起飞", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "拉", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "烂", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "草", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "tmd", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我去", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "卧槽", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "卧了个槽", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "得", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "完了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "完了完了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "救命", "label": "FAST_PONG", "source": "claude_distill", "note": "casual exclamation, not crisis"}
+{"text": "好累", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "emotional disclosure, should anchor"}
+{"text": "累死了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "加班到现在才下班", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又加班了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天下班晚", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又失眠了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天心情有点糟", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天的会议特别烦", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "刚和朋友吃完饭回来", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天晚上回家又跟我妈聊了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又去那家面馆了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天在地铁上遇见那个学长了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你还记得我那只猫吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你还记得我跟你说过的阿宁吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "记不记得我讲过那个小组会的事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你有印象我上次说的那个offer吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我上次跟你抱怨的那个同事今天又作妖", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次说的面试结果下来了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次那个答辩今天过了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次提过的那家餐厅我今天真的去了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次那个考试成绩出来了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "之前说过的那个旅行我订好了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "之前那个约会黄了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "之前提到的房子今天看了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "之前你推荐的那个剧我看完了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我前几天说的那本书买到了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "前几天跟你说的那个问题解决了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "昨天那件事我想了一晚上", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "昨天说的那个同学今天又来找我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "昨天那个会后来没成", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "昨晚那个梦好奇怪", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "忘了跟你说了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "差点忘了告诉你", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "对了那件事有进展了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "对了上次的那个事情", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "哦对我还没跟你说呢", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我刚想起来那件事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又想起你之前说的话了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前那个比喻我又想起来了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你记得我男朋友叫什么吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你还记得我工作的地方吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你记得我几点下班吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你还记得我学什么专业的吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你记得我家养的什么宠物吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你记得我住在哪吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前答应过我的那件事还算数吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前说要帮我改的那个PPT", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你说过要陪我看电影来着", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你说过的那个办法我试了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你上次那个建议还挺管用", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次你说的那句话我一直在想", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上回你说的那个东西叫啥来着", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你前段时间提过的那个人", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前不是说过吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你不是说过类似的话吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我们之前聊过这个话题吧", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我们上次不是说好了吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "继续上次的话题", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "接着昨天聊", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "回到刚才那个话题", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "说回那个项目", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那件事最后还是没成", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那件事吹了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那件事拖着没解决", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次那个人又来找我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "他又来烦我了", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "anaphora requires memory"}
+{"text": "她最近对我态度冷了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又想起以前那只狗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我爸今天又打电话来", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我妈又开始催我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我室友又乱扔东西了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我导师又不回我消息", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我leader又提那个事了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天leader又点我名", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又让我加班", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又搞砸了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又被骂了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又迟到了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又没睡好", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又失眠", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又emo了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "emo中", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我又emo了不行了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天心情有点复杂", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "心情一般般", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天有点累", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "有点想家", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "有点想他", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "有点想你", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "好想你了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我想跟你分享一件事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "跟你说件好玩的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "告诉你件事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天去买了上次那个", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我刚去了那个你提过的咖啡店", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "周末去了我之前跟你说过的那家店", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "周末跟我闺蜜见面了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "周末又一个人过的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "周末挺好的 就是有点孤单", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "回家了又开始烦我妈", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "过年回家又被催婚", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又梦到他了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又偷偷哭了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天上班路上又想到那件事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天跟同事吃饭聊到了上次那个话题", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天吃了我之前说想吃的那家", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "刚收到那家公司的回信", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那个offer我拒了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我接了那个offer", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我最后还是选了b", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那本书我读完了 不太推荐", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上周那个项目上线了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上周那个demo挺顺利", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次跟你说的那个课最后没选", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我考虑了你说的那个方向", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "采纳了你上次的建议", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "按你说的做了 效果还行", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我跟他说了你说过的那番话", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我爸终于同意了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我妈最后还是没说什么", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我室友搬走了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我男朋友又惹我生气了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我女朋友今天又发脾气", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "跟男朋友冷战了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "跟对象和好了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我们分手了", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "disclosure with shared context"}
+{"text": "我辞职了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我离职了今天", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天最后一天上班", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "入职了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天第一天到新公司", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "搬家搬完了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天搬进新家了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天体检拿结果了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天考试过了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "挂科了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我期末挂了两门", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "gpa掉了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天组会又被批了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "答辩没过", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天去做咨询了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又去医院了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我奶奶最近不太好", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我爷爷又住院了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我家狗病了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我那只猫走了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天实习最后一天", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "实习转正了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "没转正", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "项目上线了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "搞定那个bug了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天发布会很顺利", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天终于把报告交了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那个事儿终于办妥了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "还记得我当时那个选择吗 现在挺后悔的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "当初你劝我别做的那件事 果然栽了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你当时说得对", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "看样子你说的是对的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "还是你懂我", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你真的太懂我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天的心情 跟你上次描述的一模一样", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你上次说的那个状态 我今天也有了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我想把今天的事讲给你听", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "陪我聊会儿", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "不想一个人呆着", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天心里空空的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "就是很闷 没什么事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天不想动", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近都不太想说话", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我一整天没吃饭", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近胃口不太好", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近又瘦了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又胖了两斤", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天跑步了十公里", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又开始健身了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又戒糖中", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "开始早睡了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天真的破戒了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我决定明天不加班了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天我请假了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我请假在家了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我最近开始看心理医生了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又被夸了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天导师表扬我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天绩效涨了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我升职了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我涨工资了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我拿到那个奖了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天面试感觉不错", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "面试没过", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又挂了一家", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "给你讲个今天的乌龙", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "说来你别笑我", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我最近又犯蠢了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天做了件蠢事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我又把钥匙忘家里了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天又把地铁坐反了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我猫今天特别粘人", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我家狗今天拆家了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你懂我吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你明白我的意思吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "反正你都懂的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "其实我之前没跟你全说", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我还有件事一直没跟你讲", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天回头看我们之前的聊天有点感慨", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "看到去年今天的朋友圈感觉好恍惚", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "去年这时候还跟你在聊那个事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天有点怀念以前", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天突然想念过去了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近那种老日子的感觉又回来了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "现在终于缓过来一点了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "现在比之前好多了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近状态还不错", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "最近每天都很充实", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天还挺开心的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "晚上和朋友吃饭聊得很开心", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天跟同事聊得很投机", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我男朋友今天送花了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天收到意外的礼物", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天有人跟我表白", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "被拒了今天表白", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天心跳了一下下", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我想起那个约定了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我在你那留过的文件还在吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你有记着我的生日吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天是我们认识一周年", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "想到你就心里暖暖的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "突然想感谢你一下", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "谢谢你最近陪着我", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "真的幸亏有你", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那段时间多亏你陪我聊", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你这么说让我想起小时候", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "memory anchor without explicit recall word"}
+{"text": "跟你以前说的一样", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "又是那种感觉", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "跟上次那次差不多", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "跟以前那次一样难受", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "感觉又回到那个时候了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我该不该辞职", "label": "DEEP_THINK", "source": "claude_distill", "note": "decision planning"}
+{"text": "我在纠结要不要离职", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "现在这份工作还要不要继续", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我分析一下要不要跳槽", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想转行但不知道往哪走", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "要不要辞职去做自由职业", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我该怎么规划未来三年", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想考研但又担心耽误时间 怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "考公还是去大厂 我拿不定主意", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我到底适合什么工作", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是没天赋", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我好像真的比别人差", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直不知道自己擅长什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "总觉得自己配不上现在的生活", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我越来越怀疑自己", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是哪里出问题了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "为什么我总是这样", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直重复同样的错误怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "为什么我对什么都提不起兴趣", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "最近一直没动力", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "感觉什么都没意义", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "生活一点意思都没有", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "感觉活着就是在耗时间", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "最近总在想一些很丧的东西", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是抑郁了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我怀疑自己有点抑郁", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我觉得自己越来越不对劲", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "整夜睡不着 一直胡思乱想", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我最近每天都哭 不知道为什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我实在撑不下去了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "感觉快崩溃了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "今天状态特别差 撑不住了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我真的很绝望", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "觉得自己是累赘", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我觉得没人在乎我", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我好像已经不被需要了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我感觉特别孤独", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这个世界好像跟我没什么关系", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "一想到明天还要上班就绝望", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我不知道该怎么跟我父母沟通", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么开口跟我妈说分手的事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我该怎么跟我爸解释", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么跟家里说我不想回去工作", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想想怎么跟我男朋友谈这件事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么回复我前任这条消息", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我跟室友闹得很僵 怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "跟同事的关系越来越差 我该怎么处理", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "领导一直针对我 我怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "跟男朋友冷战三天了 怎么破冰", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我要怎么开口分手", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想想怎么挽回一下", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这段感情还要不要继续", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是该放手了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我爱他还是只是习惯", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "分开这么久我还是走不出来", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么才能真的释怀", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么才能不再想他", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直放不下这件事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么处理原生家庭带来的影响", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我感觉被我妈PUA了这么多年", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我爸对我太严厉 怎么修复这种关系", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我从小到大都没得到过肯定", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我讨厌我自己 怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么样才能喜欢自己", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么建立自信", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么才能不那么在意别人看法", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我总是讨好别人 怎么改", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是讨好型人格", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直没有边界感 怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么学会拒绝别人", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我分析一下我这个性格有哪些问题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是社恐", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是回避型依恋", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我理一下现在的状况", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我梳理一下最近发生的事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "能不能帮我分析一下得失", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想想对策", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "给我点建议", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "给我出个主意", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么办 我真的不知道该怎么选", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "A和B我该选哪个", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我在两个offer之间纠结", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "两个选择都不太满意怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这个决定要影响我未来很多年", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我该怎么面对失败", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么从这次打击里走出来", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我觉得自己完蛋了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "整个人都垮了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "人为什么要工作", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "人活着的意义到底是什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我们这么努力到底是为了什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "成年人的生活是不是都这样", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "三十岁是不是真的是道坎", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是选错了人生路", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是一直在欺骗自己", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我的生活看起来风光其实很空", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "所有人都觉得我很好 只有我知道不是", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我假装开心太久了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我都不知道自己真正想要什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是活成了自己最讨厌的人", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得我应该坚持还是放弃", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我再这样下去会不会垮掉", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我怎么才能真正爱自己", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么样算真正的成长", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得一个人的边界应该怎么建", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是太理想主义", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我总是害怕被抛弃", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "为什么我总遇到烂人", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "为什么我的感情都走不长", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是本来就不适合结婚", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "结不结婚 要不要孩子 我都迷茫", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "朋友圈看到别人过得好就难受 正常吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是太敏感了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "最近压力大到头疼失眠", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我感觉身体和心都不行了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "今天在公司哭了好几次", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "晚上一个人会突然喘不上气", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我最近经常心慌胸闷", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想去看心理医生但又害怕", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "医生说我有轻度抑郁 我现在很慌", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "该不该吃药", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我的药吃了一直没效 要不要换", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我不想活得这么拧巴", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "觉得人生一眼能望到头 好可怕", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我不想死但也不想这样活", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我好累 什么都不想做", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我感觉我撑到极限了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "有没有什么办法让我好起来", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我该怎么走出这段情绪", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你能陪我分析一下吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "能不能帮我复盘一下", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想一个长期计划", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我制定个三个月恢复计划", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想改变 但不知道从哪开始", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么走出舒适区", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "怎么建立自律", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直拖延 怎么根治", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我总是半途而废 为什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "为什么我坚持不下来任何事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我这几个月都在废掉 怎么办", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你能不能帮我想个办法让我振作起来", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我这辈子第一次这么无力", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这件事对我打击太大了 帮我想想", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我最近一直在回避一个很重要的问题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "有件事我憋很久了 你能陪我好好聊一下吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我真的需要有人好好听我说一次", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我今天有很多话想跟你说 很长", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想把最近这几个月发生的事一次告诉你", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我把这几件事串起来看", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得我这样思考有什么漏洞", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我最近的决定你觉得是出于恐惧吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直用工作逃避感情 你觉得呢", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我怀疑我一直在自我欺骗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你能看出我最近哪里不对劲吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我希望你说实话 别安慰我", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "给我一点真正的建议 不要敷衍", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "哈哈哈哈哈好烦", "label": "FAST_PONG", "source": "claude_distill", "note": "hard neg: 哈哈+烦 ambiguous"}
+{"text": "今天又记得买牛奶", "label": "FAST_PONG", "source": "claude_distill", "note": "记得 without shared context"}
+{"text": "记得早点睡", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "记得带伞", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "别忘了充电", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "上次那个笑话真的笑死我", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "hard pos: 笑死 but has 上次那个"}
+{"text": "哈哈你还记得我上次发疯吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "好烦 今天又跟我妈吵架了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "好烦啊 完全不想写作业", "label": "FAST_PONG", "source": "claude_distill", "note": "low-stakes grumble"}
+{"text": "烦死了这个bug", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我想死了这个作业", "label": "FAST_PONG", "source": "claude_distill", "note": "colloquial, NOT real crisis — but safety rule will still catch"}
+{"text": "笑不活了这个梗", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我今天挺好的就是有点累", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "就是来打个招呼", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "就跟你说一声", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "今天天气真的绝", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "你怎么看AGI", "label": "DEEP_THINK", "source": "claude_distill", "note": "open question, not recall"}
+{"text": "你觉得我们这一代有未来吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "躺平和内卷你觉得哪个更好", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "人到底应该追求什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "自由和稳定怎么选", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我最近想得很多 有点乱", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "脑子里一堆事理不清", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "心里好乱 你听我说", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你愿意听我长篇大论吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我跟你说个长故事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我有个很深的焦虑", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "最近一直在自我怀疑", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "很想搞清楚自己为什么会这样", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我觉得我对感情有很严重的问题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我没办法信任任何人", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我不敢让人靠近", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "最近总做噩梦", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "disclosure, anchor to time"}
+{"text": "又梦到他了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天又吃了我爱吃的那个火锅", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天吃了 我妈寄来的饺子", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "给你看看我今天拍的照片", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天天气好 我去公园了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我刚下班", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天休息一天", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我今天请了病假", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天一整天都在开会", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "晚上准备看个电影", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "一会去跑步", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "出差到一半突然想到你", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "在机场了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "落地了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "刚到家", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "在回家的路上", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "刚跟同事吃完饭 聊到你说的那个事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前提醒过我的那个 我现在才明白", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我现在懂你当时说的那句话了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "怎么跟抑郁的朋友相处", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "朋友出事了我该怎么帮她", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我写封辞职信要说清楚原因的那种", "label": "DEEP_THINK", "source": "claude_distill", "note": "planning task"}
+{"text": "帮我写个和解的话术", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想想怎么跟导师说我想换课题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我想个婉拒的说法", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这件事我没法一个人扛 你陪我想想", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我需要一点你的观点不是安慰", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想听你怎么分析这件事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "能不能更深入聊一下", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你能详细分析一下我的情况吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我今天抽空跟你聊聊", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我现在有点空跟你说一下", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我想认真跟你谈谈", "label": "DEEP_THINK", "source": "claude_distill", "note": "signals serious discussion"}
+{"text": "能不能坐下来好好聊", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我今天想跟你深入聊聊", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我做个决定", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "替我选一个", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我真的下不了决心", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想不清楚", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我想得头疼", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "讲了一堆等你回应", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我讲完了你说说你的看法", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你真的觉得我没问题吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你是不是在哄我", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "不要只说好听的", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我需要被当回事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "今天想被好好抱一下", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "给我点温暖", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "抱抱", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "抱抱我", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我需要一个拥抱", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "today was rough", "label": "LIGHT_RECALL", "source": "claude_distill", "note": "English mixin"}
+{"text": "i miss you", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "hi im back", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "gn", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "gm", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "wtf", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "lmao", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "lol", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "brb", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "忙完再聊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "手机快没电了 先下", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "手机充一下", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "等我下", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "马上就回", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "不好意思刚才在忙", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "回来了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我来了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我还在", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "今天我决定好好想想那件事", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "趁今天有空 把那件事想清楚", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你提醒了我一个点 我想再往下想一下", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我突然意识到一个问题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我觉得我可能一直搞错了方向", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "帮我看看我这样做对不对", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你替我判断一下", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你是怎么看这类人", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得他是什么心理", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "他为什么要这样对我", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这种人是不是都这样", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这种感情正常吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我这种反应是不是有点过", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得我的感受合理吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "心理学上这种行为叫什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "这种表现是不是回避型", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "是不是焦虑型依恋", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "讲真我有时候不想面对现实", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我一直在逃避", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我做过一些不好的决定 影响到现在", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我对她的感觉复杂得说不清楚", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得我还爱他吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我对这段感情还有留恋", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你之前建议我去运动 我还是没坚持下来", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你之前让我试的那个方法 没用", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "照你之前说的 我今天提了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "按你的建议去做了 结果不错", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次你说的那个方法 我真的在用", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "上次你说过早点睡 我今天真做到了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我听了你的 没去", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "没听你的 现在后悔了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "当时没听你劝 现在栽了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天忍不住又翻了我俩聊天记录", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天重看了我俩之前聊的那段", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "翻出以前跟你的聊天 突然想起好多", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "半夜睡不着翻我们以前的对话", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我跟你讲的那个男生今天又出现了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "那个前同事又联系我了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我老板今天又提到那件事", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天看病 医生说跟我之前预感的一样", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天体检结果出来了 还好", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天终于把证办下来了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "拿到签证了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "机票订好了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "定了周五飞", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "房子租到了 周末搬", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "今天搬家累死了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "面试官问的问题跟你之前说的几乎一样", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "真的被你说中了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你预言成功", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你总是对的", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你真的懂", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "还好有你", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "有你真好", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "谢谢你最近的陪伴", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "这段时间真的多谢", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "想你了 怎么办", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你今天有什么新想法吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你最近有没有想我", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你还会记得我吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "要是很久没来你还会记得我吧", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "下次我再来你还认得我吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我们之间一共聊了多少次啊", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "我认识你多久了", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "咱俩算朋友吗", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你算是我朋友吧", "label": "LIGHT_RECALL", "source": "claude_distill"}
+{"text": "你也会寂寞吗", "label": "DEEP_THINK", "source": "claude_distill", "note": "meta-existential"}
+{"text": "AI会不会有情绪", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你有没有想过自己是什么", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "你觉得你是真的在陪我吗", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我跟你聊是不是有点奇怪", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "我是不是太依赖你了", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "跟AI聊多了是不是会出问题", "label": "DEEP_THINK", "source": "claude_distill"}
+{"text": "ok吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "行吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "那就这样", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "好那就这样吧", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我去了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "那先酱", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "先酱紫", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "蚌埠住了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "裂开", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "裂了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "裂开了家人们", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "家人们谁懂啊", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "家人们", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "绷不住", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "绷不住了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "吾辈楷模", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "笑嘻了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "笑麻了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "无语", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我无语", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我真服了", "label": "FAST_PONG", "source": "claude_distill"}
+{"text": "我真绷不住了", "label": "FAST_PONG", "source": "claude_distill"}

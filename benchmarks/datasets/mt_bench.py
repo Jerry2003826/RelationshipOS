@@ -39,7 +39,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="帮我写一段产品描述，产品是一款面向户外爱好者的智能水壶。",
         turn2="把语气从营销风格改成朋友之间随口推荐的感觉。",
     ),
-
     # ── Roleplay ──
     MTBenchQuestion(
         qid=11,
@@ -59,7 +58,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="假设你是一个古代中国的诗人，刚刚写完一首关于月亮的诗。朗诵给我听。",
         turn2="用现代白话文解释这首诗的意境和情感。",
     ),
-
     # ── Reasoning ──
     MTBenchQuestion(
         qid=21,
@@ -79,7 +77,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="一栋楼有 100 层，你有 2 个完全一样的鸡蛋。你需要找到刚好让鸡蛋摔碎的最低楼层。最优策略是什么？最坏情况需要几次？",
         turn2="如果你有 3 个鸡蛋呢？最坏情况能减少到几次？",
     ),
-
     # ── Math ──
     MTBenchQuestion(
         qid=31,
@@ -99,7 +96,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="一个班有 30 个学生。至少有多少个学生生日在同一个月份？",
         turn2="如果要保证至少有 3 个学生生日在同一天（忽略年份），最少需要多少学生？",
     ),
-
     # ── Coding ──
     MTBenchQuestion(
         qid=41,
@@ -119,7 +115,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="写一个函数，把嵌套的 JSON 对象展平为一层的字典。比如 {'a': {'b': 1}} 变成 {'a.b': 1}。",
         turn2="反过来，写一个函数把展平的字典还原成嵌套结构。",
     ),
-
     # ── Extraction ──
     MTBenchQuestion(
         qid=51,
@@ -139,7 +134,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="分析这句话的逻辑关系：'虽然天气预报说明天会下雨，但小明还是决定去爬山，因为他已经约好了朋友。'",
         turn2="把这个逻辑关系用 if-then 的形式表达出来。",
     ),
-
     # ── STEM ──
     MTBenchQuestion(
         qid=61,
@@ -159,7 +153,6 @@ MT_BENCH_QUESTIONS: list[MTBenchQuestion] = [
         turn1="解释一下什么是 Transformer 架构中的自注意力机制。",
         turn2="自注意力和传统的 RNN 相比，优势和劣势各是什么？",
     ),
-
     # ── Humanities ──
     MTBenchQuestion(
         qid=71,

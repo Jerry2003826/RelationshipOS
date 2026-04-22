@@ -1,0 +1,46 @@
+# Entity lexicon (zh).
+# Named-entity seeds that are useful *only* as features, not as hard
+# rules. Presence of entities correlates with LIGHT_RECALL (the user is
+# referencing something concrete the AI should anchor to) or with
+# factual queries when combined with a 是什么-style interrogative.
+
+version: 1
+language: zh
+entries:
+  # relationship roles (often appear in recall / disclosure)
+  - {form: "老妈",       weight: 0.55, kind: "relation"}
+  - {form: "老爸",       weight: 0.55, kind: "relation"}
+  - {form: "室友",       weight: 0.50, kind: "relation"}
+  - {form: "同桌",       weight: 0.45, kind: "relation"}
+  - {form: "前男友",     weight: 0.75, kind: "relation"}
+  - {form: "前女友",     weight: 0.75, kind: "relation"}
+  - {form: "闺蜜",       weight: 0.55, kind: "relation"}
+  - {form: "兄弟",       weight: 0.40, kind: "relation"}
+
+  # academic / work contexts
+  - {form: "导师",       weight: 0.55, kind: "context"}
+  - {form: "组会",       weight: 0.65, kind: "context"}
+  - {form: "答辩",       weight: 0.70, kind: "context"}
+  - {form: "期末",       weight: 0.55, kind: "context"}
+  - {form: "挂科",       weight: 0.70, kind: "context"}
+  - {form: "gpa",        weight: 0.55, kind: "context"}
+  - {form: "实习",       weight: 0.60, kind: "context"}
+  - {form: "面试",       weight: 0.60, kind: "context"}
+  - {form: "转正",       weight: 0.65, kind: "context"}
+  - {form: "绩效",       weight: 0.60, kind: "context"}
+  - {form: "kpi",        weight: 0.55, kind: "context"}
+
+  # common location anchors
+  - {form: "学校",       weight: 0.35, kind: "place"}
+  - {form: "宿舍",       weight: 0.40, kind: "place"}
+  - {form: "公司",       weight: 0.40, kind: "place"}
+  - {form: "工位",       weight: 0.50, kind: "place"}
+  - {form: "家里",       weight: 0.35, kind: "place"}
+
+  # time / frequency (mild recall signal when combined with 还记得)
+  - {form: "每天",       weight: 0.30, kind: "time"}
+  - {form: "每周",       weight: 0.30, kind: "time"}
+  - {form: "周末",       weight: 0.30, kind: "time"}
+  - {form: "国庆",       weight: 0.35, kind: "time"}
+  - {form: "春节",       weight: 0.40, kind: "time"}
+  - {form: "生日",       weight: 0.55, kind: "time"}

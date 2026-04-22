@@ -33,15 +33,9 @@ PROACTIVE_ORCHESTRATION_UPDATED = "system.proactive_orchestration.updated"
 PROACTIVE_ACTUATION_UPDATED = "system.proactive_actuation.updated"
 PROACTIVE_PROGRESSION_UPDATED = "system.proactive_progression.updated"
 PROACTIVE_GUARDRAIL_UPDATED = "system.proactive_guardrail.updated"
-PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED = (
-    "system.proactive_aggregate_governance.assessed"
-)
-PROACTIVE_AGGREGATE_CONTROLLER_UPDATED = (
-    "system.proactive_aggregate_controller.updated"
-)
-PROACTIVE_ORCHESTRATION_CONTROLLER_UPDATED = (
-    "system.proactive_orchestration_controller.updated"
-)
+PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED = "system.proactive_aggregate_governance.assessed"
+PROACTIVE_AGGREGATE_CONTROLLER_UPDATED = "system.proactive_aggregate_controller.updated"
+PROACTIVE_ORCHESTRATION_CONTROLLER_UPDATED = "system.proactive_orchestration_controller.updated"
 PROACTIVE_STAGE_CONTROLLER_UPDATED = "system.proactive_stage_controller.updated"
 PROACTIVE_LINE_CONTROLLER_UPDATED = "system.proactive_line_controller.updated"
 PROACTIVE_STAGE_REFRESH_UPDATED = "system.proactive_stage_refresh.updated"
@@ -56,9 +50,7 @@ PROACTIVE_LINE_STATE_UPDATED = "system.proactive_line_state.updated"
 PROACTIVE_LINE_TRANSITION_UPDATED = "system.proactive_line_transition.updated"
 PROACTIVE_LINE_MACHINE_UPDATED = "system.proactive_line_machine.updated"
 PROACTIVE_LIFECYCLE_EVENT_PREFIX = "system.proactive_lifecycle_"
-PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED = (
-    "system.proactive_lifecycle_snapshot.updated"
-)
+PROACTIVE_LIFECYCLE_SNAPSHOT_UPDATED = "system.proactive_lifecycle_snapshot.updated"
 PROACTIVE_FOLLOWUP_DISPATCHED = "system.proactive_followup.dispatched"
 PROACTIVE_DISPATCH_OUTCOME_RECORDED = "system.proactive_dispatch_outcome.recorded"
 RESPONSE_POST_AUDITED = "system.response_post_audited"
