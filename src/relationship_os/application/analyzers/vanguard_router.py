@@ -48,11 +48,28 @@ def _get_v2_router() -> Any:
     return _V2_ROUTER
 
 
-def _downgrade(route_type: str) -> str:
-    """Map v2 three-class label to legacy two-class label."""
-    if route_type == "FAST_PONG":
+# Conservative gate for the legacy contract. The v2 model is trained on
+# short Chinese utterances; some English long questions slip into
+# FAST_PONG because the tier-2 classifier lacks coverage there. Downstream
+# runtime logic (knowledge_boundary, single_message, etc.) relies on
+# NEED_DEEP_THINK being chosen whenever a turn *could* be substantive.
+# We therefore only trust FAST_PONG when v2 is highly confident AND the
+# text is short enough to be a genuine greeting / acknowledgement.
+_FAST_PONG_MAX_LEN = 12
+_FAST_PONG_MIN_CONFIDENCE = 0.85
+
+
+def _downgrade(route_type: str, confidence: float, text_len: int) -> str:
+    """Map v2 three-class label to legacy two-class label, conservatively."""
+    if (
+        route_type == "FAST_PONG"
+        and confidence >= _FAST_PONG_MIN_CONFIDENCE
+        and text_len <= _FAST_PONG_MAX_LEN
+    ):
         return "FAST_PONG"
-    # LIGHT_RECALL and DEEP_THINK both go through the non-fast path.
+    # Everything else — LIGHT_RECALL, DEEP_THINK, or a low-confidence
+    # FAST_PONG on a long / non-trivial message — goes through the
+    # deep path so downstream analysers run.
     return "NEED_DEEP_THINK"
 
 
@@ -90,7 +107,11 @@ async def route_user_turn(
         )
 
     return RouterDecision(
-        route_type=_downgrade(decision.route_type),
+        route_type=_downgrade(
+            decision.route_type,
+            float(decision.confidence),
+            len(user_message.strip()),
+        ),
         reason=f"v2::{decision.decided_by}::{decision.reason}",
         confidence=float(decision.confidence),
     )
