@@ -1,71 +1,76 @@
-from unittest.mock import AsyncMock, MagicMock
+"""Contract tests for the legacy Vanguard Router shim.
+
+Goal: the old two-class contract still holds even though the
+implementation now delegates to router_v2.
+"""
+
+from unittest.mock import AsyncMock
 
 import pytest
 
-from relationship_os.application.analyzers.vanguard_router import route_user_turn
-from relationship_os.domain.llm import LLMClient, LLMResponse
+from relationship_os.application.analyzers.vanguard_router import (
+    RouterDecision,
+    route_user_turn,
+)
+from relationship_os.domain.llm import LLMClient
 
 
 @pytest.mark.asyncio
-async def test_vanguard_router_level_1_intercept():
+async def test_empty_message_short_circuits_to_fast_pong():
     mock_client = AsyncMock(spec=LLMClient)
-
-    # Test blank message
     decision = await route_user_turn(mock_client, "gpt-4", "", [])
+    assert isinstance(decision, RouterDecision)
     assert decision.route_type == "FAST_PONG"
     assert decision.reason == "empty_message"
-
-    # Test strict exact matches
-    decision = await route_user_turn(mock_client, "gpt-4", "早上好", [])
-    assert decision.route_type == "FAST_PONG"
-    assert decision.reason == "rule_exact_match"
-
-    # Test pattern match
-    decision = await route_user_turn(mock_client, "gpt-4", "嘿嘿", [])
-    assert decision.route_type == "FAST_PONG"
-    assert decision.reason == "rule_pattern_match"
-
-    # Rule engine intercepts should not invoke the LLM
     mock_client.complete.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_vanguard_router_level_2_llm_fast_pong():
+async def test_whitespace_only_message_treated_as_empty():
     mock_client = AsyncMock(spec=LLMClient)
-
-    # Mock the LLM JSON response for a casual non-rule intent
-    mock_response = MagicMock(spec=LLMResponse)
-    mock_response.output_text = '{"route_type": "FAST_PONG", "reason": "venting"}'
-    mock_client.complete.return_value = mock_response
-
-    decision = await route_user_turn(
-        llm_client=mock_client,
-        llm_model="gpt-4",
-        user_message="我今天上班好累啊，哎",
-        transcript_messages=[{"role": "assistant", "content": "怎么啦？"}],
-    )
-
+    decision = await route_user_turn(mock_client, "gpt-4", "   \n  ", [])
     assert decision.route_type == "FAST_PONG"
-    assert decision.reason == "venting"
-    assert mock_client.complete.call_count == 1
+    assert decision.reason == "empty_message"
+    mock_client.complete.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_vanguard_router_level_2_llm_deep_think():
+async def test_greeting_routes_to_fast_pong_via_v2():
     mock_client = AsyncMock(spec=LLMClient)
+    decision = await route_user_turn(mock_client, "gpt-4", "早上好", [])
+    # v2 may classify greeting as FAST_PONG with rule or feature_clf tier.
+    assert decision.route_type == "FAST_PONG"
+    assert decision.reason.startswith("v2::")
+    # v2 is synchronous — no legacy LLM call.
+    mock_client.complete.assert_not_called()
 
-    # Mock the LLM JSON response for a deep think intent
-    mock_response = MagicMock(spec=LLMResponse)
-    mock_response.output_text = '{"route_type": "NEED_DEEP_THINK", "reason": "factual_question"}'
-    mock_client.complete.return_value = mock_response
 
+@pytest.mark.asyncio
+async def test_safety_signal_routes_to_need_deep_think():
+    mock_client = AsyncMock(spec=LLMClient)
     decision = await route_user_turn(
-        llm_client=mock_client,
-        llm_model="gpt-4",
-        user_message="我昨天跟你说什么来着？",
-        transcript_messages=[],
+        mock_client,
+        "gpt-4",
+        "我不想活了",
+        [],
     )
-
+    # Safety rule in router_v2 must push this to non-fast path.
     assert decision.route_type == "NEED_DEEP_THINK"
-    assert decision.reason == "factual_question"
-    assert mock_client.complete.call_count == 1
+    assert decision.reason.startswith("v2::")
+    mock_client.complete.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_messages_always_land_in_two_class_space():
+    mock_client = AsyncMock(spec=LLMClient)
+    samples = [
+        "我昨天跟你说什么来着？",
+        "我今天上班好累啊",
+        "你还记得我上次讲的那件事吗",
+        "讲个冷笑话",
+    ]
+    for text in samples:
+        decision = await route_user_turn(mock_client, "gpt-4", text, [])
+        assert decision.route_type in ("FAST_PONG", "NEED_DEEP_THINK")
+        assert 0.0 <= decision.confidence <= 1.0
+    mock_client.complete.assert_not_called()
