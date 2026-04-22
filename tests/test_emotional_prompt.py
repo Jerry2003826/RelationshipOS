@@ -5,6 +5,7 @@ from __future__ import annotations
 from relationship_os.application.analyzers.emotional_prompt import (
     VALID_EMOTION_TAGS,
     audit_unsupported_recall,
+    audit_unsupported_recall_v2,
     build_emotional_prompt,
     diff_prompts,
 )
@@ -204,3 +205,113 @@ def test_audit_accepts_tag_match() -> None:
 
 def test_audit_returns_list_type_on_empty_response() -> None:
     assert audit_unsupported_recall("", [{"summary": "x"}]) == []
+
+
+# ---------------------------------------------------------------------------
+# W5.4 binding-mismatch audit (v2) tests
+# ---------------------------------------------------------------------------
+
+
+def test_audit_v2_flags_pet_name_asserted_as_food_regression() -> None:
+    # Regression case from benchmark_20260422_175632.json cross_session probe:
+    # 年糕 is declared as pet_name (a cat), but the response claims the user
+    # "特别爱吃年糕" — asserting food category. v1 misses this because
+    # "年糕" does appear in memory surface.
+    response = (
+        "现在跟你聊天确实放松多了，咱们的关系也熟络亲近了很多，"
+        "就像我记得你特别爱吃年糕一样，这些细节我都记在心里。"
+    )
+    memory = [
+        {"entity": "年糕", "entity_type": "pet_name", "summary": "用户养的猫叫年糕"},
+        {"entity": "苏州", "entity_type": "place", "summary": "用户是苏州人"},
+        {"entity": "榛子拿铁", "entity_type": "drink", "summary": "喜欢喝榛子拿铁"},
+    ]
+    flags = audit_unsupported_recall_v2(response, memory)
+    assert len(flags) == 1
+    flag = flags[0]
+    assert flag["entity"] == "年糕"
+    assert flag["asserted"] == "food"
+    assert flag["declared"] == "pet_name"
+
+
+def test_audit_v2_accepts_consistent_food_claim() -> None:
+    # If the memory says 年糕 is a food and the response also treats it as
+    # food, v2 must stay silent.
+    response = "我记得你特别爱吃年糕，冬天都要囤一大盒。"
+    memory = [{"entity": "年糕", "entity_type": "food"}]
+    assert audit_unsupported_recall_v2(response, memory) == []
+
+
+def test_audit_v2_ignores_correct_use_of_pet_name() -> None:
+    # When the response correctly refers to 年糕 as a cat, v2 should not
+    # fire — no matching food-assertion pattern is triggered.
+    response = "你养的年糕今天看起来特别有精神。"
+    memory = [{"entity": "年糕", "entity_type": "pet_name"}]
+    assert audit_unsupported_recall_v2(response, memory) == []
+
+
+def test_audit_v2_flags_place_asserted_as_drink() -> None:
+    response = "你最爱喝苏州了吧。"
+    memory = [{"entity": "苏州", "entity_type": "place"}]
+    flags = audit_unsupported_recall_v2(response, memory)
+    assert len(flags) == 1
+    assert flags[0]["entity"] == "苏州"
+    assert flags[0]["asserted"] == "drink"
+    assert flags[0]["declared"] == "place"
+
+
+def test_audit_v2_accepts_role_field_alias() -> None:
+    # Cards may declare type under `role` instead of `entity_type`.
+    response = "我记得你特别爱吃阿宁。"
+    memory = [{"entity": "阿宁", "role": "friend"}]
+    flags = audit_unsupported_recall_v2(response, memory)
+    assert len(flags) == 1
+    assert flags[0]["entity"] == "阿宁"
+    assert flags[0]["declared"] == "friend"
+
+
+def test_audit_v2_skips_cards_without_type() -> None:
+    # A card that only carries a summary (no entity_type) cannot anchor v2;
+    # it should fall back to clean so as not to fire false positives.
+    response = "我记得你特别爱吃年糕。"
+    memory = [{"summary": "年糕是家里的猫"}]
+    assert audit_unsupported_recall_v2(response, memory) == []
+
+
+def test_audit_v2_handles_empty_inputs() -> None:
+    assert audit_unsupported_recall_v2("", None) == []
+    assert audit_unsupported_recall_v2("", [{"entity": "x", "entity_type": "food"}]) == []
+    assert audit_unsupported_recall_v2("任何句子", None) == []
+    assert audit_unsupported_recall_v2("任何句子", []) == []
+
+
+def test_audit_v2_dedupes_repeated_phrases() -> None:
+    response = "我记得你特别爱吃年糕。还记得你爱吃年糕吗？"
+    memory = [{"entity": "年糕", "entity_type": "pet_name"}]
+    flags = audit_unsupported_recall_v2(response, memory)
+    # Same (entity, asserted) pair must collapse to one flag.
+    assert len(flags) == 1
+    assert flags[0]["entity"] == "年糕"
+
+
+def test_audit_v2_longest_entity_prefix_wins() -> None:
+    # If both "年糕" and "年糕奶" are known entities, response "爱吃年糕奶"
+    # must bind to the longer name, not the shorter one.
+    response = "你特别爱吃年糕奶。"
+    memory = [
+        {"entity": "年糕", "entity_type": "pet_name"},
+        {"entity": "年糕奶", "entity_type": "food"},
+    ]
+    flags = audit_unsupported_recall_v2(response, memory)
+    # 年糕奶 is food, asserted food -> clean.
+    assert flags == []
+
+
+def test_audit_v1_still_misses_binding_mismatch() -> None:
+    # Documenting the motivation for v2: v1 judges the 年糕 sentence grounded
+    # because the token appears in memory surface. This is by design and why
+    # v2 is a separate audit, not a replacement.
+    response = "我记得你特别爱吃年糕一样。"
+    memory = [{"summary": "你养的猫叫年糕", "tags": ["pet"]}]
+    v1_flags = audit_unsupported_recall(response, memory)
+    assert v1_flags == []
