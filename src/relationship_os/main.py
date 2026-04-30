@@ -77,14 +77,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.add_middleware(SecurityHeadersMiddleware)
 
-    from relationship_os.api.middleware import RequestLoggingMiddleware
+    from relationship_os.api.middleware import (
+        RateLimitMiddleware,
+        RequestGuardMiddleware,
+        RequestLoggingMiddleware,
+    )
 
+    app.add_middleware(
+        RateLimitMiddleware,
+        max_requests=resolved_settings.rate_limit_requests,
+        window_seconds=resolved_settings.rate_limit_window_seconds,
+    )
+    app.add_middleware(
+        RequestGuardMiddleware,
+        max_request_bytes=resolved_settings.max_request_bytes,
+        max_json_depth=resolved_settings.max_json_depth,
+    )
     app.add_middleware(RequestLoggingMiddleware)
 
     if resolved_settings.env == "production":
+        trusted_hosts = [
+            host.strip()
+            for host in resolved_settings.trusted_hosts.split(",")
+            if host.strip()
+        ]
+        if not trusted_hosts:
+            trusted_hosts = [resolved_settings.host]
         app.add_middleware(
             TrustedHostMiddleware,
-            allowed_hosts=["*"],
+            allowed_hosts=trusted_hosts,
         )
 
     @app.get("/healthz", include_in_schema=False)

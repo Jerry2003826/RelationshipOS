@@ -37,14 +37,27 @@ class InMemoryEventStore(EventStore):
                 stored_events.append(stored_event)
             return stored_events
 
-    async def read_stream(self, *, stream_id: str) -> list[StoredEvent]:
+    async def read_stream(
+        self,
+        *,
+        stream_id: str,
+        after_version: int = 0,
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
         async with self._lock:
-            return list(self._streams.get(stream_id, []))
+            events = [
+                event
+                for event in self._streams.get(stream_id, [])
+                if event.version > max(0, after_version)
+            ]
+            if limit is not None:
+                events = events[: max(0, limit)]
+            return list(events)
 
-    async def read_all(self) -> list[StoredEvent]:
+    async def read_all(self, *, offset: int = 0, limit: int | None = None) -> list[StoredEvent]:
         async with self._lock:
             events = list(chain.from_iterable(self._streams.values()))
-        return sorted(
+        ordered = sorted(
             events,
             key=lambda event: (
                 event.occurred_at,
@@ -52,6 +65,10 @@ class InMemoryEventStore(EventStore):
                 event.version,
             ),
         )
+        start = max(0, offset)
+        if limit is None:
+            return ordered[start:]
+        return ordered[start : start + max(0, limit)]
 
     async def list_stream_ids(self) -> list[str]:
         async with self._lock:

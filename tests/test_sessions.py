@@ -1,12 +1,69 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi.testclient import TestClient
 
 from relationship_os.application.proactive_followup_service.followup_builder import (
     _apply_matrix_learning_spacing,
 )
+from relationship_os.core.config import Settings
 from relationship_os.domain.llm import LLMFailure, LLMResponse
 from relationship_os.main import create_app
+
+
+def test_session_read_endpoints_require_api_key_when_configured() -> None:
+    client = TestClient(create_app(Settings(api_key="secret")))
+
+    response = client.get("/api/v1/sessions")
+
+    assert response.status_code == 401
+
+
+def test_session_read_forbids_cross_user_access_when_identity_header_present() -> None:
+    client = TestClient(create_app(Settings(api_key="secret")))
+    headers = {"X-API-Key": "secret"}
+    create_response = client.post(
+        "/api/v1/sessions",
+        headers=headers,
+        json={"session_id": "owned-session", "user_id": "owner"},
+    )
+    assert create_response.status_code == 201
+
+    forbidden_response = client.get(
+        "/api/v1/sessions/owned-session",
+        headers={**headers, "X-User-ID": "intruder"},
+    )
+    forbidden_trace_response = client.get(
+        "/api/v1/runtime/trace/owned-session",
+        headers={**headers, "X-User-ID": "intruder"},
+    )
+    owner_response = client.get(
+        "/api/v1/sessions/owned-session",
+        headers={**headers, "X-User-ID": "owner"},
+    )
+
+    assert forbidden_response.status_code == 403
+    assert forbidden_trace_response.status_code == 403
+    assert owner_response.status_code == 200
+
+
+def test_session_turn_forbids_cross_user_writes_when_identity_header_present() -> None:
+    client = TestClient(create_app(Settings(api_key="secret")))
+    headers = {"X-API-Key": "secret"}
+    create_response = client.post(
+        "/api/v1/sessions",
+        headers=headers,
+        json={"session_id": "owned-turn-session", "user_id": "owner"},
+    )
+    assert create_response.status_code == 201
+
+    response = client.post(
+        "/api/v1/sessions/owned-turn-session/turns",
+        headers={**headers, "X-User-ID": "intruder"},
+        json={"content": "Please write into someone else's session."},
+    )
+
+    assert response.status_code == 403
 
 
 def test_create_session_and_list_sessions() -> None:
@@ -25,6 +82,40 @@ def test_create_session_and_list_sessions() -> None:
     assert list_response.status_code == 200
     sessions = list_response.json()["sessions"]
     assert sessions[0]["session_id"] == "session-explicit"
+
+
+def test_list_sessions_supports_offset_limit_and_total() -> None:
+    client = TestClient(create_app())
+
+    for session_id in ["session-page-a", "session-page-b", "session-page-c"]:
+        response = client.post("/api/v1/sessions", json={"session_id": session_id})
+        assert response.status_code == 201
+
+    response = client.get("/api/v1/sessions", params={"offset": 1, "limit": 1})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 3
+    assert body["offset"] == 1
+    assert body["limit"] == 1
+    assert [session["session_id"] for session in body["sessions"]] == ["session-page-b"]
+
+
+def test_list_sessions_does_not_scan_global_event_log() -> None:
+    client = TestClient(create_app())
+    client.post("/api/v1/sessions", json={"session_id": "session-no-global-scan"})
+
+    async def fail_read_all(*args: Any, **kwargs: Any) -> list[Any]:
+        raise AssertionError("list_sessions should not call EventStore.read_all")
+
+    client.app.state.container.event_store.read_all = fail_read_all
+
+    response = client.get("/api/v1/sessions")
+
+    assert response.status_code == 200
+    assert [session["session_id"] for session in response.json()["sessions"]] == [
+        "session-no-global-scan"
+    ]
 
 
 def test_process_turn_builds_runtime_projection_and_trace() -> None:

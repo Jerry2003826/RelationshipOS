@@ -35,7 +35,16 @@ from relationship_os.application.analyzers import (
     build_session_directive,
     build_system3_snapshot,
 )
+from relationship_os.application.analyzers.emotional_prompt import (
+    audit_unsupported_recall,
+    audit_unsupported_recall_v2,
+    build_emotional_prompt,
+)
 from relationship_os.application.analyzers.experts.plan_dag import execute_plan_dag
+from relationship_os.application.analyzers.user_profile import (
+    UserProfileStore,
+    format_profile_prefix,
+)
 from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
@@ -321,6 +330,9 @@ class RuntimeService:
         self._background_memory_scope_pending: dict[str, dict[str, Any]] = {}
         self._friend_chat_memory_scope_last_checkpoint_turn: dict[str, int] = {}
         self._friend_chat_memory_scope_last_checkpoint_at: dict[str, float] = {}
+        self._session_locks: dict[str, asyncio.Lock] = {}
+        self._session_locks_guard = asyncio.Lock()
+        self._user_profile_store = UserProfileStore()
         self._runtime_quality_doctor_interval_turns = max(
             0,
             runtime_quality_doctor_interval_turns,
@@ -412,31 +424,65 @@ class RuntimeService:
         }
 
     async def list_sessions(self) -> list[dict[str, Any]]:
-        all_events = await self._stream_service.read_all_events()
-        sessions: dict[str, dict[str, Any]] = {}
-        for event in all_events:
-            session = sessions.setdefault(
-                event.stream_id,
-                {
-                    "session_id": event.stream_id,
-                    "event_count": 0,
-                    "turn_count": 0,
-                    "started_at": None,
-                    "last_event_at": None,
-                },
-            )
-            session["event_count"] += 1
-            session["last_event_at"] = event.occurred_at.isoformat()
-            if event.event_type == SESSION_STARTED:
-                session["started_at"] = event.payload.get("created_at")
-            if event.event_type == USER_MESSAGE_RECEIVED:
-                session["turn_count"] += 1
+        stream_ids = await self._stream_service.list_stream_ids()
+        sessions: list[dict[str, Any]] = []
+        for stream_id in sorted(stream_ids):
+            events = await self._stream_service.read_stream(stream_id=stream_id)
+            session = {
+                "session_id": stream_id,
+                "user_id": None,
+                "event_count": 0,
+                "turn_count": 0,
+                "started_at": None,
+                "last_event_at": None,
+            }
+            for event in events:
+                session["event_count"] += 1
+                session["last_event_at"] = event.occurred_at.isoformat()
+                if event.event_type == SESSION_STARTED:
+                    session["started_at"] = event.payload.get("created_at")
+                    session["user_id"] = event.payload.get("user_id")
+                if event.event_type == USER_MESSAGE_RECEIVED:
+                    session["turn_count"] += 1
+            if session["started_at"] is not None:
+                sessions.append(session)
         return sorted(
-            (session for session in sessions.values() if session["started_at"] is not None),
+            sessions,
             key=lambda item: item["session_id"],
         )
 
     async def process_turn(
+        self,
+        *,
+        session_id: str,
+        turn_input: TurnInput | None = None,
+        user_message: str | None = None,
+        generate_reply: bool = True,
+        metadata: dict[str, Any] | None = None,
+    ) -> RuntimeTurnResult:
+        lock = await self._get_session_lock(session_id)
+        async with lock:
+            return await self._process_turn_impl(
+                session_id=session_id,
+                turn_input=turn_input,
+                user_message=user_message,
+                generate_reply=generate_reply,
+                metadata=metadata,
+            )
+
+    async def _get_session_lock(self, session_id: str) -> asyncio.Lock:
+        if not hasattr(self, "_session_locks"):
+            self._session_locks = {}
+        if not hasattr(self, "_session_locks_guard"):
+            self._session_locks_guard = asyncio.Lock()
+        async with self._session_locks_guard:
+            lock = self._session_locks.get(session_id)
+            if lock is None:
+                lock = asyncio.Lock()
+                self._session_locks[session_id] = lock
+            return lock
+
+    async def _process_turn_impl(
         self,
         *,
         session_id: str,
@@ -524,7 +570,68 @@ class RuntimeService:
 
             events.extend(reply_artifacts.events)
             reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        elif router_decision.route_type == "LIGHT_RECALL":
+            logger.info(f"Vanguard router triggered LIGHT_RECALL: {router_decision.reason}")
+            analysis = None
+            analysis_ms = 0.0
+
+            profile_prefix = await self._update_user_profile_for_turn(
+                user_id=turn_context.user_id,
+                user_message=user_message_text,
+                readonly_probe_session=readonly_probe_session,
+            )
+            reply_artifacts = await self._generate_light_recall_reply(
+                session_id=session_id,
+                user_message=user_message_text,
+                generate_reply=generate_reply,
+                turn_context=turn_context,
+                turn_input=turn_input,
+                profile_prefix=profile_prefix,
+            )
+
+            events = self._build_session_start_events(
+                session_id=session_id,
+                metadata_payload=metadata or {},
+                turn_context=turn_context,
+            )
+            user_payload = {"content": user_message_text}
+            if turn_input and turn_input.has_media:
+                user_payload["attachments"] = [
+                    {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
+                    for a in turn_input.attachments
+                ]
+            events.append(
+                NewEvent(
+                    event_type=USER_MESSAGE_RECEIVED,
+                    payload=user_payload,
+                    metadata=metadata or {},
+                )
+            )
+            if turn_context.runtime_state:
+                prev_relationship = turn_context.runtime_state.get("relationship_state", {})
+                if prev_relationship:
+                    events.append(
+                        NewEvent(
+                            event_type=RELATIONSHIP_STATE_UPDATED,
+                            payload=prev_relationship,
+                        )
+                    )
+                prev_context = turn_context.runtime_state.get("context_frame", {})
+                if prev_context:
+                    events.append(
+                        NewEvent(
+                            event_type=CONTEXT_FRAME_COMPUTED,
+                            payload=prev_context,
+                        )
+                    )
+            events.extend(reply_artifacts.events)
+            reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
         else:
+            await self._update_user_profile_for_turn(
+                user_id=turn_context.user_id,
+                user_message=user_message_text,
+                readonly_probe_session=readonly_probe_session,
+            )
             analysis = await self._build_turn_analysis(
                 session_id=session_id,
                 user_message=user_message_text,
@@ -664,7 +771,8 @@ class RuntimeService:
             "load_context_ms": load_context_ms,
             "dispatch_outcome_ms": dispatch_outcome_ms,
             "router_ms": locals().get("router_ms", 0.0),
-            "fast_pong": locals().get("analysis") is None,
+            "route": getattr(router_decision, "route_type", ""),
+            "fast_pong": getattr(router_decision, "route_type", "") == "FAST_PONG",
             "analysis_ms": analysis_ms,
             "reply_ms": reply_and_proactive_ms,
             "append_events_ms": append_events_ms,
@@ -7980,6 +8088,269 @@ class RuntimeService:
             projector_version=self._runtime_projector_version,
         )
         return stored_events, runtime_projection
+
+    def _ensure_user_profile_store(self) -> UserProfileStore:
+        store = getattr(self, "_user_profile_store", None)
+        if store is None:
+            store = UserProfileStore()
+            self._user_profile_store = store
+        return store
+
+    async def _restore_user_profile_snapshot(self, *, user_id: str) -> None:
+        user_service = getattr(self, "_user_service", None)
+        if user_service is None or not hasattr(user_service, "get_user_index"):
+            return
+        store = self._ensure_user_profile_store()
+        if store.get(user_id) is not None:
+            return
+        try:
+            user_index = await user_service.get_user_index(user_id=user_id)
+        except Exception:
+            return
+        metadata = user_index.get("metadata") if isinstance(user_index, dict) else None
+        if not isinstance(metadata, dict):
+            return
+        profile_snapshot = metadata.get("profile_ema_128")
+        if not isinstance(profile_snapshot, dict):
+            return
+        vector = profile_snapshot.get("vector")
+        if isinstance(vector, list) and len(vector) == store.dim:
+            store.load({user_id: vector})
+
+    async def _update_user_profile_for_turn(
+        self,
+        *,
+        user_id: str | None,
+        user_message: str,
+        readonly_probe_session: bool,
+    ) -> str | None:
+        if readonly_probe_session or not user_id or not user_message.strip():
+            return None
+        await self._restore_user_profile_snapshot(user_id=user_id)
+        store = self._ensure_user_profile_store()
+        vec = store.update(user_id, user_message)
+        prefix = format_profile_prefix(vec, top_k=8)
+
+        user_service = getattr(self, "_user_service", None)
+        if user_service is not None and hasattr(user_service, "update_profile"):
+            try:
+                await user_service.update_profile(
+                    user_id=user_id,
+                    metadata={
+                        "profile_ema_128": {
+                            "dim": int(vec.size),
+                            "turns_seen": store.turns_seen(user_id),
+                            "updated_at": utc_now().isoformat(),
+                            "prefix": prefix,
+                            "vector": [round(float(x), 6) for x in vec.tolist()],
+                        }
+                    },
+                )
+            except Exception:
+                logger.warning("Failed to persist profile snapshot for user %s", user_id)
+        return prefix
+
+    def _light_recall_cards(self, memory_recall: dict[str, Any]) -> list[dict[str, Any]]:
+        cards: list[dict[str, Any]] = []
+        for item in list(memory_recall.get("results") or [])[:3]:
+            if not isinstance(item, dict):
+                continue
+            summary = str(
+                item.get("summary")
+                or item.get("value")
+                or item.get("content")
+                or item.get("text")
+                or ""
+            ).strip()
+            if not summary:
+                continue
+            card = {
+                "summary": summary[:260],
+                "tags": list(item.get("tags") or item.get("categories") or [])[:3],
+            }
+            for key in ("entity", "entity_type", "category", "subject", "name", "type", "role"):
+                if item.get(key):
+                    card[key] = item[key]
+            cards.append(card)
+        return cards
+
+    def _light_recall_emotion_tags(self, user_message: str) -> list[str]:
+        text = user_message.lower()
+        tags: list[str] = []
+        cues = [
+            ("tired", ("tired", "exhausted", "累", "疲", "困")),
+            ("anxious", ("anxious", "worried", "焦虑", "紧张", "怕")),
+            ("sad", ("sad", "down", "难过", "低落", "伤心")),
+            ("angry", ("angry", "mad", "生气", "烦", "火")),
+            ("confused", ("confused", "lost", "迷茫", "不知道")),
+            ("happy", ("happy", "glad", "开心", "高兴")),
+        ]
+        for tag, terms in cues:
+            if any(term in text for term in terms):
+                tags.append(tag)
+        return tags[:4]
+
+    async def _generate_light_recall_reply(
+        self,
+        *,
+        session_id: str,
+        user_message: str,
+        generate_reply: bool,
+        turn_context: _TurnContext,
+        turn_input: TurnInput | None = None,
+        profile_prefix: str | None = None,
+    ) -> _ReplyArtifacts:
+        memory_recall: dict[str, Any] = {"results": [], "recall_count": 0}
+        recall_started = perf_counter()
+        try:
+            memory_recall = await self._memory_service.recall_person_memory(
+                session_id=session_id,
+                user_id=turn_context.user_id,
+                query=user_message,
+                limit=min(3, max(1, getattr(self, "_edge_max_memory_items", 3))),
+                attachments=[
+                    MemoryMediaAttachment(
+                        type=attachment.type,
+                        url=attachment.url,
+                        mime_type=attachment.mime_type,
+                        filename=attachment.filename,
+                    )
+                    for attachment in (turn_input.attachments if turn_input else [])
+                ],
+                enable_vector_search=True,
+                enable_entity_vector_search=False,
+                prefer_fast=True,
+                include_factual_shadow=True,
+            )
+        except Exception:
+            logger.warning("LIGHT_RECALL memory recall failed for session %s", session_id)
+        recall_ms = round((perf_counter() - recall_started) * 1000.0, 1)
+        memory_cards = self._light_recall_cards(memory_recall)
+        memory_results = [
+            dict(item)
+            for item in list(memory_recall.get("results") or [])[: len(memory_cards) or 3]
+            if isinstance(item, dict)
+        ]
+
+        base_events: list[NewEvent] = [
+            NewEvent(
+                event_type=MEMORY_RECALL_PERFORMED,
+                payload={
+                    "route": "LIGHT_RECALL",
+                    "query": user_message[:240],
+                    "recall_count": len(memory_cards),
+                    "results": memory_results,
+                    "conscience": dict(memory_recall.get("conscience") or {}),
+                    "memory_cards": memory_cards,
+                    "latency_ms": recall_ms,
+                    "profile_prefix_injected": bool(profile_prefix),
+                },
+            )
+        ]
+
+        if not generate_reply:
+            return _ReplyArtifacts(
+                assistant_response=None,
+                assistant_responses=[],
+                response_diagnostics={
+                    "route": "LIGHT_RECALL",
+                    "memory_card_count": len(memory_cards),
+                    "profile_prefix_injected": bool(profile_prefix),
+                    "recall_ms": recall_ms,
+                },
+                response_sequence_plan=None,
+                response_post_audit=None,
+                response_normalization=None,
+                runtime_quality_doctor_report=None,
+                events=base_events,
+            )
+
+        name = getattr(self, "_entity_name", "Assistant")
+        persona_text = getattr(self, "_persona_text", "")
+        persona = f"Your name is {name}.\n{persona_text}".strip()
+        prompt = build_emotional_prompt(
+            persona=persona,
+            user_profile_prefix=profile_prefix,
+            recent_memory=memory_cards,
+            route="LIGHT_RECALL",
+            emotion_tags=self._light_recall_emotion_tags(user_message),
+            max_memory_cards=3,
+            include_profile_vec=bool(profile_prefix),
+        )
+
+        recent_context = []
+        for msg in turn_context.transcript_messages[-6:]:
+            role = str(msg.get("role", "")).upper()
+            content = msg.get("content", "")
+            if role and content:
+                recent_context.append(f"{role}: {content}")
+        user_content = user_message
+        if recent_context:
+            user_content = (
+                "Recent Conversation:\n"
+                + "\n".join(recent_context)
+                + f"\n\nUSER'S LATEST MESSAGE: {user_message}"
+            )
+
+        started = perf_counter()
+        try:
+            llm_response = await self._llm_client.complete(
+                LLMRequest(
+                    messages=[
+                        LLMMessage(role="system", content=prompt.to_system_prompt()),
+                        LLMMessage(role="user", content=user_content),
+                    ],
+                    model=self._llm_model,
+                    temperature=min(0.7, float(getattr(self, "_llm_temperature", 0.2))),
+                    max_tokens=getattr(self, "_edge_max_completion_tokens", 260),
+                )
+            )
+            assistant_response = str(llm_response.output_text).strip()
+            latency = llm_response.latency_ms
+        except Exception:
+            logger.warning("LIGHT_RECALL reply generation failed for session %s", session_id)
+            assistant_response = "I'm here with you. I can keep this light and grounded."
+            latency = int((perf_counter() - started) * 1000)
+
+        unsupported = audit_unsupported_recall(assistant_response, memory_cards)
+        binding_mismatches = audit_unsupported_recall_v2(assistant_response, memory_cards)
+        response_audit = {
+            "route": "LIGHT_RECALL",
+            "status": "warn" if unsupported or binding_mismatches else "pass",
+            "unsupported_recall": unsupported,
+            "binding_mismatches": binding_mismatches,
+        }
+        base_events.extend(
+            [
+                NewEvent(
+                    event_type=ASSISTANT_MESSAGE_SENT,
+                    payload={"content": assistant_response},
+                ),
+                NewEvent(
+                    event_type=RESPONSE_POST_AUDITED,
+                    payload=response_audit,
+                ),
+            ]
+        )
+
+        return _ReplyArtifacts(
+            assistant_response=assistant_response,
+            assistant_responses=[assistant_response],
+            response_diagnostics={
+                "route": "LIGHT_RECALL",
+                "memory_card_count": len(memory_cards),
+                "profile_prefix_injected": bool(profile_prefix),
+                "recall_ms": recall_ms,
+                "latency_ms": latency,
+                "unsupported_recall_count": len(unsupported),
+                "binding_mismatch_count": len(binding_mismatches),
+            },
+            response_sequence_plan=None,
+            response_post_audit=response_audit,
+            response_normalization=None,
+            runtime_quality_doctor_report=None,
+            events=base_events,
+        )
 
     async def _generate_fast_pong_reply(
         self,

@@ -5,7 +5,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import AuthDep, ContainerDep, assert_user_access
 from relationship_os.application.user_service import UserAlreadyExistsError
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -34,6 +34,7 @@ async def create_user(
     _auth: AuthDep,
 ) -> dict[str, object]:
     """Create a new user identity stream."""
+    assert_user_access(user_id=payload.user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     try:
@@ -53,8 +54,10 @@ async def create_user(
 async def get_user(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     """Return the user-index projection (id, display_name, linked sessions)."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     index = await container.user_service.get_user_index(user_id=user_id)
@@ -71,6 +74,7 @@ async def update_user(
     _auth: AuthDep,
 ) -> dict[str, object]:
     """Update user display_name or metadata."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     exists = await container.user_service.user_exists(user_id=user_id)
@@ -88,8 +92,10 @@ async def update_user(
 async def get_user_sessions(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     """Return all sessions linked to this user."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     session_ids = await container.user_service.get_user_sessions(user_id=user_id)
@@ -100,8 +106,10 @@ async def get_user_sessions(
 async def get_user_profile(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     """Return cross-session aggregated user profile (identity facts, preferences, history)."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     return await container.user_service.get_user_profile(user_id=user_id)
@@ -111,8 +119,10 @@ async def get_user_profile(
 async def get_self_state(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     """Return the AI's relationship self-state with this user (open threads, tone, last chat)."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     return await container.user_service.get_self_state(user_id=user_id)
@@ -122,8 +132,10 @@ async def get_self_state(
 async def get_relationship_state(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     """Return the server-entity relationship drift for this user."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.entity_service is None:
         raise HTTPException(status_code=503, detail="EntityService not available")
     return await container.entity_service.get_relationship_state(user_id=user_id)
@@ -133,10 +145,12 @@ async def get_relationship_state(
 async def get_user_memory(
     user_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
     query: str = "",
     limit: int = 10,
 ) -> dict[str, object]:
     """Recall cross-session memory for this user."""
+    assert_user_access(user_id=user_id, auth=_auth)
     if container.user_service is None:
         raise HTTPException(status_code=503, detail="UserService not available")
     results = await container.memory_service.recall_user_memory(

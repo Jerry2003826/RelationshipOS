@@ -1,6 +1,62 @@
+import pytest
 from fastapi.testclient import TestClient
+from starlette.websockets import WebSocketDisconnect
 
+from relationship_os.core.config import Settings
 from relationship_os.main import create_app
+
+
+def test_runtime_websocket_rejects_invalid_api_key_when_configured() -> None:
+    with TestClient(create_app(Settings(api_key="secret"))) as client:
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with client.websocket_connect("/api/v1/ws/runtime?api_key=wrong"):
+                pass
+
+    assert exc_info.value.code == 1008
+
+
+def test_runtime_websocket_rejects_disallowed_origin_when_configured() -> None:
+    settings = Settings(
+        api_key="secret",
+        websocket_allowed_origins="https://allowed.example",
+    )
+    with TestClient(create_app(settings)) as client:
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with client.websocket_connect(
+                "/api/v1/ws/runtime?api_key=secret",
+                headers={"origin": "https://evil.example"},
+            ):
+                pass
+
+    assert exc_info.value.code == 1008
+
+
+def test_runtime_websocket_rejects_cross_user_subscription() -> None:
+    settings = Settings(api_key="secret")
+    with TestClient(create_app(settings)) as client:
+        create_response = client.post(
+            "/api/v1/sessions",
+            headers={"X-API-Key": "secret"},
+            json={"session_id": "ws-owned-session", "user_id": "owner"},
+        )
+        assert create_response.status_code == 201
+
+        with client.websocket_connect(
+            "/api/v1/ws/runtime?api_key=secret",
+            headers={"X-User-ID": "intruder"},
+        ) as websocket:
+            hello = websocket.receive_json()
+            assert hello["type"] == "hello"
+            websocket.send_json(
+                {
+                    "type": "subscribe",
+                    "stream_id": "ws-owned-session",
+                }
+            )
+            response = websocket.receive_json()
+
+    assert response["type"] == "error"
+    assert response["detail"] == "forbidden stream"
 
 
 def test_runtime_websocket_stream_subscription_receives_trace_and_projection_updates() -> None:

@@ -1,4 +1,4 @@
-"""Legacy Vanguard Router shim.
+"""Runtime Vanguard Router shim.
 
 Old callers::
 
@@ -7,10 +7,7 @@ Old callers::
     )
 
 still work unchanged. Internally this now delegates to ``router_v2``
-(Option D: safety-only rules + distilled LogReg + mini-LLM arbiter).
-
-Deprecated since 2026-04; the legacy LLM fallback remains only for
-cases where the v2 artefacts (lexicons / model) fail to load.
+and preserves the runtime three-route contract.
 """
 
 from __future__ import annotations
@@ -18,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -26,14 +24,14 @@ from relationship_os.domain.llm import LLMClient, LLMMessage, LLMRequest
 
 logger = logging.getLogger(__name__)
 
-# Lazy so that tests which only exercise the legacy two-class contract
+# Lazy so that tests which only exercise the router contract
 # do not pull in the sklearn / joblib stack at import time.
 _V2_ROUTER: Any | None = None
 
 
 @dataclass(slots=True, frozen=True)
 class RouterDecision:
-    """Legacy two-class routing decision (FAST_PONG / NEED_DEEP_THINK)."""
+    """Runtime routing decision (FAST_PONG / LIGHT_RECALL / DEEP_THINK)."""
 
     route_type: str
     reason: str
@@ -55,9 +53,9 @@ def _build_shadow_logger() -> Any | None:
     except ValueError:
         rate = 1.0
     try:
-        from router_v2.analyzers.router.shadow_logger import JsonlShadowLogger
+        from router_v2.analyzers.router.shadow_logger import AsyncJsonlShadowLogger
 
-        return JsonlShadowLogger(path=Path(path_env), sample_rate=rate)
+        return AsyncJsonlShadowLogger(path=Path(path_env), sample_rate=rate)
     except Exception as exc:  # noqa: BLE001
         logger.warning("shadow logger disabled: %s", exc)
         return None
@@ -90,10 +88,61 @@ def reset_router_cache() -> None:
 # text is short enough to be a genuine greeting / acknowledgement.
 _FAST_PONG_MAX_LEN = 12
 _FAST_PONG_MIN_CONFIDENCE = 0.85
+_RUNTIME_CRISIS_TERMS = (
+    "do not want to live",
+    "don't want to live",
+    "dont want to live",
+    "kill myself",
+    "end my life",
+    "suicide",
+    "不想活",
+    "想死",
+    "自杀",
+)
+_ASCII_WORD_RE = re.compile(r"[a-zA-Z]+")
 
 
-def _downgrade(route_type: str, confidence: float, text_len: int) -> str:
-    """Map v2 three-class label to legacy two-class label, conservatively."""
+def _has_runtime_crisis_signal(text: str) -> bool:
+    normalized = " ".join((text or "").strip().lower().split())
+    return any(term in normalized for term in _RUNTIME_CRISIS_TERMS)
+
+
+def _should_escalate_light_recall(text: str) -> bool:
+    """Keep English multi-clause work/safety/memory questions on the deep path."""
+    raw = text or ""
+    normalized = raw.lower()
+    ascii_words = _ASCII_WORD_RE.findall(raw)
+    deep_markers = (
+        "plan",
+        "roadmap",
+        "guarantee",
+        "forever",
+        "steady",
+        "practical",
+        "direct",
+        "progress",
+        "moving",
+        "forward",
+        "计划",
+        "下一步",
+        "推进",
+        "进度",
+        "担心",
+        "节奏",
+        "稳定",
+        "直接",
+        "继续",
+        "做完",
+        "不太想动",
+        "刷手机",
+        "躺着",
+    )
+    return len(ascii_words) >= 8 or any(marker in normalized for marker in deep_markers)
+
+
+def _runtime_route(route_type: str, confidence: float, text_len: int) -> str:
+    """Normalize v2/legacy labels into the runtime three-route contract."""
+    route_type = str(route_type or "").strip().upper()
     if (
         route_type == "FAST_PONG"
         and confidence >= _FAST_PONG_MIN_CONFIDENCE
@@ -103,7 +152,13 @@ def _downgrade(route_type: str, confidence: float, text_len: int) -> str:
     # Everything else — LIGHT_RECALL, DEEP_THINK, or a low-confidence
     # FAST_PONG on a long / non-trivial message — goes through the
     # deep path so downstream analysers run.
-    return "NEED_DEEP_THINK"
+    if route_type == "FAST_PONG":
+        return "LIGHT_RECALL"
+    if route_type in {"LIGHT_RECALL", "DEEP_THINK"}:
+        return route_type
+    if route_type == "NEED_DEEP_THINK":
+        return "DEEP_THINK"
+    return "DEEP_THINK"
 
 
 async def route_user_turn(
@@ -124,6 +179,12 @@ async def route_user_turn(
             reason="empty_message",
             confidence=1.0,
         )
+    if _has_runtime_crisis_signal(user_message):
+        return RouterDecision(
+            route_type="DEEP_THINK",
+            reason="v2::safety.crisis_override",
+            confidence=1.0,
+        )
 
     try:
         decision = _get_v2_router().decide(user_message)
@@ -139,12 +200,16 @@ async def route_user_turn(
             transcript_messages=transcript_messages,
         )
 
+    runtime_route = _runtime_route(
+        decision.route_type,
+        float(decision.confidence),
+        len(user_message.strip()),
+    )
+    if runtime_route == "LIGHT_RECALL" and _should_escalate_light_recall(user_message):
+        runtime_route = "DEEP_THINK"
+
     return RouterDecision(
-        route_type=_downgrade(
-            decision.route_type,
-            float(decision.confidence),
-            len(user_message.strip()),
-        ),
+        route_type=runtime_route,
         reason=f"v2::{decision.decided_by}::{decision.reason}",
         confidence=float(decision.confidence),
     )
@@ -196,15 +261,14 @@ async def _legacy_llm_fallback(
         )
         if not response.output_text:
             return RouterDecision(
-                route_type="NEED_DEEP_THINK",
+                route_type="DEEP_THINK",
                 reason="llm_no_response",
                 confidence=0.0,
             )
         data = json.loads(response.output_text)
-        route_type = str(data.get("route_type", "NEED_DEEP_THINK")).strip()
+        route_type = str(data.get("route_type", "DEEP_THINK")).strip()
         reason = str(data.get("reason", "llm_routed")).strip()
-        if route_type not in ("FAST_PONG", "NEED_DEEP_THINK"):
-            route_type = "NEED_DEEP_THINK"
+        route_type = _runtime_route(route_type, 0.85, len(user_message.strip()))
         return RouterDecision(
             route_type=route_type, reason=reason, confidence=0.85
         )
@@ -214,7 +278,7 @@ async def _legacy_llm_fallback(
             e,
         )
         return RouterDecision(
-            route_type="NEED_DEEP_THINK",
+            route_type="DEEP_THINK",
             reason="llm_error",
             confidence=0.0,
         )

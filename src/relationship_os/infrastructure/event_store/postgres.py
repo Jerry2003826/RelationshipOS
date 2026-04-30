@@ -80,24 +80,38 @@ class PostgresEventStore(EventStore):
 
         return stored_events
 
-    async def read_stream(self, *, stream_id: str) -> list[StoredEvent]:
+    async def read_stream(
+        self,
+        *,
+        stream_id: str,
+        after_version: int = 0,
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
         async with self._engine.connect() as connection:
-            result = await connection.execute(
+            statement = (
                 select(event_records)
                 .where(event_records.c.stream_id == stream_id)
+                .where(event_records.c.version > max(0, after_version))
                 .order_by(event_records.c.version.asc())
             )
+            if limit is not None:
+                statement = statement.limit(max(0, limit))
+            result = await connection.execute(statement)
             return [_row_to_stored_event(row) for row in result.mappings().all()]
 
-    async def read_all(self) -> list[StoredEvent]:
+    async def read_all(self, *, offset: int = 0, limit: int | None = None) -> list[StoredEvent]:
         async with self._engine.connect() as connection:
-            result = await connection.execute(
+            statement = (
                 select(event_records).order_by(
                     event_records.c.occurred_at.asc(),
                     event_records.c.stream_id.asc(),
                     event_records.c.version.asc(),
                 )
             )
+            statement = statement.offset(max(0, offset))
+            if limit is not None:
+                statement = statement.limit(max(0, limit))
+            result = await connection.execute(statement)
             return [_row_to_stored_event(row) for row in result.mappings().all()]
 
     async def list_stream_ids(self) -> list[str]:

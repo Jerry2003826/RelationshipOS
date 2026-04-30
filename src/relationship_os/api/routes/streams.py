@@ -1,10 +1,15 @@
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import (
+    AuthDep,
+    ContainerDep,
+    assert_stream_access,
+    require_admin,
+)
 from relationship_os.api.errors import legacy_lifecycle_error_response
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -66,6 +71,7 @@ async def append_events(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, list[StoredEventResponse]]:
+    require_admin(_auth)
     try:
         stored_events = await container.stream_service.append_events(
             stream_id=stream_id,
@@ -92,8 +98,16 @@ async def append_events(
 async def read_stream(
     stream_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
+    after_version: int = Query(default=0, ge=0),
+    limit: int | None = Query(default=None, ge=1, le=1000),
 ) -> dict[str, list[StoredEventResponse]]:
-    events = await container.stream_service.read_stream(stream_id=stream_id)
+    await assert_stream_access(container=container, stream_id=stream_id, auth=_auth)
+    events = await container.stream_service.read_stream(
+        stream_id=stream_id,
+        after_version=after_version,
+        limit=limit,
+    )
     return {"events": [StoredEventResponse.from_event(event) for event in events]}
 
 
@@ -101,9 +115,11 @@ async def read_stream(
 async def replay_stream(
     stream_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
     projector_name: str = "session-transcript",
     version: str = "v1",
 ) -> ReplayStreamResponse:
+    await assert_stream_access(container=container, stream_id=stream_id, auth=_auth)
     try:
         replay = await container.stream_service.replay_stream(
             stream_id=stream_id,
@@ -125,8 +141,10 @@ async def project_stream(
     stream_id: str,
     projector_name: str,
     container: ContainerDep,
+    _auth: AuthDep,
     version: str = "v1",
 ) -> dict[str, object]:
+    await assert_stream_access(container=container, stream_id=stream_id, auth=_auth)
     try:
         return await container.stream_service.project_stream(
             stream_id=stream_id,

@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import ContainerDep
+from relationship_os.api.dependencies import AuthDep, ContainerDep, require_admin
 from relationship_os.application.scenario_evaluation_service.simulation import (
     LONGITUDINAL_SIMULATION_PRESETS,
     LongitudinalSimulationConfig,
@@ -42,6 +42,7 @@ class RunSimulationRequest(BaseModel):
 @router.get("/presets")
 async def list_simulation_presets(
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, Any]:
     """List all available longitudinal simulation presets."""
     return {
@@ -54,6 +55,7 @@ async def list_simulation_presets(
 async def get_simulation_preset(
     preset_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, Any]:
     """Get details for a specific simulation preset."""
     cfg = container.longitudinal_simulation_service.get_preset_config(preset_id)
@@ -85,6 +87,7 @@ async def run_simulation(
     request: RunSimulationRequest,
     container: ContainerDep,
     background_tasks: BackgroundTasks,
+    _auth: AuthDep,
 ) -> dict[str, Any]:
     """Run a longitudinal simulation.
 
@@ -95,6 +98,7 @@ async def run_simulation(
     When ``run_in_background=False``, the simulation runs synchronously.
     Only use this for short simulations or testing.
     """
+    require_admin(_auth)
     if request.preset_id:
         cfg = container.longitudinal_simulation_service.get_preset_config(request.preset_id)
         if cfg is None:
@@ -156,6 +160,7 @@ async def run_simulation(
 async def get_simulation_result(
     simulation_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, Any]:
     """Get the result/report for a completed simulation."""
     report = container.longitudinal_simulation_service.build_simulation_report(simulation_id)
@@ -174,6 +179,7 @@ async def get_simulation_result(
 async def get_simulation_drift_report(
     simulation_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, Any]:
     """Get a drift analysis report for a completed simulation.
 

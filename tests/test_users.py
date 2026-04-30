@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi.testclient import TestClient
 
 from relationship_os.application.projectors.self_state import SelfStateProjector
+from relationship_os.core.config import Settings
 from relationship_os.domain.event_types import SELF_STATE_UPDATED
 from relationship_os.domain.events import NewEvent, StoredEvent
 from relationship_os.main import create_app
@@ -49,6 +50,29 @@ def test_get_user_returns_index() -> None:
     assert body["user_id"] == "bob"
     assert body["display_name"] == "Bob"
     assert body["session_ids"] == []
+
+
+def test_user_read_forbids_cross_user_identity_header() -> None:
+    client = TestClient(create_app(Settings(api_key="secret")))
+    headers = {"X-API-Key": "secret"}
+    create_resp = client.post(
+        "/api/v1/users",
+        headers=headers,
+        json={"user_id": "owned-user"},
+    )
+    assert create_resp.status_code == 201
+
+    forbidden_resp = client.get(
+        "/api/v1/users/owned-user/profile",
+        headers={**headers, "X-User-ID": "intruder"},
+    )
+    owner_resp = client.get(
+        "/api/v1/users/owned-user/profile",
+        headers={**headers, "X-User-ID": "owned-user"},
+    )
+
+    assert forbidden_resp.status_code == 403
+    assert owner_resp.status_code == 200
 
 
 def test_get_nonexistent_user_returns_404() -> None:

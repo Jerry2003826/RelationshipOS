@@ -3,7 +3,12 @@ from datetime import datetime
 
 from fastapi import APIRouter, Query
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import (
+    AuthDep,
+    ContainerDep,
+    assert_stream_access,
+    require_admin,
+)
 from relationship_os.application.container import RuntimeContainer
 from relationship_os.domain.event_types import is_trace_event_type
 
@@ -48,6 +53,7 @@ async def build_runtime_overview_payload(
 @router.get("")
 async def get_runtime_overview(
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     return await build_runtime_overview_payload(container)
 
@@ -56,7 +62,9 @@ async def get_runtime_overview(
 async def get_runtime_trace(
     stream_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_stream_access(container=container, stream_id=stream_id, auth=_auth)
     events = await container.stream_service.read_stream(stream_id=stream_id)
     trace = [
         container.stream_service.serialize_event(event)
@@ -73,24 +81,30 @@ async def get_runtime_trace(
 async def get_runtime_audit(
     stream_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_stream_access(container=container, stream_id=stream_id, auth=_auth)
     return await container.audit_service.get_session_audit(session_id=stream_id)
 
 
 @router.get("/archives")
 async def list_archived_sessions(
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     return await container.audit_service.list_archived_sessions()
 
 
 @router.get("/proactive-followups")
 async def list_proactive_followups(
     container: ContainerDep,
+    _auth: AuthDep,
     as_of: datetime | None = None,
     include_hold: bool = True,
     limit: int = Query(default=20, ge=1, le=100),
 ) -> dict[str, object]:
+    require_admin(_auth)
     return await container.proactive_followup_service.list_followups(
         as_of=as_of,
         include_hold=include_hold,
@@ -105,6 +119,7 @@ async def dispatch_due_proactive_followups(
     as_of: datetime | None = None,
     limit: int | None = None,
 ) -> dict[str, object]:
+    require_admin(_auth)
     return await container.proactive_followup_dispatcher.dispatch_due_followups(
         source="manual",
         as_of=as_of,

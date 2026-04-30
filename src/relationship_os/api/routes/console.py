@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from relationship_os.api.dependencies import get_container
+from relationship_os.api.dependencies import get_container, verify_api_key
 from relationship_os.api.routes.runtime import build_runtime_overview_payload
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -21,7 +21,11 @@ from relationship_os.application.container import RuntimeContainer
 from relationship_os.domain.event_types import is_trace_event_type
 from relationship_os.domain.projectors import UnknownProjectorError
 
-router = APIRouter(prefix="/console", tags=["console"])
+router = APIRouter(
+    prefix="/console",
+    tags=["console"],
+    dependencies=[Depends(verify_api_key)],
+)
 ContainerDep = Annotated[RuntimeContainer, Depends(get_container)]
 
 PANEL_REFRESH_SECONDS = 12

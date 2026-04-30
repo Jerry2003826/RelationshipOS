@@ -546,6 +546,68 @@ def test_runtime_service_process_turn_skips_mutating_side_effects_for_probe_sess
     }
 
 
+def test_runtime_service_process_turn_light_recall_skips_deep_analysis(monkeypatch) -> None:
+    async def _route_user_turn(**_kwargs):  # type: ignore[no-untyped-def]
+        return SimpleNamespace(route_type="LIGHT_RECALL", reason="test", confidence=0.81)
+
+    monkeypatch.setattr(
+        "relationship_os.application.runtime_service.route_user_turn",
+        _route_user_turn,
+    )
+
+    service = object.__new__(RuntimeService)
+    service._llm_client = object()
+    service._llm_model = "test-model"
+    service._user_service = None
+    service._entity_service = None
+    service._action_service = None
+
+    async def _load_turn_context(*, session_id: str):  # type: ignore[no-untyped-def]
+        return _TurnContext(
+            prior_events=[],
+            expected_version=0,
+            runtime_state=None,
+            strategy_history=[],
+            turn_index=0,
+            transcript_messages=[],
+            idle_gap_seconds=0.0,
+            session_age_seconds=0.0,
+            user_id="user-1",
+            session_metadata={},
+        )
+
+    async def _maybe_record_dispatch_outcome(**_kwargs):  # type: ignore[no-untyped-def]
+        return None
+
+    async def _build_turn_analysis(**_kwargs):  # type: ignore[no-untyped-def]
+        raise AssertionError("LIGHT_RECALL must not run the deep analysis DAG")
+
+    async def _generate_light_recall_reply(**_kwargs):  # type: ignore[no-untyped-def]
+        return SimpleNamespace(
+            events=[],
+            assistant_response="I remember enough to answer lightly.",
+            assistant_responses=["I remember enough to answer lightly."],
+            response_diagnostics={"route": "LIGHT_RECALL"},
+        )
+
+    async def _append_turn_events(**_kwargs):  # type: ignore[no-untyped-def]
+        return [], {"state": {}}
+
+    service._load_turn_context = _load_turn_context  # type: ignore[method-assign]
+    service._maybe_record_dispatch_outcome = _maybe_record_dispatch_outcome  # type: ignore[method-assign]
+    service._build_turn_analysis = _build_turn_analysis  # type: ignore[method-assign]
+    service._generate_light_recall_reply = _generate_light_recall_reply  # type: ignore[method-assign]
+    service._append_turn_events = _append_turn_events  # type: ignore[method-assign]
+
+    result = asyncio.run(
+        service.process_turn(session_id="session-light", user_message="Do you remember my cat?")
+    )
+
+    assert result.assistant_response == "I remember enough to answer lightly."
+    assert result.response_diagnostics["route"] == "LIGHT_RECALL"
+    assert result.turn_stage_timing["route"] == "LIGHT_RECALL"
+
+
 def test_runtime_service_friend_chat_syncs_memory_incrementally_after_turn() -> None:
     class _StubMemoryService:
         def __init__(self) -> None:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import AuthDep, ContainerDep, require_admin
 from relationship_os.api.errors import legacy_lifecycle_error_response
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -23,6 +23,7 @@ async def rebuild_projection(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     try:
         return await container.stream_service.rebuild_projection(
             projector_name=projector_name,

@@ -35,6 +35,7 @@ from router_v2.analyzers.router.features import (  # noqa: E402
     load_lexicons,
 )
 from router_v2.analyzers.router.rule_engine import default_engine  # noqa: E402
+from router_v2.analyzers.router.tier2_classifier import load_or_fallback  # noqa: E402
 from router_v2.analyzers.router.vanguard_router_v2 import (  # noqa: E402
     RouterConfig,
     VanguardRouterV2,
@@ -163,6 +164,14 @@ def test_cascade_classifier_paths_are_valid(text):
     d = r.decide(text)
     assert d.route_type in ALL_ROUTES
     assert set(d.probabilities.keys()) == set(ALL_ROUTES)
+
+
+def test_tier2_model_missing_fails_fast_in_production(tmp_path, monkeypatch):
+    monkeypatch.setenv("RELATIONSHIP_OS_ENV", "production")
+    missing_model = tmp_path / "missing-model.joblib"
+
+    with pytest.raises(RuntimeError, match="tier2 model"):
+        load_or_fallback(missing_model)
 
 
 def test_latency_is_measured():

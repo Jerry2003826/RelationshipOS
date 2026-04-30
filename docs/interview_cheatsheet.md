@@ -1,5 +1,8 @@
 # Interview Cheatsheet — RelationshipOS
 
+> 2026-04-30 status note: router holdout Macro F1 is now reproducible at **0.873** on `router_v2/training/holdout_zh.jsonl`.
+> Runtime dispatch is truly three-way: `FAST_PONG`, `LIGHT_RECALL`, `DEEP_THINK`. Say "foundation 并行 + expert DAG 依赖序执行", not "DAG 完全并行".
+
 > 给自己看的。不进 README 不讲给用户看。
 > 目标:15 秒钩子 → 2 分钟 pitch → 20 分钟深聊 → 常见追问都能答。
 

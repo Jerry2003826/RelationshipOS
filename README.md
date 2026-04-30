@@ -3,7 +3,7 @@
   <img src="https://img.shields.io/badge/benchmark-8.2%2F10-brightgreen" />
   <img src="https://img.shields.io/badge/runtime-friend__chat__zh__v1-orange" />
   <img src="https://img.shields.io/badge/router-v2-purple" />
-  <img src="https://img.shields.io/badge/macro__f1-0.83-blueviolet" />
+  <img src="https://img.shields.io/badge/macro__f1-0.873-blueviolet" />
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" />
 </p>
 
@@ -21,6 +21,17 @@
 
 ## TL;DR
 
+> **Implementation status (2026-04-30):** this repo now has real three-way runtime
+> dispatch (`FAST_PONG` / `LIGHT_RECALL` / `DEEP_THINK`). `LIGHT_RECALL` is a
+> shallow memory recall + `EmotionalPrompt` + single LLM reply path; `DEEP_THINK`
+> remains the full foundation + expert DAG path. The expert DAG itself is
+> dependency-ordered; the foundation stage uses `asyncio.gather` for parallel
+> interpretation/entity reads. Router holdout eval is reproducible with
+> `uv run python router_v2/training/router_eval.py --data router_v2/training/holdout_zh.jsonl`
+> and currently reports Macro F1 **0.873** on 164 holdout rows. Mem0 is optional:
+> the default `mem0_shadow` mode gracefully falls back when `mem0ai` is not
+> installed, and full Mem0 deps live under the `benchmark` extra.
+
 > 市面上的 chatbot 做的是「每一轮重新组织一次上下文再回答」。
 > RelationshipOS 做的是「**同一个人一直在这里,只是这次决定要不要认真动脑,再决定怎么说**」。
 >
@@ -31,15 +42,15 @@
 | **路由** | 两级 Vanguard Router v2(规则 + tier-2 分类器),mini-LLM 调用 100% → 15%,p95 800ms → <1ms | 所有请求走大模型 |
 | **记忆** | 三层 digest-first 结构化记忆 + 夜间压缩卡片 | 历史消息 replay |
 | **数据闭环** | shadow log → LLM 银标 → 人工复核 → 周日回训(Macro F1 门槛 0.71) | 模型一次部署静态运行 |
-| **用户画像** | 128 维 EMA profile_vec 注入 prompt,≈30 轮收敛 | 无画像 |
+| **用户画像** | 128 维 EMA profile_vec 每轮更新并持久化; LIGHT_RECALL prompt 注入 top-k prefix | 无画像 |
 | **人格** | 同一 entity 跨 session 一致(persona_state + social_world) | 每次像换了一个人 |
-| **推理** | 6 专家 DAG 并行编排(Factual / Emotional / Governance / Coordination / Expression / Response) | 单一大 prompt |
+| **推理** | 6 专家 DAG 按依赖序执行; foundation 阶段并行读取/解释 | 单一大 prompt |
 | **表达** | "脑子"和"嘴巴"分离:先想,再自然说 | 一步到位 |
 | **评测** | 5 维 probe benchmark + 离线 A/B harness(EmotionalExpert prompt) | 靠主观感觉 |
 | **运维** | 夜间记忆压缩 + 周级回训 + 自动运维周报(R1 一次调用) | 无自动化 |
 
 **Benchmark:** `friend_chat_zh_v1` Overall **8.2 / 10**(2026-04-22 手工评审,vs 裸 `glm-5` 2.8 / `glm-5 + Mem0 OSS` 2.4)
-**Router v2:** Macro F1 **0.83**,CI 门槛 0.71(12pt 安全余量)
+**Router v2:** Macro F1 **0.873** on `holdout_zh.jsonl` (2026-04-30), CI 门槛 0.71
 **测试:** 新增 70+ 单测(W2–W4),CI ruff + pytest 全绿
 
 ---
@@ -108,7 +119,7 @@ User Turn
       ├─ LIGHT_RECALL  (情感接住 + 近期记忆卡片)    → EmotionalExpert prompt
       └─ DEEP_THINK    (复杂规划 / 危机 / 事实追问) → 专家 DAG
 
-  → 专家 DAG (6 领域专家按依赖序并行)
+  → 专家 DAG (6 领域专家按依赖序执行; foundation 阶段并行)
       ├─ L1:  Factual Expert       → knowledge_boundary_decision
       ├─ L2:  Emotional Expert     → private_judgment + prompt 模块化
       ├─ L3-5: Governance Expert   → policy_gate → strategy → rehearsal
@@ -153,7 +164,7 @@ User Turn
 
 **已知缺陷及处理:** `cross_session_friend_feel` 曾出现"我还记得你上次说不喜欢吃香菜"这类未得到记忆支持的表达。W5.3 从 prompt 约束 + `audit_unsupported_recall` 事后审计两层加防护。
 
-Router v2 tier-2 分类器在 `router_v2/tests` 下 21 个测试通过,在 holdout 上 Macro F1 **0.83**,CI 门槛设 0.71(12pt 安全余量)。
+Router v2 tier-2 分类器在 `router_v2/tests` 下通过结构化测试,在 `holdout_zh.jsonl` 上 Macro F1 **0.873**(2026-04-30),CI 门槛设 0.71。
 
 ---
 
@@ -345,7 +356,7 @@ RELATIONSHIP_OS_MEM0_EMBED_MODEL=intfloat/multilingual-e5-small
 RELATIONSHIP_OS_MEM0_RETRIEVAL_LIMIT=12
 ```
 
-Mem0 依赖已经写进 `pyproject.toml`(`mem0ai>=1.0.7`),`uv sync --extra dev` 会一起装;存储后端用 **Qdrant 本地文件 + SQLite** 两份落盘文件,首次跑会自动创建,**不需要独立起 Qdrant 服务**。
+Mem0 依赖在 `pyproject.toml` 的 `benchmark` extra 里(`mem0ai>=1.0.7`);需要完整 Mem0 压测时用 `uv sync --extra benchmark`。默认 `mem0_shadow` 会在未安装 Mem0 时退回 native 事实层;存储后端用 **Qdrant 本地文件 + SQLite** 两份落盘文件,首次跑会自动创建,**不需要独立起 Qdrant 服务**。
 
 **目录结构**(跑起来之后):
 

@@ -3,7 +3,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import (
+    AuthDep,
+    ContainerDep,
+    assert_session_access,
+    require_admin,
+)
 from relationship_os.application.job_service import (
     JobNotFoundError,
     JobRetryNotAllowedError,
@@ -22,9 +27,14 @@ class CreateOfflineConsolidationJobRequest(BaseModel):
 @router.get("")
 async def list_jobs(
     container: ContainerDep,
+    _auth: AuthDep,
     status_filter: Annotated[str | None, Query(alias="status")] = None,
     session_id: str | None = None,
 ) -> dict[str, object]:
+    if session_id is not None:
+        await assert_session_access(container=container, session_id=session_id, auth=_auth)
+    else:
+        require_admin(_auth)
     return await container.job_service.list_jobs(
         status=status_filter,
         session_id=session_id,
@@ -37,6 +47,11 @@ async def create_offline_consolidation_job(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(
+        container=container,
+        session_id=payload.session_id,
+        auth=_auth,
+    )
     try:
         job = await container.job_service.create_offline_consolidation_job(
             session_id=payload.session_id,
@@ -57,6 +72,7 @@ async def create_offline_consolidation_job(
 async def get_job(
     job_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
     try:
         job = await container.job_service.get_job(job_id=job_id)
@@ -65,6 +81,11 @@ async def get_job(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    await assert_session_access(
+        container=container,
+        session_id=str(job["session_id"]),
+        auth=_auth,
+    )
     return {"job": job}
 
 
@@ -75,6 +96,12 @@ async def retry_job(
     _auth: AuthDep,
 ) -> dict[str, object]:
     try:
+        current_job = await container.job_service.get_job(job_id=job_id)
+        await assert_session_access(
+            container=container,
+            session_id=str(current_job["session_id"]),
+            auth=_auth,
+        )
         job = await container.job_service.retry_job(job_id=job_id)
     except JobNotFoundError as exc:
         raise HTTPException(
