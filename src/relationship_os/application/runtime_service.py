@@ -50,6 +50,11 @@ from relationship_os.application.runtime.assistant_message_event_builder import 
     build_assistant_message_events as build_runtime_assistant_message_events,
 )
 from relationship_os.application.runtime.dispatch_outcome_recorder import DispatchOutcomeRecorder
+from relationship_os.application.runtime.edge_memory_text import (
+    is_low_signal_fallback_memory_value,
+    ordered_text_terms,
+    text_keywords,
+)
 from relationship_os.application.runtime.edge_prompt_cards import (
     build_edge_conscience_card as build_runtime_edge_conscience_card,
 )
@@ -158,8 +163,6 @@ from relationship_os.domain.llm import (
 
 logger = logging.getLogger(__name__)
 __all__ = ["RuntimeService", "RuntimeTurnResult", "SessionAlreadyExistsError"]
-_EDGE_MEMORY_WORD_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+", re.IGNORECASE)
-_EDGE_MEMORY_METRIC_RE = re.compile(r"^[a-z_]+:\S+$", re.IGNORECASE)
 
 
 @dataclass(slots=True, frozen=True)
@@ -2858,17 +2861,7 @@ class RuntimeService:
             cleaned = cleaned.replace(str(token), " ")
         cleaned = re.sub(r"[和跟与及、]", " ", cleaned)
         cleaned = re.sub(r"[？?！!，,。；;：:、\n\r\t]+", " ", cleaned)
-        queries: list[str] = []
-        seen: set[str] = set()
-        for candidate in _EDGE_MEMORY_WORD_RE.findall(cleaned):
-            normalized = str(candidate).strip()
-            if not normalized or len(normalized) <= 1:
-                continue
-            if normalized in seen:
-                continue
-            seen.add(normalized)
-            queries.append(normalized)
-        return queries
+        return ordered_text_terms(cleaned)
 
     def _friend_chat_other_memory_items(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         items = metadata.get("friend_chat_other_memory_items")
@@ -5548,64 +5541,10 @@ class RuntimeService:
         )
 
     def _is_low_signal_fallback_memory_value(self, value: str) -> bool:
-        lowered = value.strip().casefold()
-        if not lowered:
-            return True
-        if _EDGE_MEMORY_METRIC_RE.match(lowered):
-            return True
-        prefixes = (
-            "assistant:",
-            "topic:",
-            "appraisal:",
-            "dialogue_act:",
-            "summary:",
-            "quality:",
-        )
-        return any(lowered.startswith(prefix) for prefix in prefixes)
+        return is_low_signal_fallback_memory_value(value)
 
     def _text_keywords(self, value: str) -> set[str]:
-        stopwords = {
-            "the",
-            "and",
-            "that",
-            "this",
-            "with",
-            "from",
-            "have",
-            "your",
-            "you",
-            "are",
-            "was",
-            "were",
-            "into",
-            "about",
-            "they",
-            "them",
-            "their",
-            "my",
-            "his",
-            "her",
-            "for",
-            "after",
-            "before",
-            "where",
-            "what",
-            "when",
-            "who",
-            "name",
-            "named",
-            "tell",
-            "me",
-            "do",
-            "did",
-            "know",
-            "anything",
-        }
-        return {
-            token.casefold()
-            for token in _EDGE_MEMORY_WORD_RE.findall(value)
-            if len(token) > 1 and token.casefold() not in stopwords
-        }
+        return text_keywords(value)
 
     def _build_fallback_memory_items(
         self,
