@@ -57,6 +57,9 @@ from relationship_os.application.runtime.light_recall_pipeline import (
     UnavailableLightRecallMemoryService,
 )
 from relationship_os.application.runtime.memory_scope_syncer import MemoryScopeSyncer
+from relationship_os.application.runtime.persona_timeout_fallback import (
+    get_cached_persona_timeout_dialogue,
+)
 from relationship_os.application.runtime.post_turn_effects import PostTurnEffects
 from relationship_os.application.runtime.proactive_event_builder import (
     build_proactive_events as build_runtime_proactive_events,
@@ -7059,15 +7062,7 @@ class RuntimeService:
         )
 
     def _get_cached_persona_timeout_dialogue(self) -> str:
-        # Using a mock static map for demonstration (Phase 1).
-        # Phase 2 involves proactively fetching this from the memory_service.
-        if hasattr(self, "entity_persona") and self.entity_persona:
-            archetype = self.entity_persona.get("persona_archetype", "default")
-            if archetype == "tsundere":
-                return "我才没有没话说呢，只是信号不好。再发一遍。"
-            if archetype == "gentle":
-                return "抱歉呀，我现在有点累了没听清，晚点再慢点跟我说好吗？"
-        return "不好意思，信号有点差，我等会回复。"
+        return get_cached_persona_timeout_dialogue(getattr(self, "entity_persona", None))
 
     def _build_runtime_quality_doctor_report(
         self,
