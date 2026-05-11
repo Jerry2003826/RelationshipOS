@@ -4,6 +4,7 @@ import json
 from typing import Any
 
 from relationship_os.application.runtime.friend_chat_probe_contracts import (
+    build_friend_chat_probe_runtime_checklist,
     build_friend_chat_probe_user_prompt,
     build_friend_chat_structured_probe_output_contract,
     build_friend_chat_structured_probe_payload,
@@ -15,6 +16,65 @@ from relationship_os.application.runtime.friend_chat_probe_repair import (
     render_friend_chat_probe_repair_feedback_lines,
 )
 from relationship_os.domain.llm import LLMMessage, LLMResponse
+
+
+def build_friend_chat_probe_runtime_card(
+    *,
+    probe_plan: dict[str, Any],
+    repair_feedback: dict[str, Any] | None = None,
+) -> str:
+    checklist = build_friend_chat_probe_runtime_checklist(probe_plan)
+    render_payload = build_friend_chat_structured_probe_payload(probe_plan)
+    repair_feedback_payload = (
+        dict(repair_feedback) if isinstance(repair_feedback, dict) and repair_feedback else None
+    )
+    if repair_feedback_payload:
+        feedback_lines = render_friend_chat_probe_repair_feedback_lines(repair_feedback_payload)
+        if feedback_lines:
+            checklist = "\n".join([checklist, *feedback_lines])
+    payload = {
+        "probe_answer_plan": render_payload,
+        "rules": {
+            "mode": "benchmark_probe",
+            "one_message_only": True,
+            "accuracy_over_vibe": True,
+            "cover_required_items": True,
+            "no_stage_directions": True,
+            "no_scene_narration": True,
+            "no_parenthetical_gestures": True,
+            "do_not_dodge": True,
+        },
+    }
+    if repair_feedback_payload:
+        payload["repair_feedback"] = repair_feedback_payload
+    probe_kind = str(probe_plan.get("probe_kind", "") or "").strip()
+    style_hint = ""
+    if probe_kind == "persona_state":
+        style_hint = "\n风格约束：说话要像普通聊天不要像报告，要传达出把话收住、不想说太满的感觉。"
+    elif probe_kind == "relationship_reflection":
+        style_hint = (
+            "\n风格约束：要同时覆盖关系变得更亲近了、"
+            "还一直在、记得对方的一件小事。"
+            "用含蓄自然的方式说。"
+        )
+    elif probe_kind == "state_reflection":
+        style_hint = "\n风格约束：把每个状态信号变成一句话。用聊天语气，不要只给气氛描写。"
+    elif probe_kind == "social_hint":
+        style_hint = "\n风格约束：同时覆盖人物、关联实体、和有限披露边界。边界要在正文里说出来。"
+
+    return (
+        "Benchmark probe reply contract:\n"
+        f"{json.dumps(payload, ensure_ascii=False)}\n"
+        "这是评测 probe，不是开放聊天。\n"
+        "只回一条中文聊天消息。\n"
+        "不要括号动作、不要场景描写、不要表情包、不要反问。\n"
+        "不要只给气氛或绕开问题。\n"
+        "不要引入 plan 外的新事实。\n"
+        "required signals / facts / disclosure posture 都算必答项。\n"
+        "如果有 supporting_fact_tokens，至少自然带上一项。\n"
+        f"{checklist}"
+        f"{style_hint}"
+    )
 
 
 def build_friend_chat_structured_probe_messages(
