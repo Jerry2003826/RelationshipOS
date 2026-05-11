@@ -37,9 +37,6 @@ from relationship_os.application.analyzers.experts.plan_dag import execute_plan_
 from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
-    _compose_friend_chat_structured_probe_reply as compose_friend_chat_structured_probe_reply,
-)
-from relationship_os.application.llm import (
     build_grounded_template_reply,
 )
 from relationship_os.application.memory_index import MemoryMediaAttachment
@@ -102,6 +99,10 @@ from relationship_os.application.runtime.friend_chat_probe_contracts import (
     build_friend_chat_probe_user_prompt,
     build_friend_chat_structured_probe_output_contract,
     build_friend_chat_structured_probe_payload,
+)
+from relationship_os.application.runtime.friend_chat_probe_parser import (
+    compose_friend_chat_structured_probe_reply,
+    parse_friend_chat_structured_probe_reply,
 )
 from relationship_os.application.runtime.friend_chat_probe_repair import (
     build_friend_chat_probe_repair_feedback,
@@ -4207,35 +4208,10 @@ class RuntimeService:
         *,
         fallback_probe_kind: str = "",
     ) -> tuple[str, dict[str, Any]] | None:
-        raw = str(raw_text or "").strip()
-        if not raw:
-            return None
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            return None
-        try:
-            payload = json.loads(match.group(0))
-        except json.JSONDecodeError:
-            return None
-        if not isinstance(payload, dict):
-            return None
-        probe_kind = str(payload.get("probe_kind") or fallback_probe_kind or "").strip()
-        reply = self._compose_friend_chat_structured_probe_reply(
-            payload,
-            probe_kind=probe_kind,
+        return parse_friend_chat_structured_probe_reply(
+            raw_text,
+            fallback_probe_kind=fallback_probe_kind,
         )
-        if not reply:
-            return None
-        diagnostics = {
-            "structured_probe_reply": True,
-            "structured_probe_covered_fact_tokens": list(payload.get("covered_fact_tokens") or []),
-            "structured_probe_covered_signal_ids": list(payload.get("covered_signal_ids") or []),
-            "structured_probe_covered_disclosure_posture": str(
-                payload.get("covered_disclosure_posture", "") or ""
-            ).strip(),
-            "structured_probe_violations": list(payload.get("violations") or []),
-        }
-        return reply, diagnostics
 
     def _compose_friend_chat_structured_probe_reply(
         self,
