@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from time import perf_counter
-from typing import Any
+from typing import Any, Protocol
 
 from relationship_os.application.runtime.event_builder import build_lightweight_turn_events
 from relationship_os.domain.contracts.turn_input import TurnInput
@@ -21,8 +21,26 @@ class TurnRouteDispatchResult:
     reply_and_proactive_ms: float
 
 
+class TurnRouteRuntimeHost(Protocol):
+    async def _generate_fast_pong_reply(self, **kwargs: Any) -> Any: ...
+
+    async def _update_user_profile_for_turn(self, **kwargs: Any) -> str: ...
+
+    async def _generate_light_recall_reply(self, **kwargs: Any) -> Any: ...
+
+    async def _build_turn_analysis(self, **kwargs: Any) -> Any: ...
+
+    def _build_turn_events(self, **kwargs: Any) -> list[NewEvent]: ...
+
+    async def _generate_turn_reply(self, **kwargs: Any) -> Any: ...
+
+    async def _build_proactive_artifacts(self, **kwargs: Any) -> Any: ...
+
+    def _build_proactive_events(self, proactive_artifacts: Any) -> list[NewEvent]: ...
+
+
 async def dispatch_turn_route(
-    runtime: Any,
+    runtime: TurnRouteRuntimeHost,
     *,
     router_decision: Any,
     session_id: str,
