@@ -64,6 +64,18 @@ from relationship_os.application.runtime.self_state_writer import (
     normalize_state_reflection_fragment,
 )
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
+from relationship_os.application.runtime.turn_analysis_event_builder import (
+    build_session_directive_payload as build_turn_session_directive_payload,
+)
+from relationship_os.application.runtime.turn_analysis_event_builder import (
+    build_session_start_events as build_deep_session_start_events,
+)
+from relationship_os.application.runtime.turn_analysis_event_builder import (
+    build_turn_analysis_events as build_deep_turn_analysis_events,
+)
+from relationship_os.application.runtime.turn_analysis_event_builder import (
+    build_turn_events as build_deep_turn_events,
+)
 from relationship_os.application.runtime.turn_context import TurnContextLoader, _TurnContext
 from relationship_os.application.runtime.turn_event_appender import TurnEventAppender
 from relationship_os.application.runtime.user_profile_turn_updater import (
@@ -73,21 +85,7 @@ from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
     ASSISTANT_MESSAGE_SENT,
-    CONFIDENCE_ASSESSMENT_COMPUTED,
-    CONTEXT_FRAME_COMPUTED,
-    CONVERSATION_CADENCE_UPDATED,
-    EMPOWERMENT_AUDIT_COMPLETED,
-    GUIDANCE_PLAN_UPDATED,
-    INNER_MONOLOGUE_RECORDED,
-    KNOWLEDGE_BOUNDARY_DECIDED,
     LLM_COMPLETION_FAILED,
-    MEMORY_BUNDLE_UPDATED,
-    MEMORY_FORGETTING_APPLIED,
-    MEMORY_RECALL_PERFORMED,
-    MEMORY_RETENTION_POLICY_APPLIED,
-    MEMORY_WRITE_GUARD_EVALUATED,
-    POLICY_GATE_DECIDED,
-    PRIVATE_JUDGMENT_COMPUTED,
     PROACTIVE_ACTUATION_UPDATED,
     PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED,
     PROACTIVE_CADENCE_UPDATED,
@@ -98,21 +96,11 @@ from relationship_os.domain.event_types import (
     PROACTIVE_SCHEDULING_UPDATED,
     REENGAGEMENT_MATRIX_ASSESSED,
     REENGAGEMENT_PLAN_UPDATED,
-    REHEARSAL_COMPLETED,
-    RELATIONSHIP_STATE_UPDATED,
-    REPAIR_ASSESSMENT_COMPUTED,
-    REPAIR_PLAN_UPDATED,
-    RESPONSE_DRAFT_PLANNED,
     RESPONSE_NORMALIZED,
     RESPONSE_POST_AUDITED,
-    RESPONSE_RENDERING_POLICY_DECIDED,
     RESPONSE_SEQUENCE_PLANNED,
-    RUNTIME_COORDINATION_UPDATED,
     RUNTIME_QUALITY_DOCTOR_COMPLETED,
-    SESSION_DIRECTIVE_UPDATED,
-    SESSION_RITUAL_UPDATED,
     SESSION_STARTED,
-    SOMATIC_ORCHESTRATION_UPDATED,
     SYSTEM3_SNAPSHOT_UPDATED,
     USER_MESSAGE_RECEIVED,
 )
@@ -1898,21 +1886,14 @@ class RuntimeService:
         analysis: _TurnAnalysis,
         turn_input: TurnInput | None = None,
     ) -> list[NewEvent]:
-        metadata_payload = metadata or {}
-        events = self._build_session_start_events(
+        return build_deep_turn_events(
             session_id=session_id,
-            metadata_payload=metadata_payload,
+            user_message=user_message,
+            metadata=metadata,
             turn_context=turn_context,
+            analysis=analysis,
+            turn_input=turn_input,
         )
-        events.extend(
-            self._build_turn_analysis_events(
-                user_message=user_message,
-                metadata_payload=metadata_payload,
-                analysis=analysis,
-                turn_input=turn_input,
-            )
-        )
-        return events
 
     def _build_session_start_events(
         self,
@@ -1921,18 +1902,11 @@ class RuntimeService:
         metadata_payload: dict[str, Any],
         turn_context: _TurnContext,
     ) -> list[NewEvent]:
-        if turn_context.prior_events:
-            return []
-        return [
-            NewEvent(
-                event_type=SESSION_STARTED,
-                payload={
-                    "session_id": session_id,
-                    "created_at": utc_now().isoformat(),
-                    "metadata": metadata_payload,
-                },
-            )
-        ]
+        return build_deep_session_start_events(
+            session_id=session_id,
+            metadata_payload=metadata_payload,
+            turn_context=turn_context,
+        )
 
     def _build_turn_analysis_events(
         self,
@@ -1942,132 +1916,18 @@ class RuntimeService:
         analysis: _TurnAnalysis,
         turn_input: TurnInput | None = None,
     ) -> list[NewEvent]:
-        user_payload: dict[str, Any] = {"content": user_message}
-        if turn_input and turn_input.has_media:
-            user_payload["attachments"] = [
-                {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
-                for a in turn_input.attachments
-            ]
-        return [
-            NewEvent(
-                event_type=USER_MESSAGE_RECEIVED,
-                payload=user_payload,
-                metadata=metadata_payload,
-            ),
-            NewEvent(
-                event_type=CONTEXT_FRAME_COMPUTED,
-                payload=asdict(analysis.context_frame),
-            ),
-            NewEvent(
-                event_type=RELATIONSHIP_STATE_UPDATED,
-                payload=asdict(analysis.relationship_state),
-            ),
-            NewEvent(
-                event_type=CONFIDENCE_ASSESSMENT_COMPUTED,
-                payload=asdict(analysis.confidence_assessment),
-            ),
-            NewEvent(
-                event_type=REPAIR_ASSESSMENT_COMPUTED,
-                payload=asdict(analysis.repair_assessment),
-            ),
-            NewEvent(
-                event_type=MEMORY_WRITE_GUARD_EVALUATED,
-                payload=analysis.memory_write_guard,
-            ),
-            NewEvent(
-                event_type=MEMORY_RETENTION_POLICY_APPLIED,
-                payload=analysis.memory_retention_policy,
-            ),
-            NewEvent(
-                event_type=MEMORY_BUNDLE_UPDATED,
-                payload=asdict(analysis.memory_bundle),
-            ),
-            NewEvent(
-                event_type=MEMORY_FORGETTING_APPLIED,
-                payload=analysis.memory_forgetting,
-            ),
-            NewEvent(
-                event_type=MEMORY_RECALL_PERFORMED,
-                payload=analysis.memory_recall,
-            ),
-            NewEvent(
-                event_type=KNOWLEDGE_BOUNDARY_DECIDED,
-                payload=asdict(analysis.knowledge_boundary_decision),
-            ),
-            NewEvent(
-                event_type=POLICY_GATE_DECIDED,
-                payload=asdict(analysis.policy_gate),
-            ),
-            NewEvent(
-                event_type=REHEARSAL_COMPLETED,
-                payload=asdict(analysis.rehearsal_result),
-            ),
-            NewEvent(
-                event_type=REPAIR_PLAN_UPDATED,
-                payload=asdict(analysis.repair_plan),
-            ),
-            NewEvent(
-                event_type=EMPOWERMENT_AUDIT_COMPLETED,
-                payload=asdict(analysis.empowerment_audit),
-            ),
-            NewEvent(
-                event_type=RESPONSE_DRAFT_PLANNED,
-                payload=asdict(analysis.response_draft_plan),
-            ),
-            NewEvent(
-                event_type=RESPONSE_RENDERING_POLICY_DECIDED,
-                payload=asdict(analysis.response_rendering_policy),
-            ),
-            NewEvent(
-                event_type=RUNTIME_COORDINATION_UPDATED,
-                payload=asdict(analysis.runtime_coordination_snapshot),
-            ),
-            NewEvent(
-                event_type=GUIDANCE_PLAN_UPDATED,
-                payload=asdict(analysis.guidance_plan),
-            ),
-            NewEvent(
-                event_type=CONVERSATION_CADENCE_UPDATED,
-                payload=asdict(analysis.conversation_cadence_plan),
-            ),
-            NewEvent(
-                event_type=SESSION_RITUAL_UPDATED,
-                payload=asdict(analysis.session_ritual_plan),
-            ),
-            NewEvent(
-                event_type=SOMATIC_ORCHESTRATION_UPDATED,
-                payload=asdict(analysis.somatic_orchestration_plan),
-            ),
-            NewEvent(
-                event_type=PRIVATE_JUDGMENT_COMPUTED,
-                payload=asdict(analysis.private_judgment),
-            ),
-            NewEvent(
-                event_type=INNER_MONOLOGUE_RECORDED,
-                payload={"entries": [asdict(entry) for entry in analysis.inner_monologue]},
-            ),
-            NewEvent(
-                event_type=SESSION_DIRECTIVE_UPDATED,
-                payload=self._build_session_directive_payload(analysis),
-            ),
-        ]
+        return build_deep_turn_analysis_events(
+            user_message=user_message,
+            metadata_payload=metadata_payload,
+            analysis=analysis,
+            turn_input=turn_input,
+        )
 
     def _build_session_directive_payload(
         self,
         analysis: _TurnAnalysis,
     ) -> dict[str, Any]:
-        return {
-            "directive": asdict(analysis.session_directive),
-            "confidence": asdict(analysis.confidence_assessment),
-            "strategy": asdict(analysis.strategy_decision),
-            "expression_plan": asdict(analysis.expression_plan),
-            "guidance_plan": asdict(analysis.guidance_plan),
-            "conversation_cadence_plan": asdict(analysis.conversation_cadence_plan),
-            "session_ritual_plan": asdict(analysis.session_ritual_plan),
-            "somatic_orchestration_plan": asdict(analysis.somatic_orchestration_plan),
-            "response_draft_plan": asdict(analysis.response_draft_plan),
-            "response_rendering_policy": asdict(analysis.response_rendering_policy),
-        }
+        return build_turn_session_directive_payload(analysis)
 
     def _build_reply_drafting_lines(self, analysis: _TurnAnalysis) -> list[str]:
         return [
