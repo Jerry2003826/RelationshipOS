@@ -76,7 +76,19 @@ def build_policy_gate(
         regulation_mode = "calibrated"
         selected_path = "answer_with_uncertainty"
 
-    if selected_path == "reflect_and_progress" and context_frame.dialogue_act == "question":
+    question_requires_clarification = (
+        context_frame.dialogue_act == "question"
+        and (
+            confidence_assessment.needs_clarification
+            or confidence_assessment.response_mode == "clarify"
+            or knowledge_boundary_decision.decision == "clarify_before_answer"
+            or (
+                not knowledge_boundary_decision.can_answer
+                and bool(knowledge_boundary_decision.missing_information)
+            )
+        )
+    )
+    if selected_path == "reflect_and_progress" and question_requires_clarification:
         selected_path = "clarify_then_answer"
         regulation_mode = "clarify"
 

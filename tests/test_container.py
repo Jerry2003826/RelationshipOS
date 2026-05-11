@@ -22,7 +22,7 @@ def test_build_container_defaults_to_in_memory_event_store() -> None:
     assert container.runtime_service is not None
     assert container.llm_client is not None
     assert container.database_engine is None
-    assert container.memory_service._factual_backend_mode == "mem0_shadow"
+    assert container.memory_service._factual_backend_mode == "native"
 
 
 def test_build_container_can_switch_to_postgres_event_store() -> None:

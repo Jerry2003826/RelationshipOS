@@ -29,8 +29,8 @@
 > interpretation/entity reads. Router holdout eval is reproducible with
 > `uv run python router_v2/training/router_eval.py --data router_v2/training/holdout_zh.jsonl`
 > and currently reports Macro F1 **0.873** on 164 holdout rows. Mem0 is optional:
-> the default `mem0_shadow` mode gracefully falls back when `mem0ai` is not
-> installed, and full Mem0 deps live under the `benchmark` extra.
+> the default fact-memory backend is `native`, and full Mem0 deps live under the
+> `benchmark` extra.
 
 > 市面上的 chatbot 做的是「每一轮重新组织一次上下文再回答」。
 > RelationshipOS 做的是「**同一个人一直在这里,只是这次决定要不要认真动脑,再决定怎么说**」。
@@ -179,9 +179,14 @@ uv run uvicorn relationship_os.main:app --reload
 # 浏览器打开 http://127.0.0.1:8000/static/chat.html
 ```
 
+> Mem0 / benchmark 压测依赖在 `benchmark` extra 里；需要时再跑
+> `uv sync --extra dev --extra benchmark`。
+
 ### 2. 跑 Benchmark(开发者)
 
 ```bash
+uv sync --extra dev --extra benchmark
+
 # 120-turn 长聊压力
 uv run python -m benchmarks.minimax_companion_stress_zh_demo \
   --system-only --stress-mode stable --stress-turns 120
@@ -288,7 +293,7 @@ uv run pytest tests/test_emotion_ab_eval.py -q   # 单文件
 
         ↓  事实槽位可选挂到↓
 
-┌── Mem0 事实层(可替换,默认 shadow 双写)──────┐
+┌── Mem0 事实层(可替换,默认 native)──────────┐
 │  向量索引:Qdrant 本地模式(storage.sqlite)    │
 │  历史:history.db                                │
 │  嵌入:multilingual-e5-small(离线)              │
@@ -338,13 +343,13 @@ RelationshipOS 自带一套原生的事实/摘要记忆,**用不用 Mem0 都能�
 | 模式 | 含义 | 适合 |
 |:---|:---|:---|
 | `native` | 只用自带事实层,Mem0 完全不加载 | 最小依赖,本地跑通先用这个 |
-| `mem0_shadow` | 双写:native 主用,Mem0 同步写一份,读仍走 native | 默认值,安全灰度 |
+| `mem0_shadow` | 双写:native 主用,Mem0 同步写一份,读仍走 native | 安全灰度 |
 | `mem0_primary` | 双写,但事实槽位**优先从 Mem0 召回** | 跨 session 记忆主力场景,压测用这个 |
 
 **配置示例**(在 `.env` 里加):
 
 ```bash
-# 事实层模式(默认 mem0_shadow)
+# 事实层模式(默认 native; Mem0 压测/灰度时手动开启)
 RELATIONSHIP_OS_FACT_MEMORY_BACKEND=mem0_primary
 
 # Mem0 本地存储路径(都是相对仓库根目录的默认值)
@@ -356,7 +361,10 @@ RELATIONSHIP_OS_MEM0_EMBED_MODEL=intfloat/multilingual-e5-small
 RELATIONSHIP_OS_MEM0_RETRIEVAL_LIMIT=12
 ```
 
-Mem0 依赖在 `pyproject.toml` 的 `benchmark` extra 里(`mem0ai>=1.0.7`);需要完整 Mem0 压测时用 `uv sync --extra benchmark`。默认 `mem0_shadow` 会在未安装 Mem0 时退回 native 事实层;存储后端用 **Qdrant 本地文件 + SQLite** 两份落盘文件,首次跑会自动创建,**不需要独立起 Qdrant 服务**。
+Mem0 依赖写在 `pyproject.toml` 的 `benchmark` extra 里；普通本地启动只需要
+`uv sync --extra dev`，Mem0 / benchmark 压测再使用
+`uv sync --extra dev --extra benchmark`。存储后端用 **Qdrant 本地文件 + SQLite**
+两份落盘文件,首次跑会自动创建,**不需要独立起 Qdrant 服务**。
 
 **目录结构**(跑起来之后):
 

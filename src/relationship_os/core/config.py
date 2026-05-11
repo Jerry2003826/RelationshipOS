@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     entity_persona_seed_file: str = ""
     search_enabled: bool = True
     memory_index_enabled: bool = True
-    fact_memory_backend: Literal["native", "mem0_shadow", "mem0_primary"] = "mem0_shadow"
+    fact_memory_backend: Literal["native", "mem0_shadow", "mem0_primary"] = "native"
     memory_index_store_path: str = ".relationship_os/memory_index"
     memory_index_text_provider: Literal["hash", "aliyun", "openai_compatible"] = "aliyun"
     memory_index_text_model: str = "text-embedding-v4"
