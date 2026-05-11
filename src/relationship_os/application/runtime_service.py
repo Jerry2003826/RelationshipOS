@@ -58,6 +58,7 @@ from relationship_os.application.runtime.light_recall_pipeline import (
     LightRecallPipeline,
     UnavailableLightRecallMemoryService,
 )
+from relationship_os.application.runtime.post_turn_effects import PostTurnEffects
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
@@ -343,6 +344,11 @@ class RuntimeService:
             persona_text=persona_text,
             entity_name=entity_name,
             edge_max_completion_tokens=self._edge_max_completion_tokens,
+        )
+        self._post_turn_effects = PostTurnEffects(
+            entity_service=entity_service,
+            action_service=action_service,
+            entity_id=entity_id,
         )
         self._semantic_turn_cache: dict[str, _UserTurnInterpretation] = {}
         self._background_factual_shadow_tasks: dict[str, asyncio.Task[None]] = {}
@@ -674,55 +680,18 @@ class RuntimeService:
                     exc_info=True,
                 )
         self_state_ms = round((perf_counter() - stage_started) * 1000.0, 1)
-        stage_started = perf_counter()
-        if not readonly_probe_session and self._entity_service is not None and analysis is not None:
-            try:
-                await self._entity_service.update_after_turn(
-                    user_id=turn_context.user_id,
-                    session_id=session_id,
-                    user_message=user_message_text,
-                    assistant_response=reply_artifacts.assistant_response,
-                    recalled_memory=analysis.recalled_memory,
-                    conscience_assessment=self._entity_service_assessment(analysis),
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to update entity state for session %s",
-                    session_id,
-                    exc_info=True,
-                )
-        entity_update_ms = round((perf_counter() - stage_started) * 1000.0, 1)
-        stage_started = perf_counter()
-        if (
-            not readonly_probe_session
-            and self._action_service is not None
-            and self._entity_service is not None
-        ):
-            try:
-                persona_state = await self._entity_service.get_persona_state()
-                goal_state = await self._entity_service.get_goal_state()
-                world_state = await self._entity_service.get_world_state()
-                await self._action_service.plan_and_execute(
-                    entity_id=self._entity_id,
-                    user_id=turn_context.user_id,
-                    session_id=session_id,
-                    user_message=user_message_text,
-                    assistant_response=reply_artifacts.assistant_response,
-                    archetype=str(
-                        persona_state.get("persona_archetype")
-                        or persona_state.get("archetype")
-                        or "default"
-                    ),
-                    goal_state=goal_state,
-                    world_state=world_state,
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to plan or execute entity actions for session %s",
-                    session_id,
-                    exc_info=True,
-                )
-        action_ms = round((perf_counter() - stage_started) * 1000.0, 1)
+        post_turn_effect_timings = await (
+            self._get_post_turn_effects().run_entity_and_action_effects(
+                readonly_probe_session=readonly_probe_session,
+                analysis=analysis,
+                turn_context=turn_context,
+                session_id=session_id,
+                user_message=user_message_text,
+                reply_artifacts=reply_artifacts,
+            )
+        )
+        entity_update_ms = post_turn_effect_timings.entity_update_ms
+        action_ms = post_turn_effect_timings.action_ms
         total_ms = round((perf_counter() - turn_started) * 1000.0, 1)
         turn_stage_timing = {
             "total_ms": total_ms,
@@ -770,38 +739,16 @@ class RuntimeService:
             turn_stage_timing=turn_stage_timing,
         )
 
-    def _entity_service_assessment(self, analysis: _TurnAnalysis) -> Any:
-        if self._entity_service is None:
-            return None
-        from relationship_os.application.entity_service import ConscienceAssessment
-
-        return ConscienceAssessment(
-            mode=str(analysis.conscience_assessment.get("mode", "withhold")),
-            reason=str(analysis.conscience_assessment.get("reason", "")),
-            disclosure_style=str(analysis.conscience_assessment.get("disclosure_style", "hint")),
-            dramatic_value=float(analysis.conscience_assessment.get("dramatic_value", 0.0) or 0.0),
-            conscience_weight=float(
-                analysis.conscience_assessment.get("conscience_weight", 0.55) or 0.55
-            ),
-            source_user_ids=list(analysis.conscience_assessment.get("source_user_ids") or []),
-            allowed_fact_count=int(
-                analysis.conscience_assessment.get("allowed_fact_count", 0) or 0
-            ),
-            attribution_required=bool(
-                analysis.conscience_assessment.get("attribution_required", False)
-            ),
-            ambiguity_required=bool(analysis.conscience_assessment.get("ambiguity_required", True)),
-            quote_style=str(analysis.conscience_assessment.get("quote_style", "opaque")),
-            dramatic_ceiling=float(
-                analysis.conscience_assessment.get("dramatic_ceiling", 0.18) or 0.18
-            ),
-            must_anchor_to_observed_memory=bool(
-                analysis.conscience_assessment.get(
-                    "must_anchor_to_observed_memory",
-                    False,
-                )
-            ),
-        )
+    def _get_post_turn_effects(self) -> PostTurnEffects:
+        effects = getattr(self, "_post_turn_effects", None)
+        if effects is None:
+            effects = PostTurnEffects(
+                entity_service=getattr(self, "_entity_service", None),
+                action_service=getattr(self, "_action_service", None),
+                entity_id=getattr(self, "_entity_id", "server"),
+            )
+            self._post_turn_effects = effects
+        return effects
 
     async def _write_self_state(
         self,
