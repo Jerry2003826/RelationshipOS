@@ -76,6 +76,13 @@ from relationship_os.application.runtime.reply_prompt_sections import (
 from relationship_os.application.runtime.reply_prompt_sections import (
     build_reply_rendering_lines as build_runtime_reply_rendering_lines,
 )
+from relationship_os.application.runtime.runtime_behavior_policy import (
+    load_runtime_behavior_policy,
+    runtime_behavior_bool,
+    runtime_behavior_int,
+    runtime_behavior_list,
+    runtime_behavior_map,
+)
 from relationship_os.application.runtime.runtime_quality_doctor_runner import (
     RuntimeQualityDoctorRunner,
 )
@@ -1913,43 +1920,19 @@ class RuntimeService:
         return self._runtime_profile == "friend_chat_zh_v1"
 
     def _runtime_behavior_policy(self) -> dict[str, Any]:
-        compiled = get_default_compiled_policy_set(
-            runtime_profile=getattr(self, "_runtime_profile", "default"),
-            archetype="default",
-        )
-        if compiled is None:
-            return {}
-        return dict(compiled.rendering_policy.get("runtime_behavior") or {})
+        return load_runtime_behavior_policy(getattr(self, "_runtime_profile", "default"))
 
     def _runtime_behavior_list(self, key: str, fallback: tuple[str, ...]) -> tuple[str, ...]:
-        values = self._runtime_behavior_policy().get(key)
-        if not isinstance(values, list):
-            return fallback
-        compiled = tuple(str(value) for value in values if str(value).strip())
-        return compiled or fallback
+        return runtime_behavior_list(self._runtime_behavior_policy(), key, fallback)
 
     def _runtime_behavior_map(self, key: str) -> dict[str, Any]:
-        value = self._runtime_behavior_policy().get(key)
-        return dict(value) if isinstance(value, dict) else {}
+        return runtime_behavior_map(self._runtime_behavior_policy(), key)
 
     def _runtime_behavior_int(self, key: str, fallback: int) -> int:
-        value = self._runtime_behavior_policy().get(key)
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return fallback
+        return runtime_behavior_int(self._runtime_behavior_policy(), key, fallback)
 
     def _runtime_behavior_bool(self, key: str, fallback: bool) -> bool:
-        value = self._runtime_behavior_policy().get(key)
-        if isinstance(value, bool):
-            return value
-        if isinstance(value, str):
-            normalized = value.strip().casefold()
-            if normalized in {"true", "1", "yes", "on"}:
-                return True
-            if normalized in {"false", "0", "no", "off"}:
-                return False
-        return fallback
+        return runtime_behavior_bool(self._runtime_behavior_policy(), key, fallback)
 
     def _rule_based_turn_interpretation(self, user_message: str) -> _UserTurnInterpretation:
         presence_probe = self._is_presence_probe(user_message)
