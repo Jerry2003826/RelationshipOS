@@ -104,6 +104,9 @@ from relationship_os.application.runtime.friend_chat_probe_parser import (
     compose_friend_chat_structured_probe_reply,
     parse_friend_chat_structured_probe_reply,
 )
+from relationship_os.application.runtime.friend_chat_probe_planning import (
+    build_friend_chat_probe_answer_plan,
+)
 from relationship_os.application.runtime.friend_chat_probe_repair import (
     build_friend_chat_probe_repair_feedback,
     friend_chat_probe_persona_trait_semantics,
@@ -4352,208 +4355,12 @@ class RuntimeService:
     ) -> dict[str, Any] | None:
         probe_cues = self._build_friend_chat_probe_cues(metadata)
         snapshot = self._build_friend_chat_probe_snapshot(metadata)
-        if not probe_cues:
-            probe_kind = ""
-            if bool(metadata.get("turn_interpretation_persona_state_probe")):
-                probe_kind = "persona_state"
-            elif bool(metadata.get("turn_interpretation_relationship_reflection_probe")):
-                probe_kind = "relationship_reflection"
-            elif bool(metadata.get("turn_interpretation_state_reflection_probe")):
-                probe_kind = "state_reflection"
-            elif bool(metadata.get("turn_interpretation_self_referential_memory_query")):
-                probe_kind = "memory_recap"
-            elif bool(metadata.get("turn_interpretation_social_probe")):
-                probe_kind = "social_hint"
-            if not probe_kind:
-                return None
-            if probe_kind == "memory_recap":
-                factual_slots = dict(snapshot.get("factual_slots") or {})
-                required_fact_tokens = [
-                    value
-                    for value in (
-                        str(factual_slots.get("hometown", "") or "").strip(),
-                        str(factual_slots.get("pet_name", "") or "").strip(),
-                        str(factual_slots.get("drink_preference", "") or "").strip(),
-                        str(factual_slots.get("communication_preference", "") or "").strip(),
-                    )
-                    if value
-                ]
-                probe_cues = {
-                    "probe_kind": probe_kind,
-                    "required_fact_tokens": required_fact_tokens,
-                    "minimum_required_fact_token_count": min(4, len(required_fact_tokens)),
-                    "must_cover_required_items": True,
-                    "answer_perspective": "user",
-                    "fact_slots": factual_slots,
-                }
-            elif probe_kind == "state_reflection":
-                state_snapshot = dict(snapshot.get("state_snapshot") or {})
-                probe_cues = {
-                    "probe_kind": probe_kind,
-                    "required_signal_ids": list(state_snapshot.get("signals") or [])[:4],
-                    "state_markers": list(state_snapshot.get("markers") or [])[:4],
-                    "minimum_required_signal_count": min(
-                        3,
-                        len(list(state_snapshot.get("signals") or [])[:4]),
-                    ),
-                    "must_cover_required_items": True,
-                }
-            elif probe_kind == "relationship_reflection":
-                relationship_snapshot = dict(snapshot.get("relationship_snapshot") or {})
-                factual_slots = dict(snapshot.get("factual_slots") or {})
-                supporting_fact_tokens = [
-                    value
-                    for value in (
-                        str(factual_slots.get("hometown", "") or "").strip(),
-                        str(factual_slots.get("pet_name", "") or "").strip(),
-                        str(factual_slots.get("drink_preference", "") or "").strip(),
-                        str(factual_slots.get("communication_preference", "") or "").strip(),
-                    )
-                    if value
-                ][:3]
-                probe_cues = {
-                    "probe_kind": probe_kind,
-                    "required_signal_ids": list(relationship_snapshot.get("signals") or [])[:4],
-                    "relationship_markers": list(relationship_snapshot.get("markers") or [])[:4],
-                    "supporting_fact_tokens": supporting_fact_tokens,
-                    "minimum_required_signal_count": min(
-                        3,
-                        len(list(relationship_snapshot.get("signals") or [])[:4]),
-                    ),
-                    "must_anchor_detail": bool(
-                        supporting_fact_tokens
-                        and "remembers_details" in list(relationship_snapshot.get("signals") or [])
-                    ),
-                    "must_explicit_continuity": "still_here"
-                    in list(relationship_snapshot.get("signals") or []),
-                    "must_explicit_familiarity": any(
-                        signal in {"closer", "more_relaxed", "less_formal"}
-                        for signal in list(relationship_snapshot.get("signals") or [])
-                    ),
-                }
-            elif probe_kind == "persona_state":
-                state_snapshot = dict(snapshot.get("state_snapshot") or {})
-                required = [
-                    signal
-                    for signal in list(state_snapshot.get("signals") or [])
-                    if signal in {"tired", "slow", "withdrawn"}
-                ][:3]
-                if (
-                    str(state_snapshot.get("dominant_tone", "") or "").strip() == "low_energy"
-                    and "tired" not in required
-                ):
-                    required.append("tired")
-                required_persona_traits: list[str] = []
-                if required:
-                    required_persona_traits.append("low_energy")
-                if "withdrawn" in required or "slow" in required or "tired" in required:
-                    required_persona_traits.append("not_full")
-                required_persona_traits.append("conversational")
-                probe_cues = {
-                    "probe_kind": probe_kind,
-                    "required_signal_ids": required[:3],
-                    "minimum_required_signal_count": min(2, len(required[:3])),
-                    "required_persona_traits": list(dict.fromkeys(required_persona_traits)),
-                    "minimum_required_persona_trait_count": min(
-                        3, len(list(dict.fromkeys(required_persona_traits)))
-                    ),
-                    "must_cover_required_items": True,
-                    "style_tags": ["low_energy"],
-                    "must_sound_conversational": True,
-                }
-            elif probe_kind == "social_hint":
-                social_snapshot = dict(snapshot.get("social_snapshot") or {})
-                probe_cues = {
-                    "probe_kind": probe_kind,
-                    "required_fact_tokens": [
-                        value
-                        for value in (
-                            str(social_snapshot.get("subject_token", "") or "").strip(),
-                            str(social_snapshot.get("entity_token", "") or "").strip(),
-                        )
-                        if value
-                    ],
-                    "minimum_required_fact_token_count": min(
-                        2,
-                        len(
-                            [
-                                value
-                                for value in (
-                                    str(social_snapshot.get("subject_token", "") or "").strip(),
-                                    str(social_snapshot.get("entity_token", "") or "").strip(),
-                                )
-                                if value
-                            ]
-                        ),
-                    ),
-                    "must_cover_required_items": True,
-                    "disclosure_posture": str(
-                        social_snapshot.get("disclosure_posture", "") or ""
-                    ).strip(),
-                    "required_disclosure_posture": (
-                        "partial_withhold"
-                        if str(social_snapshot.get("disclosure_posture", "") or "").strip()
-                        else ""
-                    ),
-                    "must_explicit_withhold": bool(
-                        str(social_snapshot.get("disclosure_posture", "") or "").strip()
-                    ),
-                }
-        if not probe_cues:
-            return None
-        probe_kind = str(probe_cues.get("probe_kind", "") or "").strip()
-        return {
-            "probe_kind": probe_kind,
-            "language": "zh" if self._is_friend_chat_profile() else "en",
-            "required_signal_ids": list(dict.fromkeys(probe_cues.get("required_signal_ids") or [])),
-            "required_signal_semantics": {
-                signal_id: self._friend_chat_probe_signal_semantics(signal_id)
-                for signal_id in list(dict.fromkeys(probe_cues.get("required_signal_ids") or []))
-                if self._friend_chat_probe_signal_semantics(signal_id)
-            },
-            "required_persona_traits": list(
-                dict.fromkeys(probe_cues.get("required_persona_traits") or [])
-            ),
-            "required_persona_trait_semantics": {
-                trait: self._friend_chat_probe_persona_trait_semantics(trait)
-                for trait in list(dict.fromkeys(probe_cues.get("required_persona_traits") or []))
-                if self._friend_chat_probe_persona_trait_semantics(trait)
-            },
-            "required_fact_tokens": list(
-                dict.fromkeys(probe_cues.get("required_fact_tokens") or [])
-            ),
-            "required_disclosure_posture": str(
-                probe_cues.get("required_disclosure_posture", "") or ""
-            ).strip(),
-            "required_disclosure_posture_semantics": self._friend_chat_probe_posture_semantics(
-                str(probe_cues.get("required_disclosure_posture", "") or "").strip()
-            ),
-            "minimum_required_signal_count": int(
-                probe_cues.get("minimum_required_signal_count") or 0
-            ),
-            "minimum_required_persona_trait_count": int(
-                probe_cues.get("minimum_required_persona_trait_count") or 0
-            ),
-            "minimum_required_fact_token_count": int(
-                probe_cues.get("minimum_required_fact_token_count") or 0
-            ),
-            "must_cover_required_items": bool(probe_cues.get("must_cover_required_items")),
-            "must_anchor_detail": bool(probe_cues.get("must_anchor_detail")),
-            "must_explicit_continuity": bool(probe_cues.get("must_explicit_continuity")),
-            "must_explicit_familiarity": bool(probe_cues.get("must_explicit_familiarity")),
-            "must_sound_conversational": bool(probe_cues.get("must_sound_conversational")),
-            "must_explicit_withhold": bool(probe_cues.get("must_explicit_withhold")),
-            "answer_perspective": str(probe_cues.get("answer_perspective", "") or "").strip(),
-            "disclosure_posture": str(probe_cues.get("disclosure_posture", "") or "").strip(),
-            "style_tags": list(dict.fromkeys(probe_cues.get("style_tags") or [])),
-            "supporting_fact_tokens": list(
-                dict.fromkeys(probe_cues.get("supporting_fact_tokens") or [])
-            ),
-            "factual_slots": dict(snapshot.get("factual_slots") or {}),
-            "state_snapshot": dict(snapshot.get("state_snapshot") or {}),
-            "relationship_snapshot": dict(snapshot.get("relationship_snapshot") or {}),
-            "social_snapshot": dict(snapshot.get("social_snapshot") or {}),
-        }
+        return build_friend_chat_probe_answer_plan(
+            probe_cues=probe_cues,
+            snapshot=snapshot,
+            metadata=metadata,
+            is_friend_chat_profile=self._is_friend_chat_profile(),
+        )
 
     def _is_self_referential_memory_query(self, user_message: str) -> bool:
         lowered = user_message.casefold().strip()
