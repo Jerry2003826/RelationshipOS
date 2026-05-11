@@ -110,7 +110,19 @@ from relationship_os.application.runtime.friend_chat_probe_contracts import (
     build_friend_chat_structured_probe_payload,
 )
 from relationship_os.application.runtime.friend_chat_probe_cues import (
+    build_friend_chat_memory_recap_cues as build_runtime_friend_chat_memory_recap_cues,
+)
+from relationship_os.application.runtime.friend_chat_probe_cues import (
+    build_persona_state_probe_cues as build_runtime_persona_state_probe_cues,
+)
+from relationship_os.application.runtime.friend_chat_probe_cues import (
+    build_relationship_reflection_cues as build_runtime_relationship_reflection_cues,
+)
+from relationship_os.application.runtime.friend_chat_probe_cues import (
     build_social_hint_cues as build_runtime_social_hint_cues,
+)
+from relationship_os.application.runtime.friend_chat_probe_cues import (
+    build_state_reflection_cues as build_runtime_state_reflection_cues,
 )
 from relationship_os.application.runtime.friend_chat_probe_messages import (
     build_friend_chat_compact_probe_messages,
@@ -179,9 +191,6 @@ from relationship_os.application.runtime.runtime_quality_doctor_runner import (
 )
 from relationship_os.application.runtime.self_state_writer import (
     SelfStateWriter,
-    extract_relationship_markers_from_text,
-    extract_state_markers_from_text,
-    normalize_state_reflection_fragment,
 )
 from relationship_os.application.runtime.session_lifecycle import (
     SessionAlreadyExistsError,
@@ -2939,33 +2948,6 @@ class RuntimeService:
             normalized.append(item)
         return normalized
 
-    def _normalize_state_reflection_fragment(self, candidate: str) -> str:
-        return normalize_state_reflection_fragment(candidate)
-
-    def _state_marker_implies_reply_avoidance(self, text: str) -> bool:
-        normalized = self._normalize_state_reflection_fragment(text)
-        if normalized == "不想回消息":
-            return True
-        raw = str(text or "")
-        if ("不太想回" in raw or "不想回" in raw or "懒得回" in raw) and (
-            "消息" in raw or "回复" in raw or "回你" in raw or "拖着" in raw
-        ):
-            return True
-        return any(
-            token in raw
-            for token in (
-                "不想回消息",
-                "不太想回消息",
-                "懒得回消息",
-                "回消息费劲",
-                "打几个字就觉得累",
-                "回的消息拖到",
-                "刷手机",
-                "发呆",
-                "静音",
-            )
-        )
-
     def _normalize_friend_chat_communication_preference(self, text: str) -> str:
         return normalize_communication_preference(text)
 
@@ -3075,12 +3057,6 @@ class RuntimeService:
             ),
         }
 
-    def _extract_state_markers_from_text(self, text: str) -> list[str]:
-        return extract_state_markers_from_text(text)
-
-    def _extract_relationship_markers_from_text(self, text: str) -> list[str]:
-        return extract_relationship_markers_from_text(text)
-
     def _normalize_friend_chat_owner(self, item: dict[str, Any]) -> str:
         return normalize_friend_chat_owner(item)
 
@@ -3159,238 +3135,28 @@ class RuntimeService:
         return None
 
     def _build_persona_state_probe_cues(self, metadata: dict[str, Any]) -> dict[str, Any] | None:
-        summary = str(metadata.get("entity_persona_summary", "") or "").strip()
-        archetype = str(metadata.get("entity_persona_archetype", "default") or "default").strip()
-        speech_style = str(metadata.get("entity_persona_speech_style", "") or "").strip()
-        mood_tone = str(metadata.get("entity_persona_mood_tone", "steady") or "steady").strip()
-        probe_snapshot = self._build_friend_chat_probe_snapshot(metadata)
-        snapshot_state = dict(probe_snapshot.get("state_snapshot") or {})
-        narrative_digest = self._normalize_friend_chat_narrative_digest(
-            metadata.get("friend_chat_narrative_digest")
+        return build_runtime_persona_state_probe_cues(
+            metadata=metadata,
+            is_friend_chat_profile=self._is_friend_chat_profile(),
+            probe_snapshot=self._build_friend_chat_probe_snapshot(metadata),
+            self_memory_values=self._self_memory_values(metadata),
         )
-        if snapshot_state:
-            narrative_digest = {
-                **narrative_digest,
-                **snapshot_state,
-            }
-        style_tags: list[str] = []
-        if self._is_friend_chat_profile() and mood_tone not in {"charged", "tender"}:
-            style_tags.append("low_energy")
-        if "melancholic" in archetype or "低能量" in summary or "没什么意思" in speech_style:
-            style_tags.append("low_energy")
-        if mood_tone == "charged":
-            style_tags.append("guarded_fast")
-        if mood_tone == "tender":
-            style_tags.append("soft_close")
-        self_memory_blob = " ".join(self._self_memory_values(metadata))
-        if "low_energy" not in style_tags and any(
-            token in self_memory_blob
-            for token in ("累", "没力气", "提不起劲", "蔫", "不太想动", "懒得动")
-        ):
-            style_tags.append("low_energy")
-        required_signal_ids = [
-            signal
-            for signal in ("tired", "slow", "withdrawn")
-            if signal in list(narrative_digest.get("signals") or [])
-        ]
-        if "low_energy" in style_tags and not required_signal_ids:
-            required_signal_ids.append("tired")
-        required_persona_traits: list[str] = []
-        if "low_energy" in style_tags or any(
-            signal in {"tired", "slow"} for signal in required_signal_ids
-        ):
-            required_persona_traits.append("low_energy")
-        if (
-            "withdrawn" in required_signal_ids
-            or "low_energy" in style_tags
-            or "没什么意思" in summary
-            or "收着" in speech_style
-        ):
-            required_persona_traits.append("not_full")
-        if self._is_friend_chat_profile():
-            required_persona_traits.append("conversational")
-        cues = {
-            "probe_kind": "persona_state",
-            "persona_archetype": archetype,
-            "mood_tone": mood_tone,
-            "style_tags": list(dict.fromkeys(style_tags)),
-            "required_signal_ids": required_signal_ids[:3],
-            "minimum_required_signal_count": min(2, len(required_signal_ids[:3])),
-            "required_persona_traits": list(dict.fromkeys(required_persona_traits)),
-            "minimum_required_persona_trait_count": min(
-                3, len(list(dict.fromkeys(required_persona_traits)))
-            ),
-            "must_cover_required_items": True,
-            "persona_summary_hint": summary[:120],
-            "speech_style_hint": speech_style[:120],
-        }
-        return cues if any(cues.values()) else None
 
     def _build_state_reflection_cues(self, metadata: dict[str, Any]) -> dict[str, Any] | None:
-        probe_snapshot = self._build_friend_chat_probe_snapshot(metadata)
-        snapshot_state = dict(probe_snapshot.get("state_snapshot") or {})
-        digest = self._normalize_friend_chat_narrative_digest(
-            metadata.get("friend_chat_narrative_digest")
+        return build_runtime_state_reflection_cues(
+            metadata=metadata,
+            probe_snapshot=self._build_friend_chat_probe_snapshot(metadata),
+            self_memory_values=self._self_memory_values(metadata),
         )
-        if snapshot_state:
-            digest = {
-                **digest,
-                **snapshot_state,
-            }
-        values = self._self_memory_values(metadata)
-        values.extend(
-            str(value).strip()
-            for value in list(metadata.get("friend_chat_recent_user_messages") or [])
-            if str(value).strip()
-        )
-        markers = list(digest.get("markers") or [])
-        recent_markers = metadata.get("friend_chat_recent_state_markers")
-        if isinstance(recent_markers, list):
-            for marker in recent_markers:
-                text = str(marker).strip()
-                if text and text not in markers:
-                    markers.append(text)
-        if not markers:
-            for value in values:
-                for marker in self._extract_state_markers_from_text(value):
-                    if marker not in markers:
-                        markers.append(marker)
-                    if len(markers) >= 4:
-                        break
-                if len(markers) >= 4:
-                    break
-        withdrawn_inferred = any(
-            self._state_marker_implies_reply_avoidance(marker) for marker in markers
-        )
-        withdrawn_inferred = withdrawn_inferred or any(
-            self._state_marker_implies_reply_avoidance(str(value))
-            for value in (
-                metadata.get("turn_interpretation_user_state_guess", ""),
-                metadata.get("turn_interpretation_situation_guess", ""),
-            )
-        )
-        required_signal_ids = list(
-            dict.fromkeys(
-                str(signal).strip()
-                for signal in list(digest.get("signals") or [])
-                if str(signal).strip() in {"tired", "slow", "withdrawn", "cluttered"}
-            )
-        )
-        for marker in markers:
-            normalized = self._normalize_state_reflection_fragment(marker)
-            if normalized == "累" and "tired" not in required_signal_ids:
-                required_signal_ids.append("tired")
-            elif normalized == "慢" and "slow" not in required_signal_ids:
-                required_signal_ids.append("slow")
-        if withdrawn_inferred and "withdrawn" not in required_signal_ids:
-            required_signal_ids.append("withdrawn")
-        required_signal_ids = required_signal_ids[:4]
-        filtered_markers = [
-            marker
-            for marker in markers
-            if not (withdrawn_inferred and self._state_marker_implies_reply_avoidance(marker))
-        ]
-        cues = {
-            "probe_kind": "state_reflection",
-            "state_signals": list(digest.get("signals") or []),
-            "state_markers": list(dict.fromkeys([*filtered_markers]))[:4],
-            "required_signal_ids": required_signal_ids,
-            "minimum_required_signal_count": min(3, len(required_signal_ids)),
-            "must_cover_required_items": True,
-            "dominant_tone": str(digest.get("dominant_tone", "") or "").strip(),
-            "user_state_guess": str(
-                metadata.get("turn_interpretation_user_state_guess", "") or ""
-            ).strip(),
-            "situation_guess": str(
-                metadata.get("turn_interpretation_situation_guess", "") or ""
-            ).strip(),
-            "appraisal": str(metadata.get("turn_interpretation_appraisal", "") or "").strip(),
-            "emotional_load": str(
-                metadata.get("turn_interpretation_emotional_load", "") or ""
-            ).strip(),
-        }
-        return cues if any(value for key, value in cues.items() if key != "probe_kind") else None
 
     def _build_relationship_reflection_cues(
         self,
         metadata: dict[str, Any],
     ) -> dict[str, Any] | None:
-        probe_snapshot = self._build_friend_chat_probe_snapshot(metadata)
-        snapshot_relationship = dict(probe_snapshot.get("relationship_snapshot") or {})
-        digest = self._normalize_friend_chat_relationship_digest(
-            metadata.get("friend_chat_relationship_digest")
+        return build_runtime_relationship_reflection_cues(
+            metadata=metadata,
+            probe_snapshot=self._build_friend_chat_probe_snapshot(metadata),
         )
-        if snapshot_relationship:
-            digest = {
-                **digest,
-                **snapshot_relationship,
-            }
-        markers = list(digest.get("markers") or [])
-        recent_markers = metadata.get("friend_chat_recent_relationship_markers")
-        if isinstance(recent_markers, list):
-            for marker in recent_markers:
-                text = str(marker).strip()
-                if text and text not in markers:
-                    markers.append(text)
-        signals = list(digest.get("signals") or [])
-        marker_blob = " ".join(markers)
-        if "还在" in marker_blob and "still_here" not in signals:
-            signals.append("still_here")
-        if (
-            "记得" in marker_blob or "小习惯" in marker_blob
-        ) and "remembers_details" not in signals:
-            signals.append("remembers_details")
-        if ("放松" in marker_blob or "松一点" in marker_blob) and "more_relaxed" not in signals:
-            signals.append("more_relaxed")
-        if ("端着" in marker_blob or "普通聊天" in marker_blob) and "less_formal" not in signals:
-            signals.append("less_formal")
-        total_interactions = int(
-            digest.get("total_interactions")
-            or metadata.get("friend_chat_total_interactions", 0)
-            or 0
-        )
-        factual_slots = dict(probe_snapshot.get("factual_slots") or {})
-        supporting_fact_tokens: list[str] = []
-        for value in (
-            str(factual_slots.get("pet_name", "") or "").strip(),
-            str(factual_slots.get("communication_preference", "") or "").strip(),
-            str(factual_slots.get("drink_preference", "") or "").strip(),
-            str(factual_slots.get("hometown", "") or "").strip(),
-        ):
-            if value:
-                supporting_fact_tokens = [value]
-                break
-        has_remembered_detail = bool(supporting_fact_tokens)
-        if total_interactions >= 2 and "closer" not in signals:
-            signals.append("closer")
-        if total_interactions >= 2 and "still_here" not in signals:
-            signals.append("still_here")
-        if has_remembered_detail and "remembers_details" not in signals:
-            signals.append("remembers_details")
-        if total_interactions >= 3 and "more_relaxed" not in signals:
-            signals.append("more_relaxed")
-        if (
-            total_interactions >= 3
-            and ("more_relaxed" in signals or "closer" in signals)
-            and "less_formal" not in signals
-        ):
-            signals.append("less_formal")
-        cues = {
-            "probe_kind": "relationship_reflection",
-            "relationship_signals": signals,
-            "relationship_markers": markers[:4],
-            "required_signal_ids": signals[:4],
-            "supporting_fact_tokens": supporting_fact_tokens[:3],
-            "minimum_required_signal_count": min(3, len(signals[:4])),
-            "must_cover_required_items": True,
-            "must_anchor_detail": has_remembered_detail and "remembers_details" in signals,
-            "interaction_band": str(digest.get("interaction_band", "") or "").strip(),
-            "total_interactions": total_interactions,
-            "relationship_shift_guess": str(
-                metadata.get("turn_interpretation_relationship_shift_guess", "") or ""
-            ).strip(),
-        }
-        return cues if any(value for key, value in cues.items() if key != "probe_kind") else None
 
     def _build_social_hint_cues(self, metadata: dict[str, Any]) -> dict[str, Any] | None:
         return build_runtime_social_hint_cues(
@@ -3402,63 +3168,11 @@ class RuntimeService:
         self,
         metadata: dict[str, Any],
     ) -> dict[str, Any] | None:
-        probe_snapshot = self._build_friend_chat_probe_snapshot(metadata)
-        digest = {
-            **dict(probe_snapshot.get("factual_slots") or {}),
-            **self._enriched_friend_chat_fact_slot_digest(metadata),
-        }
-        inferred_communication_preference = str(
-            digest.get("communication_preference", "") or ""
-        ).strip()
-        if inferred_communication_preference == "像聊天":
-            inferred_communication_preference = ""
-        if not any(
-            (
-                digest.get("hometown"),
-                digest.get("pet_name"),
-                digest.get("drink_preference"),
-                inferred_communication_preference,
-                digest.get("living_facts"),
-            )
-        ):
-            return None
-        return {
-            "probe_kind": "memory_recap",
-            "fact_slots": {
-                "hometown": str(digest.get("hometown", "") or "").strip(),
-                "pet_name": str(digest.get("pet_name", "") or "").strip(),
-                "pet_kind": str(digest.get("pet_kind", "") or "").strip(),
-                "drink_preference": str(digest.get("drink_preference", "") or "").strip(),
-                "communication_preference": inferred_communication_preference,
-                "living_facts": list(digest.get("living_facts") or [])[:2],
-            },
-            "required_fact_tokens": [
-                value
-                for value in (
-                    str(digest.get("hometown", "") or "").strip(),
-                    str(digest.get("pet_name", "") or "").strip(),
-                    str(digest.get("drink_preference", "") or "").strip(),
-                    inferred_communication_preference,
-                )
-                if value
-            ][:4],
-            "minimum_required_fact_token_count": min(
-                4,
-                len(
-                    [
-                        value
-                        for value in (
-                            str(digest.get("hometown", "") or "").strip(),
-                            str(digest.get("pet_name", "") or "").strip(),
-                            str(digest.get("drink_preference", "") or "").strip(),
-                            inferred_communication_preference,
-                        )
-                        if value
-                    ]
-                ),
-            ),
-            "must_cover_required_items": True,
-        }
+        return build_runtime_friend_chat_memory_recap_cues(
+            metadata=metadata,
+            probe_snapshot=self._build_friend_chat_probe_snapshot(metadata),
+            fact_slot_digest=self._enriched_friend_chat_fact_slot_digest(metadata),
+        )
 
     def _build_friend_chat_probe_cues(
         self,
