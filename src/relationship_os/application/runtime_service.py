@@ -69,6 +69,7 @@ from relationship_os.application.runtime.self_state_writer import (
 )
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
 from relationship_os.application.runtime.turn_context import TurnContextLoader, _TurnContext
+from relationship_os.application.runtime.turn_event_appender import TurnEventAppender
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
@@ -343,6 +344,10 @@ class RuntimeService:
             entity_id=entity_id,
         )
         self._turn_context_loader = TurnContextLoader(
+            stream_service=stream_service,
+            runtime_projector_version=runtime_projector_version,
+        )
+        self._turn_event_appender = TurnEventAppender(
             stream_service=stream_service,
             runtime_projector_version=runtime_projector_version,
         )
@@ -7554,25 +7559,21 @@ class RuntimeService:
         turn_context: _TurnContext,
         events: list[NewEvent],
     ) -> tuple[list[StoredEvent], dict[str, Any]]:
-        stored_events = await self._stream_service.append_events(
-            stream_id=session_id,
-            expected_version=turn_context.expected_version,
+        return await self._get_turn_event_appender().append(
+            session_id=session_id,
+            turn_context=turn_context,
             events=events,
         )
-        runtime_projection = self._stream_service.apply_events(
-            stream_id=session_id,
-            state=turn_context.runtime_state
-            or self._stream_service.project_events(
-                stream_id=session_id,
-                events=turn_context.prior_events,
-                projector_name="session-runtime",
-                projector_version=self._runtime_projector_version,
-            )["state"],
-            events=stored_events,
-            projector_name="session-runtime",
-            projector_version=self._runtime_projector_version,
-        )
-        return stored_events, runtime_projection
+
+    def _get_turn_event_appender(self) -> TurnEventAppender:
+        appender = getattr(self, "_turn_event_appender", None)
+        if appender is None:
+            appender = TurnEventAppender(
+                stream_service=self._stream_service,
+                runtime_projector_version=self._runtime_projector_version,
+            )
+            self._turn_event_appender = appender
+        return appender
 
     def _ensure_user_profile_store(self) -> UserProfileStore:
         store = getattr(self, "_user_profile_store", None)
