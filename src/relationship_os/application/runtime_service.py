@@ -95,13 +95,15 @@ from relationship_os.application.runtime.friend_chat_fact_extractors import (
 )
 from relationship_os.application.runtime.friend_chat_fact_slots import (
     build_enriched_friend_chat_fact_slot_digest,
-    infer_friend_chat_communication_preference,
 )
 from relationship_os.application.runtime.friend_chat_memory_selection import (
     build_fallback_memory_items,
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
     build_speakable_memory_items,
+)
+from relationship_os.application.runtime.friend_chat_metadata_context import (
+    build_friend_chat_recent_context,
 )
 from relationship_os.application.runtime.friend_chat_probe_contracts import (
     build_friend_chat_probe_runtime_checklist,
@@ -2948,12 +2950,6 @@ class RuntimeService:
             normalized.append(item)
         return normalized
 
-    def _infer_friend_chat_communication_preference(self, metadata: dict[str, Any]) -> str:
-        return infer_friend_chat_communication_preference(
-            metadata=metadata,
-            self_memory_values=self._self_memory_values(metadata),
-        )
-
     def _enriched_friend_chat_fact_slot_digest(
         self,
         metadata: dict[str, Any],
@@ -4092,45 +4088,9 @@ class RuntimeService:
             user_message=user_message,
             analysis=analysis,
         )
-        self_state = friend_chat_self_state or {}
-        fact_slot_digest = self._normalize_friend_chat_fact_slot_digest(
-            self_state.get("fact_slot_digest")
-        )
-        friend_chat_narrative_digest = self._normalize_friend_chat_narrative_digest(
-            self_state.get("narrative_digest")
-        )
-        friend_chat_relationship_digest = self._normalize_friend_chat_relationship_digest(
-            self_state.get("relationship_digest")
-        )
-        recent_sessions = list(self_state.get("recent_sessions_summary") or [])
-        recent_state_markers: list[str] = []
-        recent_relationship_markers: list[str] = []
-        archived_user_messages: list[str] = []
-        for entry in recent_sessions[-3:]:
-            if not isinstance(entry, dict):
-                continue
-            recent_state_markers.extend(
-                str(value).strip()
-                for value in list(entry.get("user_state_markers") or [])
-                if str(value).strip()
-            )
-            recent_relationship_markers.extend(
-                str(value).strip()
-                for value in list(entry.get("relationship_markers") or [])
-                if str(value).strip()
-            )
-            archived_user_messages.extend(
-                str(value).strip()
-                for value in list(entry.get("recent_user_messages") or [])
-                if str(value).strip()
-            )
-        transcript_user_messages = [
-            str(message.get("content", "")).strip()
-            for message in turn_context.transcript_messages[-8:]
-            if message.get("role") == "user" and str(message.get("content", "")).strip()
-        ]
-        friend_chat_recent_user_messages = list(
-            dict.fromkeys([*archived_user_messages, *transcript_user_messages])
+        friend_chat_context = build_friend_chat_recent_context(
+            self_state=friend_chat_self_state or {},
+            transcript_messages=turn_context.transcript_messages,
         )
         metadata = {
             "topic": analysis.context_frame.topic,
@@ -4307,9 +4267,9 @@ class RuntimeService:
                 analysis=analysis,
                 scopes={"self_user", "session", "user"},
             ),
-            "friend_chat_fact_slot_digest": fact_slot_digest,
-            "friend_chat_narrative_digest": friend_chat_narrative_digest,
-            "friend_chat_relationship_digest": friend_chat_relationship_digest,
+            "friend_chat_fact_slot_digest": friend_chat_context["fact_slot_digest"],
+            "friend_chat_narrative_digest": friend_chat_context["narrative_digest"],
+            "friend_chat_relationship_digest": friend_chat_context["relationship_digest"],
             "friend_chat_other_memory_items": self._build_friend_chat_memory_items(
                 analysis=analysis,
                 scopes={"other_user"},
@@ -4318,18 +4278,18 @@ class RuntimeService:
                 analysis=analysis,
                 scopes={"other_user"},
             ),
-            "friend_chat_recent_user_messages": friend_chat_recent_user_messages,
-            "friend_chat_recent_assistant_messages": [
-                str(message.get("content", "")).strip()
-                for message in turn_context.transcript_messages[-8:]
-                if message.get("role") == "assistant" and str(message.get("content", "")).strip()
+            "friend_chat_recent_user_messages": friend_chat_context["recent_user_messages"],
+            "friend_chat_recent_assistant_messages": friend_chat_context[
+                "recent_assistant_messages"
             ],
             "friend_chat_probe_kind": self._friend_chat_probe_kind_for_runtime_plan(
                 runtime_plan=analysis.edge_runtime_plan
             ),
-            "friend_chat_recent_state_markers": recent_state_markers,
-            "friend_chat_recent_relationship_markers": recent_relationship_markers,
-            "friend_chat_total_interactions": int(self_state.get("total_interactions", 0) or 0),
+            "friend_chat_recent_state_markers": friend_chat_context["recent_state_markers"],
+            "friend_chat_recent_relationship_markers": friend_chat_context[
+                "recent_relationship_markers"
+            ],
+            "friend_chat_total_interactions": friend_chat_context["total_interactions"],
             "speakable_memory_count": len(fallback_memory_items),
             "hidden_memory_count": max(
                 0,
