@@ -1,6 +1,7 @@
 from relationship_os.application.runtime.friend_chat_memory_selection import (
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
+    build_speakable_memory_items,
 )
 
 
@@ -38,3 +39,54 @@ def test_build_friend_chat_memory_items_normalizes_owner_and_limits() -> None:
     assert len(items) == 1
     assert items[0]["subject_display_name"] == "阿宁"
     assert items[0]["value"] == "阿宁提过海盐"
+
+
+def test_build_speakable_memory_items_limits_cross_user_by_conscience() -> None:
+    items = build_speakable_memory_items(
+        user_message="阿宁那边你知道一点吧",
+        recalled_memory=[
+            {
+                "scope": "other_user",
+                "value": "阿宁提过海盐",
+                "source_user_id": "anning",
+                "attribution_guard": "attribution_required",
+                "attribution_confidence": 0.8,
+            },
+            {
+                "scope": "other_user",
+                "value": "小北提过风铃",
+                "source_user_id": "xiaobei",
+                "attribution_guard": "attribution_required",
+                "attribution_confidence": 0.9,
+            },
+            {"scope": "self_user", "value": "我喜欢榛子拿铁"},
+        ],
+        routing_mode="social_disclosure",
+        edge_runtime_plan={},
+        conscience_assessment={
+            "mode": "partial_reveal",
+            "source_user_ids": ["anning"],
+            "allowed_fact_count": 1,
+        },
+        self_referential_memory_query=False,
+    )
+
+    assert len(items) == 1
+    assert items[0]["value"] == "阿宁提过海盐"
+    assert items[0]["subject_display_name"] == "阿宁"
+
+
+def test_build_speakable_memory_items_prefers_self_memory_for_self_factual_query() -> None:
+    items = build_speakable_memory_items(
+        user_message="我喜欢喝什么？",
+        recalled_memory=[
+            {"scope": "global_entity", "value": "榛子拿铁是饮品"},
+            {"scope": "self_user", "value": "我喜欢榛子拿铁"},
+        ],
+        routing_mode="factual_recall",
+        edge_runtime_plan={},
+        conscience_assessment={},
+        self_referential_memory_query=True,
+    )
+
+    assert [item["value"] for item in items] == ["我喜欢榛子拿铁"]

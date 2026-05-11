@@ -85,3 +85,105 @@ def build_friend_chat_memory_items(
         if len(items) >= max_items:
             break
     return items
+
+
+def build_speakable_memory_items(
+    *,
+    user_message: str,
+    recalled_memory: list[dict[str, Any]],
+    routing_mode: str,
+    edge_runtime_plan: dict[str, Any],
+    conscience_assessment: dict[str, Any],
+    self_referential_memory_query: bool,
+) -> list[dict[str, Any]]:
+    candidates = [
+        item
+        for item in recalled_memory
+        if not is_low_signal_fallback_memory_value(str(item.get("value", "")))
+    ]
+    factual_self_query = bool(
+        edge_runtime_plan.get(
+            "interpreted_self_referential_memory_query",
+            self_referential_memory_query,
+        )
+    )
+    conscience_mode = str(conscience_assessment.get("mode", "withhold") or "withhold")
+    allowed_source_user_ids = {
+        str(value)
+        for value in (conscience_assessment.get("source_user_ids") or [])
+        if str(value).strip()
+    }
+    allowed_fact_count = max(
+        0,
+        int(conscience_assessment.get("allowed_fact_count", 0) or 0),
+    )
+
+    def _is_cross_user_speakable(item: dict[str, Any]) -> bool:
+        if str(item.get("scope", "")) != "other_user":
+            return False
+        source_user_id = str(item.get("source_user_id", "") or "")
+        subject_user_id = str(item.get("subject_user_id", "") or "")
+        if allowed_source_user_ids and (
+            source_user_id not in allowed_source_user_ids
+            and subject_user_id not in allowed_source_user_ids
+        ):
+            return False
+        guard = str(item.get("attribution_guard", "hint_only") or "hint_only")
+        if guard == "hint_only":
+            return False
+        return float(item.get("attribution_confidence", 0.0) or 0.0) >= 0.58
+
+    visible: list[dict[str, Any]]
+    if routing_mode == "factual_recall":
+        if factual_self_query:
+            self_candidates = [
+                item
+                for item in candidates
+                if str(item.get("scope", "")) in {"self_user", "session", "user"}
+            ]
+            visible = self_candidates or [
+                item for item in candidates if str(item.get("scope", "")) == "global_entity"
+            ]
+        elif (
+            conscience_mode
+            in {
+                "partial_reveal",
+                "direct_reveal",
+                "dramatic_confrontation",
+            }
+            and allowed_fact_count > 0
+        ):
+            cross_user_candidates = [item for item in candidates if _is_cross_user_speakable(item)]
+            visible = cross_user_candidates[:allowed_fact_count]
+        else:
+            visible = [
+                item for item in candidates if str(item.get("scope", "")) == "global_entity"
+            ]
+    elif routing_mode == "social_disclosure":
+        cross_user_candidates = [item for item in candidates if _is_cross_user_speakable(item)]
+        disclosure_cap = allowed_fact_count
+        if disclosure_cap <= 0 and conscience_mode == "hint":
+            disclosure_cap = 1
+        visible = cross_user_candidates[: max(disclosure_cap, 0)]
+    else:
+        visible = [
+            item
+            for item in candidates
+            if str(item.get("scope", "")) in {"self_user", "session", "user", "global_entity"}
+        ]
+
+    deduped: list[dict[str, Any]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for item in visible:
+        key = (
+            str(item.get("scope", "")),
+            str(item.get("subject_user_id", "") or item.get("source_user_id", "") or ""),
+            str(item.get("value", "")),
+        )
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        normalized_item = dict(item)
+        normalized_item["subject_display_name"] = normalize_friend_chat_owner(item)
+        deduped.append(normalized_item)
+    return deduped
