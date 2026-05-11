@@ -30,7 +30,6 @@ from relationship_os.application.analyzers import (
     build_response_output_units,
     build_response_post_audit,
     build_response_sequence_plan,
-    build_runtime_quality_doctor_report,
     build_session_directive,
     build_system3_snapshot,
 )
@@ -64,6 +63,9 @@ from relationship_os.application.runtime.proactive_event_builder import (
 )
 from relationship_os.application.runtime.reply_completion_resolver import (
     resolve_turn_reply_completion as resolve_runtime_turn_reply_completion,
+)
+from relationship_os.application.runtime.runtime_quality_doctor_runner import (
+    RuntimeQualityDoctorRunner,
 )
 from relationship_os.application.runtime.self_state_writer import (
     SelfStateWriter,
@@ -342,13 +344,9 @@ class RuntimeService:
         self._memory_scope_syncer = self._build_memory_scope_syncer()
         self._session_lock_registry = SessionLockRegistry()
         self._user_profile_turn_updater = UserProfileTurnUpdater(user_service=user_service)
-        self._runtime_quality_doctor_interval_turns = max(
-            0,
-            runtime_quality_doctor_interval_turns,
-        )
-        self._runtime_quality_doctor_window_turns = max(
-            2,
-            runtime_quality_doctor_window_turns,
+        self._runtime_quality_doctor_runner = RuntimeQualityDoctorRunner(
+            interval_turns=runtime_quality_doctor_interval_turns,
+            window_turns=runtime_quality_doctor_window_turns,
         )
         self._proactive_dispatch_handler = ProactiveDispatchHandler(
             stream_service=stream_service,
@@ -7078,19 +7076,21 @@ class RuntimeService:
         turn_context: _TurnContext,
         assistant_responses: list[str],
     ) -> Any | None:
-        should_run_quality_doctor = (
-            self._runtime_quality_doctor_interval_turns > 0
-            and turn_context.turn_index % self._runtime_quality_doctor_interval_turns == 0
-        )
-        if not should_run_quality_doctor:
-            return None
-        return build_runtime_quality_doctor_report(
-            transcript_messages=turn_context.transcript_messages,
+        return self._get_runtime_quality_doctor_runner().build_report(
             user_message=user_message,
+            turn_context=turn_context,
             assistant_responses=assistant_responses,
-            triggered_turn_index=turn_context.turn_index,
-            window_turns=self._runtime_quality_doctor_window_turns,
         )
+
+    def _get_runtime_quality_doctor_runner(self) -> RuntimeQualityDoctorRunner:
+        runner = getattr(self, "_runtime_quality_doctor_runner", None)
+        if runner is None:
+            runner = RuntimeQualityDoctorRunner(
+                interval_turns=getattr(self, "_runtime_quality_doctor_interval_turns", 0),
+                window_turns=getattr(self, "_runtime_quality_doctor_window_turns", 2),
+            )
+            self._runtime_quality_doctor_runner = runner
+        return runner
 
     def _build_assistant_message_events(
         self,
