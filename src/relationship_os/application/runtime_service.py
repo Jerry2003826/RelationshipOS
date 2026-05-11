@@ -109,6 +109,9 @@ from relationship_os.application.runtime.friend_chat_probe_contracts import (
     build_friend_chat_structured_probe_output_contract,
     build_friend_chat_structured_probe_payload,
 )
+from relationship_os.application.runtime.friend_chat_probe_cues import (
+    build_social_hint_cues as build_runtime_social_hint_cues,
+)
 from relationship_os.application.runtime.friend_chat_probe_messages import (
     build_friend_chat_compact_probe_messages,
 )
@@ -3390,134 +3393,10 @@ class RuntimeService:
         return cues if any(value for key, value in cues.items() if key != "probe_kind") else None
 
     def _build_social_hint_cues(self, metadata: dict[str, Any]) -> dict[str, Any] | None:
-        items = self._friend_chat_other_memory_items(metadata)
-        subject_token = ""
-        entity_token = ""
-        fact_hint = ""
-        if items:
-            allowed_source_user_ids = {
-                str(value).strip()
-                for value in list(metadata.get("entity_source_user_ids") or [])
-                if str(value).strip()
-            }
-
-            def _matches_allowed_source(candidate: dict[str, Any]) -> bool:
-                if not allowed_source_user_ids:
-                    return True
-                return any(
-                    str(candidate.get(field, "") or "").strip() in allowed_source_user_ids
-                    for field in ("subject_user_id", "source_user_id")
-                )
-
-            def _is_speakable_social_candidate(candidate: dict[str, Any]) -> bool:
-                guard = str(candidate.get("attribution_guard", "") or "").strip()
-                confidence = float(candidate.get("attribution_confidence", 0.0) or 0.0)
-                return (
-                    _matches_allowed_source(candidate)
-                    and guard in {"attribution_required", "direct_ok"}
-                    and confidence >= 0.58
-                )
-
-            def _extract_candidate_tokens(
-                candidate: dict[str, Any],
-            ) -> tuple[str, str, str]:
-                value = str(candidate.get("value", "") or "").strip("。！？；;，, ")
-                if value.casefold().startswith("user:"):
-                    value = value.split(":", 1)[1].strip("。！？；;，, ")
-                subject = self._normalize_friend_chat_owner(candidate)
-                entity = self._extract_friend_chat_social_entity_token(value)
-                if (
-                    not subject
-                    or subject == "有人"
-                    or not entity
-                    or entity == subject
-                    or not any(
-                        marker in value for marker in ("提到", "那只", "猫", "狗", "宠物", "叫")
-                    )
-                ):
-                    return "", "", ""
-                return subject, entity, value
-
-            filtered_items = [
-                item
-                for item in items
-                if _is_speakable_social_candidate(item) and any(_extract_candidate_tokens(item))
-            ]
-            if not filtered_items:
-                filtered_items = [
-                    item
-                    for item in items
-                    if _matches_allowed_source(item) and any(_extract_candidate_tokens(item))
-                ]
-            if not filtered_items:
-                return None
-
-            item = max(
-                filtered_items,
-                key=lambda candidate: (
-                    1.0
-                    if (
-                        self._extract_friend_chat_social_entity_token(
-                            str(candidate.get("value", "") or "")
-                        )
-                        and self._extract_friend_chat_social_entity_token(
-                            str(candidate.get("value", "") or "")
-                        )
-                        != self._normalize_friend_chat_owner(candidate)
-                    )
-                    else 0.0,
-                    1.0
-                    if str(candidate.get("attribution_guard", "") or "").strip()
-                    in {"attribution_required", "direct_ok"}
-                    else 0.0,
-                    1.0
-                    if any(
-                        token in str(candidate.get("value", "") or "")
-                        for token in ("提到", "猫", "狗", "宠物")
-                    )
-                    else 0.0,
-                    float(candidate.get("attribution_confidence", 0.0) or 0.0),
-                    float(candidate.get("final_rank_score", 0.0) or 0.0),
-                ),
-            )
-            subject_token, entity_token, fact_hint = _extract_candidate_tokens(item)
-        if not (subject_token and entity_token and fact_hint):
-            return None
-        disclosure_posture = str(metadata.get("social_disclosure_mode", "hint") or "hint").strip()
-        return {
-            "probe_kind": "social_hint",
-            "subject_token": subject_token if subject_token != "有人" else "",
-            "entity_token": entity_token,
-            "fact_hint": fact_hint,
-            "disclosure_posture": disclosure_posture,
-            "required_fact_tokens": [
-                value
-                for value in (
-                    subject_token if subject_token != "有人" else "",
-                    entity_token,
-                )
-                if value
-            ],
-            "required_disclosure_posture": "partial_withhold" if disclosure_posture else "",
-            "minimum_required_fact_token_count": min(
-                2,
-                len(
-                    [
-                        value
-                        for value in (
-                            subject_token if subject_token != "有人" else "",
-                            entity_token,
-                        )
-                        if value
-                    ]
-                ),
-            ),
-            "must_cover_required_items": True,
-            "subject_entity_relation": (
-                "subject_associated_with_entity" if subject_token and entity_token else ""
-            ),
-            "minimum_unit": ["subject_token", "entity_token", "disclosure_posture"],
-        }
+        return build_runtime_social_hint_cues(
+            metadata=metadata,
+            items=self._friend_chat_other_memory_items(metadata),
+        )
 
     def _build_friend_chat_memory_recap_cues(
         self,
