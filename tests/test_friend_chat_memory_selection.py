@@ -2,6 +2,9 @@ from relationship_os.application.runtime.friend_chat_memory_selection import (
     build_fallback_memory_items,
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
+    build_friend_chat_other_memory_items_from_metadata,
+    build_other_memory_values_from_metadata,
+    build_self_memory_values_from_metadata,
     build_speakable_memory_items,
 )
 
@@ -113,3 +116,41 @@ def test_build_fallback_memory_items_prioritizes_pet_name_matches() -> None:
 
     assert items[0]["value"] == "我那只猫叫月饼"
     assert items[0]["scope"] == "self_user"
+
+
+def test_build_self_memory_values_from_metadata_prefers_precomputed_values() -> None:
+    values = build_self_memory_values_from_metadata(
+        {
+            "friend_chat_self_memory_values": ["  \u6211\u5728\u6210\u90fd\u957f\u5927  "],
+            "fallback_memory_items": [{"scope": "self_user", "value": "ignored"}],
+        }
+    )
+
+    assert values == ["\u6211\u5728\u6210\u90fd\u957f\u5927"]
+
+
+def test_build_other_memory_values_from_metadata_falls_back_to_detailed_items() -> None:
+    values = build_other_memory_values_from_metadata(
+        {
+            "friend_chat_other_memory_items": [
+                {"value": "  \u963f\u5b81\u63d0\u5230\u56e2\u5b50  "},
+                {"value": ""},
+            ]
+        }
+    )
+
+    assert values == ["\u963f\u5b81\u63d0\u5230\u56e2\u5b50"]
+
+
+def test_build_friend_chat_other_memory_items_from_metadata_filters_empty_values() -> None:
+    items = build_friend_chat_other_memory_items_from_metadata(
+        {
+            "friend_chat_other_memory_items": [
+                {"value": "\u963f\u5b81\u63d0\u5230\u56e2\u5b50"},
+                {"value": " "},
+                "not-a-dict",
+            ]
+        }
+    )
+
+    assert items == [{"value": "\u963f\u5b81\u63d0\u5230\u56e2\u5b50"}]

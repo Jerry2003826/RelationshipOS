@@ -100,6 +100,8 @@ from relationship_os.application.runtime.friend_chat_memory_selection import (
     build_fallback_memory_items,
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
+    build_friend_chat_other_memory_items_from_metadata,
+    build_self_memory_values_from_metadata,
     build_speakable_memory_items,
 )
 from relationship_os.application.runtime.friend_chat_metadata_context import (
@@ -2853,60 +2855,7 @@ class RuntimeService:
         return None
 
     def _self_memory_values(self, metadata: dict[str, Any]) -> list[str]:
-        precomputed = metadata.get("friend_chat_self_memory_values")
-        if isinstance(precomputed, list):
-            values = [str(value).strip() for value in precomputed if str(value).strip()]
-            if values:
-                return values
-        values: list[str] = []
-        for item in list(metadata.get("fallback_memory_items") or []):
-            if not isinstance(item, dict):
-                continue
-            scope = str(item.get("scope", "") or "")
-            if scope not in {"self_user", "session", "user"}:
-                continue
-            value = str(item.get("value", "") or "").strip()
-            if value.casefold().startswith("user:"):
-                value = value.split(":", 1)[1].strip()
-            if value:
-                values.append(value)
-        if values:
-            return values
-        recent_messages = metadata.get("friend_chat_recent_user_messages")
-        if isinstance(recent_messages, list):
-            values = [str(value).strip() for value in recent_messages if str(value).strip()]
-            if values:
-                return values
-        recent_markers = metadata.get("friend_chat_recent_state_markers")
-        if isinstance(recent_markers, list):
-            return [str(value).strip() for value in recent_markers if str(value).strip()]
-        return values
-
-    def _other_memory_values(self, metadata: dict[str, Any]) -> list[str]:
-        precomputed = metadata.get("friend_chat_other_memory_values")
-        if isinstance(precomputed, list):
-            values = [str(value).strip() for value in precomputed if str(value).strip()]
-            if values:
-                return values
-        values: list[str] = []
-        for item in list(metadata.get("fallback_memory_items") or []):
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("scope", "") or "") != "other_user":
-                continue
-            value = str(item.get("value", "") or "").strip()
-            if value:
-                values.append(value)
-        if values:
-            return values
-        detailed = metadata.get("friend_chat_other_memory_items")
-        if isinstance(detailed, list):
-            return [
-                str(item.get("value", "")).strip()
-                for item in detailed
-                if isinstance(item, dict) and str(item.get("value", "")).strip()
-            ]
-        return values
+        return build_self_memory_values_from_metadata(metadata)
 
     def _friend_chat_social_queries(self, user_message: str) -> list[str]:
         text = str(user_message or "")
@@ -2937,18 +2886,7 @@ class RuntimeService:
         return ordered_text_terms(cleaned)
 
     def _friend_chat_other_memory_items(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
-        items = metadata.get("friend_chat_other_memory_items")
-        if not isinstance(items, list):
-            return []
-        normalized: list[dict[str, Any]] = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            value = str(item.get("value", "") or "").strip()
-            if not value:
-                continue
-            normalized.append(item)
-        return normalized
+        return build_friend_chat_other_memory_items_from_metadata(metadata)
 
     def _enriched_friend_chat_fact_slot_digest(
         self,
