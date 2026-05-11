@@ -62,6 +62,9 @@ from relationship_os.application.runtime.post_turn_effects import PostTurnEffect
 from relationship_os.application.runtime.proactive_event_builder import (
     build_proactive_events as build_runtime_proactive_events,
 )
+from relationship_os.application.runtime.reply_completion_resolver import (
+    resolve_turn_reply_completion as resolve_runtime_turn_reply_completion,
+)
 from relationship_os.application.runtime.self_state_writer import (
     SelfStateWriter,
     extract_relationship_markers_from_text,
@@ -93,7 +96,6 @@ from relationship_os.application.runtime.user_profile_turn_updater import (
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
-    LLM_COMPLETION_FAILED,
     RESPONSE_NORMALIZED,
     RESPONSE_POST_AUDITED,
     RESPONSE_SEQUENCE_PLANNED,
@@ -7052,22 +7054,10 @@ class RuntimeService:
         llm_response: Any,
         analysis: _TurnAnalysis,
     ) -> tuple[str, list[NewEvent]]:
-        if llm_response.failure is None:
-            return llm_response.output_text, []
-        fallback_text = self._get_cached_persona_timeout_dialogue()
-        return (
-            fallback_text,
-            [
-                NewEvent(
-                    event_type=LLM_COMPLETION_FAILED,
-                    payload={
-                        "model": llm_response.model,
-                        "error_type": llm_response.failure.error_type,
-                        "message": llm_response.failure.message,
-                        "retryable": llm_response.failure.retryable,
-                    },
-                )
-            ],
+        del user_message, analysis
+        return resolve_runtime_turn_reply_completion(
+            llm_response=llm_response,
+            fallback_text=self._get_cached_persona_timeout_dialogue(),
         )
 
     def _get_cached_persona_timeout_dialogue(self) -> str:
