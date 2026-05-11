@@ -100,6 +100,9 @@ from relationship_os.application.runtime.friend_chat_probe_contracts import (
     build_friend_chat_structured_probe_output_contract,
     build_friend_chat_structured_probe_payload,
 )
+from relationship_os.application.runtime.friend_chat_probe_messages import (
+    build_friend_chat_compact_probe_messages,
+)
 from relationship_os.application.runtime.friend_chat_probe_parser import (
     compose_friend_chat_structured_probe_reply,
     parse_friend_chat_structured_probe_reply,
@@ -4292,34 +4295,15 @@ class RuntimeService:
         if not probe_plan:
             return None
         system_content = card
-        compact_messages = [LLMMessage(role="system", content=system_content)]
         prompt_text = self._build_friend_chat_probe_user_prompt(
             user_message=user_message,
             probe_plan=probe_plan,
         )
-        if turn_input and turn_input.has_media:
-            blocks: list[ContentBlock] = [ContentBlock(type="text", text=prompt_text)]
-            for img in turn_input.images:
-                if img.url:
-                    blocks.append(
-                        ContentBlock(
-                            type="image_url",
-                            url=img.url,
-                            mime_type=img.mime_type,
-                        )
-                    )
-            if turn_input.audio and turn_input.audio.url:
-                blocks.append(
-                    ContentBlock(
-                        type="audio_url",
-                        url=turn_input.audio.url,
-                        mime_type=turn_input.audio.mime_type,
-                    )
-                )
-            compact_messages.append(LLMMessage(role="user", content=blocks))
-        else:
-            compact_messages.append(LLMMessage(role="user", content=prompt_text))
-        return compact_messages
+        return build_friend_chat_compact_probe_messages(
+            runtime_card=system_content,
+            user_prompt=prompt_text,
+            turn_input=turn_input,
+        )
 
     def _build_friend_chat_probe_answer_plan(
         self,
