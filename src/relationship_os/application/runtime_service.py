@@ -49,7 +49,6 @@ from relationship_os.application.runtime.assistant_message_event_builder import 
 from relationship_os.application.runtime.dispatch_outcome_recorder import DispatchOutcomeRecorder
 from relationship_os.application.runtime.edge_memory_text import (
     is_low_signal_fallback_memory_value,
-    ordered_text_terms,
     text_keywords,
 )
 from relationship_os.application.runtime.edge_prompt_cards import (
@@ -158,6 +157,10 @@ from relationship_os.application.runtime.friend_chat_probe_repair import (
 )
 from relationship_os.application.runtime.friend_chat_readonly_probe_renderer import (
     render_friend_chat_readonly_probe_response,
+)
+from relationship_os.application.runtime.friend_chat_social_queries import (
+    DEFAULT_SOCIAL_QUERY_NOISE_TOKENS,
+    build_friend_chat_social_queries,
 )
 from relationship_os.application.runtime.light_recall_pipeline import (
     LightRecallPipeline,
@@ -2858,32 +2861,13 @@ class RuntimeService:
         return build_self_memory_values_from_metadata(metadata)
 
     def _friend_chat_social_queries(self, user_message: str) -> list[str]:
-        text = str(user_message or "")
-        if not text.strip():
-            return []
-        cleaned = text
-        for token in self._runtime_behavior_list(
-            "social_query_noise_tokens",
-            (
-                "你是不是",
-                "知道一点",
-                "要说就",
-                "少说一点",
-                "的事",
-                "别人",
-                "谁还",
-                "还有谁",
-                "秘密",
-                "八卦",
-                "说一点",
-                "说说",
-                "讲讲",
+        return build_friend_chat_social_queries(
+            user_message,
+            noise_tokens=self._runtime_behavior_list(
+                "social_query_noise_tokens",
+                DEFAULT_SOCIAL_QUERY_NOISE_TOKENS,
             ),
-        ):
-            cleaned = cleaned.replace(str(token), " ")
-        cleaned = re.sub(r"[和跟与及、]", " ", cleaned)
-        cleaned = re.sub(r"[？?！!，,。；;：:、\n\r\t]+", " ", cleaned)
-        return ordered_text_terms(cleaned)
+        )
 
     def _friend_chat_other_memory_items(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         return build_friend_chat_other_memory_items_from_metadata(metadata)
