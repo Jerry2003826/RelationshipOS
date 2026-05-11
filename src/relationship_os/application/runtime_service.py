@@ -5,7 +5,6 @@ import re
 from dataclasses import asdict, dataclass, replace
 from time import perf_counter
 from typing import Any
-from uuid import uuid4
 
 from relationship_os.application.analyzers import (
     apply_semantic_hints,
@@ -66,6 +65,10 @@ from relationship_os.application.runtime.self_state_writer import (
     extract_state_markers_from_text,
     normalize_state_reflection_fragment,
 )
+from relationship_os.application.runtime.session_lifecycle import (
+    SessionAlreadyExistsError,
+    SessionLifecycleService,
+)
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
 from relationship_os.application.runtime.turn_analysis_event_builder import (
     build_session_directive_payload as build_turn_session_directive_payload,
@@ -93,10 +96,8 @@ from relationship_os.domain.event_types import (
     RESPONSE_POST_AUDITED,
     RESPONSE_SEQUENCE_PLANNED,
     RUNTIME_QUALITY_DOCTOR_COMPLETED,
-    SESSION_STARTED,
-    USER_MESSAGE_RECEIVED,
 )
-from relationship_os.domain.events import NewEvent, StoredEvent, utc_now
+from relationship_os.domain.events import NewEvent, StoredEvent
 from relationship_os.domain.llm import (
     ContentBlock,
     LLMClient,
@@ -106,12 +107,9 @@ from relationship_os.domain.llm import (
 )
 
 logger = logging.getLogger(__name__)
+__all__ = ["RuntimeService", "RuntimeTurnResult", "SessionAlreadyExistsError"]
 _EDGE_MEMORY_WORD_RE = re.compile(r"[a-z0-9]+|[\u4e00-\u9fff]+", re.IGNORECASE)
 _EDGE_MEMORY_METRIC_RE = re.compile(r"^[a-z_]+:\S+$", re.IGNORECASE)
-
-
-class SessionAlreadyExistsError(RuntimeError):
-    """Raised when a session is created twice with the same identifier."""
 
 
 @dataclass(slots=True, frozen=True)
@@ -360,6 +358,11 @@ class RuntimeService:
         self._dispatch_outcome_recorder = DispatchOutcomeRecorder(
             proactive_dispatch_handler=self._proactive_dispatch_handler
         )
+        self._session_lifecycle = SessionLifecycleService(
+            stream_service=stream_service,
+            user_service=user_service,
+            runtime_projector_version=runtime_projector_version,
+        )
 
     async def dispatch_proactive_followup(
         self,
@@ -381,85 +384,25 @@ class RuntimeService:
         user_id: str | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        resolved_session_id = session_id or f"session-{uuid4().hex[:12]}"
-        existing_events = await self._stream_service.read_stream(stream_id=resolved_session_id)
-        if existing_events:
-            raise SessionAlreadyExistsError(f"Session {resolved_session_id} already exists")
-
-        session_payload: dict[str, Any] = {
-            "session_id": resolved_session_id,
-            "created_at": utc_now().isoformat(),
-            "metadata": metadata or {},
-        }
-        if user_id:
-            session_payload["user_id"] = user_id
-
-        stored_events = await self._stream_service.append_events(
-            stream_id=resolved_session_id,
-            expected_version=0,
-            events=[
-                NewEvent(
-                    event_type=SESSION_STARTED,
-                    payload=session_payload,
-                )
-            ],
+        return await self._get_session_lifecycle().create_session(
+            session_id=session_id,
+            user_id=user_id,
+            metadata=metadata,
         )
-
-        # Link the session to the user stream if user_id provided
-        if user_id and self._user_service is not None:
-            try:
-                await self._user_service.link_session(
-                    user_id=user_id, session_id=resolved_session_id
-                )
-            except Exception:
-                logger.warning(
-                    "Failed to link session %s to user %s",
-                    resolved_session_id,
-                    user_id,
-                    exc_info=True,
-                )
-
-        runtime_projection = self._stream_service.project_events(
-            stream_id=resolved_session_id,
-            events=stored_events,
-            projector_name="session-runtime",
-            projector_version=self._runtime_projector_version,
-        )
-        return {
-            "session_id": resolved_session_id,
-            "user_id": user_id,
-            "created": True,
-            "events": [self._stream_service.serialize_event(event) for event in stored_events],
-            "projection": runtime_projection,
-        }
 
     async def list_sessions(self) -> list[dict[str, Any]]:
-        stream_ids = await self._stream_service.list_stream_ids()
-        sessions: list[dict[str, Any]] = []
-        for stream_id in sorted(stream_ids):
-            events = await self._stream_service.read_stream(stream_id=stream_id)
-            session = {
-                "session_id": stream_id,
-                "user_id": None,
-                "event_count": 0,
-                "turn_count": 0,
-                "started_at": None,
-                "last_event_at": None,
-            }
-            for event in events:
-                session["event_count"] += 1
-                session["last_event_at"] = event.occurred_at.isoformat()
-                if event.event_type == SESSION_STARTED:
-                    session["started_at"] = event.payload.get("created_at")
-                    session["user_id"] = event.payload.get("user_id")
-                if event.event_type == USER_MESSAGE_RECEIVED:
-                    session["turn_count"] += 1
-            if session["started_at"] is not None:
-                sessions.append(session)
-        return sorted(
-            sessions,
-            key=lambda item: item["session_id"],
-        )
+        return await self._get_session_lifecycle().list_sessions()
+
+    def _get_session_lifecycle(self) -> SessionLifecycleService:
+        lifecycle = getattr(self, "_session_lifecycle", None)
+        if lifecycle is None:
+            lifecycle = SessionLifecycleService(
+                stream_service=self._stream_service,
+                user_service=getattr(self, "_user_service", None),
+                runtime_projector_version=self._runtime_projector_version,
+            )
+            self._session_lifecycle = lifecycle
+        return lifecycle
 
     async def process_turn(
         self,
