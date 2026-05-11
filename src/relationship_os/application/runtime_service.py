@@ -47,6 +47,9 @@ from relationship_os.application.memory_index import MemoryMediaAttachment
 from relationship_os.application.memory_service import MemoryService
 from relationship_os.application.policy_registry import get_default_compiled_policy_set
 from relationship_os.application.proactive_dispatch_handler import ProactiveDispatchHandler
+from relationship_os.application.runtime.assistant_message_event_builder import (
+    build_assistant_message_events as build_runtime_assistant_message_events,
+)
 from relationship_os.application.runtime.dispatch_outcome_recorder import DispatchOutcomeRecorder
 from relationship_os.application.runtime.event_builder import build_lightweight_turn_events
 from relationship_os.application.runtime.fast_pong_pipeline import FastPongPipeline
@@ -90,7 +93,6 @@ from relationship_os.application.runtime.user_profile_turn_updater import (
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
-    ASSISTANT_MESSAGE_SENT,
     LLM_COMPLETION_FAILED,
     RESPONSE_NORMALIZED,
     RESPONSE_POST_AUDITED,
@@ -7107,33 +7109,11 @@ class RuntimeService:
         llm_response: Any,
         response_sequence_plan: Any,
     ) -> list[NewEvent]:
-        events: list[NewEvent] = []
-        for index, item in enumerate(assistant_response_units, start=1):
-            events.append(
-                NewEvent(
-                    event_type=ASSISTANT_MESSAGE_SENT,
-                    payload={
-                        "content": item["content"],
-                        "model": llm_response.model,
-                        "usage": (
-                            asdict(llm_response.usage)
-                            if llm_response.usage and index == 1
-                            else None
-                        ),
-                        "latency_ms": (llm_response.latency_ms if index == 1 else None),
-                        "failure": (
-                            asdict(llm_response.failure)
-                            if llm_response.failure is not None and index == 1
-                            else None
-                        ),
-                        "sequence_index": index,
-                        "sequence_total": len(assistant_response_units),
-                        "delivery_mode": response_sequence_plan.mode,
-                        "segment_label": item["label"],
-                    },
-                )
-            )
-        return events
+        return build_runtime_assistant_message_events(
+            assistant_response_units=assistant_response_units,
+            llm_response=llm_response,
+            response_sequence_plan=response_sequence_plan,
+        )
 
     async def _build_proactive_artifacts(
         self,
