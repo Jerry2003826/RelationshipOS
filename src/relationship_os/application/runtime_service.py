@@ -89,13 +89,13 @@ from relationship_os.application.runtime.friend_chat_digest_helpers import (
     normalize_friend_chat_relationship_digest,
 )
 from relationship_os.application.runtime.friend_chat_fact_extractors import (
-    extract_drink_preference_from_text,
-    extract_hometown_from_text,
-    extract_pet_name_from_text,
     extract_social_entity_token,
     fact_slot_digest_values,
-    normalize_communication_preference,
     normalize_fact_slot_digest,
+)
+from relationship_os.application.runtime.friend_chat_fact_slots import (
+    build_enriched_friend_chat_fact_slot_digest,
+    infer_friend_chat_communication_preference,
 )
 from relationship_os.application.runtime.friend_chat_memory_selection import (
     build_fallback_memory_items,
@@ -2948,114 +2948,20 @@ class RuntimeService:
             normalized.append(item)
         return normalized
 
-    def _normalize_friend_chat_communication_preference(self, text: str) -> str:
-        return normalize_communication_preference(text)
-
     def _infer_friend_chat_communication_preference(self, metadata: dict[str, Any]) -> str:
-        digest = self._normalize_friend_chat_fact_slot_digest(
-            metadata.get("friend_chat_fact_slot_digest")
+        return infer_friend_chat_communication_preference(
+            metadata=metadata,
+            self_memory_values=self._self_memory_values(metadata),
         )
-        existing = self._normalize_friend_chat_communication_preference(
-            str(digest.get("communication_preference", "") or "")
-        )
-        if existing:
-            return existing
-
-        candidate_texts: list[str] = []
-        candidate_texts.extend(
-            str(value).strip()
-            for value in list(digest.get("living_facts") or [])
-            if str(value).strip()
-        )
-        candidate_texts.extend(self._self_memory_values(metadata))
-        candidate_texts.extend(
-            str(value).strip()
-            for value in list(metadata.get("friend_chat_recent_user_messages") or [])
-            if str(value).strip()
-        )
-        for item in list(metadata.get("fallback_memory_items") or []):
-            if isinstance(item, dict):
-                value = str(item.get("value", "") or "").strip()
-                if value:
-                    candidate_texts.append(value)
-
-        for text in candidate_texts:
-            normalized = self._normalize_friend_chat_communication_preference(text)
-            if normalized:
-                return normalized
-        return ""
-
-    def _extract_friend_chat_hometown_from_text(self, text: str) -> str:
-        return extract_hometown_from_text(text)
-
-    def _extract_friend_chat_pet_name_from_text(self, text: str) -> str:
-        return extract_pet_name_from_text(text)
-
-    def _extract_friend_chat_drink_preference_from_text(self, text: str) -> str:
-        return extract_drink_preference_from_text(text)
 
     def _enriched_friend_chat_fact_slot_digest(
         self,
         metadata: dict[str, Any],
     ) -> dict[str, Any]:
-        digest = self._normalize_friend_chat_fact_slot_digest(
-            metadata.get("friend_chat_fact_slot_digest")
+        return build_enriched_friend_chat_fact_slot_digest(
+            metadata=metadata,
+            self_memory_values=self._self_memory_values(metadata),
         )
-        values = self._self_memory_values(metadata)
-        values.extend(
-            str(value).strip()
-            for value in list(metadata.get("friend_chat_recent_user_messages") or [])
-            if str(value).strip()
-        )
-        values.extend(
-            str(item.get("value", "")).strip()
-            for item in list(metadata.get("fallback_memory_items") or [])
-            if isinstance(item, dict) and str(item.get("value", "")).strip()
-        )
-        hometown = str(digest.get("hometown", "") or "").strip()
-        pet_name = str(digest.get("pet_name", "") or "").strip()
-        pet_kind = str(digest.get("pet_kind", "") or "").strip()
-        drink_preference = str(digest.get("drink_preference", "") or "").strip()
-
-        if not hometown:
-            for value in values:
-                hometown = self._extract_friend_chat_hometown_from_text(value)
-                if hometown:
-                    break
-        if not pet_name:
-            for value in values:
-                pet_name = self._extract_friend_chat_pet_name_from_text(value)
-                if pet_name:
-                    break
-        if not drink_preference:
-            for value in values:
-                drink_preference = self._extract_friend_chat_drink_preference_from_text(value)
-                if drink_preference:
-                    break
-        if not pet_kind and any(
-            token in value for value in values for token in ("猫", "小猫", "猫咪")
-        ):
-            pet_kind = "猫"
-
-        return {
-            **digest,
-            "hometown": hometown,
-            "pet_name": pet_name,
-            "pet_kind": pet_kind,
-            "drink_preference": drink_preference,
-            "communication_preference": self._infer_friend_chat_communication_preference(
-                {
-                    **metadata,
-                    "friend_chat_fact_slot_digest": {
-                        **digest,
-                        "hometown": hometown,
-                        "pet_name": pet_name,
-                        "pet_kind": pet_kind,
-                        "drink_preference": drink_preference,
-                    },
-                }
-            ),
-        }
 
     def _normalize_friend_chat_owner(self, item: dict[str, Any]) -> str:
         return normalize_friend_chat_owner(item)
