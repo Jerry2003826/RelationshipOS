@@ -36,10 +36,6 @@ from relationship_os.application.analyzers import (
     build_system3_snapshot,
 )
 from relationship_os.application.analyzers.experts.plan_dag import execute_plan_dag
-from relationship_os.application.analyzers.user_profile import (
-    UserProfileStore,
-    format_profile_prefix,
-)
 from relationship_os.application.analyzers.vanguard_router import route_user_turn
 from relationship_os.application.evaluation_service import EvaluationService
 from relationship_os.application.llm import (
@@ -70,6 +66,9 @@ from relationship_os.application.runtime.self_state_writer import (
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
 from relationship_os.application.runtime.turn_context import TurnContextLoader, _TurnContext
 from relationship_os.application.runtime.turn_event_appender import TurnEventAppender
+from relationship_os.application.runtime.user_profile_turn_updater import (
+    UserProfileTurnUpdater,
+)
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
@@ -360,7 +359,7 @@ class RuntimeService:
         self._friend_chat_memory_scope_last_checkpoint_at: dict[str, float] = {}
         self._memory_scope_syncer = self._build_memory_scope_syncer()
         self._session_lock_registry = SessionLockRegistry()
-        self._user_profile_store = UserProfileStore()
+        self._user_profile_turn_updater = UserProfileTurnUpdater(user_service=user_service)
         self._runtime_quality_doctor_interval_turns = max(
             0,
             runtime_quality_doctor_interval_turns,
@@ -7575,33 +7574,11 @@ class RuntimeService:
             self._turn_event_appender = appender
         return appender
 
-    def _ensure_user_profile_store(self) -> UserProfileStore:
-        store = getattr(self, "_user_profile_store", None)
-        if store is None:
-            store = UserProfileStore()
-            self._user_profile_store = store
-        return store
+    def _ensure_user_profile_store(self) -> Any:
+        return self._get_user_profile_turn_updater().profile_store
 
     async def _restore_user_profile_snapshot(self, *, user_id: str) -> None:
-        user_service = getattr(self, "_user_service", None)
-        if user_service is None or not hasattr(user_service, "get_user_index"):
-            return
-        store = self._ensure_user_profile_store()
-        if store.get(user_id) is not None:
-            return
-        try:
-            user_index = await user_service.get_user_index(user_id=user_id)
-        except Exception:
-            return
-        metadata = user_index.get("metadata") if isinstance(user_index, dict) else None
-        if not isinstance(metadata, dict):
-            return
-        profile_snapshot = metadata.get("profile_ema_128")
-        if not isinstance(profile_snapshot, dict):
-            return
-        vector = profile_snapshot.get("vector")
-        if isinstance(vector, list) and len(vector) == store.dim:
-            store.load({user_id: vector})
+        await self._get_user_profile_turn_updater().restore_snapshot(user_id=user_id)
 
     async def _update_user_profile_for_turn(
         self,
@@ -7610,31 +7587,18 @@ class RuntimeService:
         user_message: str,
         readonly_probe_session: bool,
     ) -> str | None:
-        if readonly_probe_session or not user_id or not user_message.strip():
-            return None
-        await self._restore_user_profile_snapshot(user_id=user_id)
-        store = self._ensure_user_profile_store()
-        vec = store.update(user_id, user_message)
-        prefix = format_profile_prefix(vec, top_k=8)
+        return await self._get_user_profile_turn_updater().update_for_turn(
+            user_id=user_id,
+            user_message=user_message,
+            readonly_probe_session=readonly_probe_session,
+        )
 
-        user_service = getattr(self, "_user_service", None)
-        if user_service is not None and hasattr(user_service, "update_profile"):
-            try:
-                await user_service.update_profile(
-                    user_id=user_id,
-                    metadata={
-                        "profile_ema_128": {
-                            "dim": int(vec.size),
-                            "turns_seen": store.turns_seen(user_id),
-                            "updated_at": utc_now().isoformat(),
-                            "prefix": prefix,
-                            "vector": [round(float(x), 6) for x in vec.tolist()],
-                        }
-                    },
-                )
-            except Exception:
-                logger.warning("Failed to persist profile snapshot for user %s", user_id)
-        return prefix
+    def _get_user_profile_turn_updater(self) -> UserProfileTurnUpdater:
+        updater = getattr(self, "_user_profile_turn_updater", None)
+        if updater is None:
+            updater = UserProfileTurnUpdater(user_service=getattr(self, "_user_service", None))
+            self._user_profile_turn_updater = updater
+        return updater
 
     async def _generate_light_recall_reply(
         self,
