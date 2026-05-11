@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 
+from relationship_os.api.middleware import RateLimitMiddleware
 from relationship_os.core.config import Settings
 from relationship_os.main import create_app
 
@@ -62,3 +63,21 @@ def test_rate_limit_rejects_excess_requests_for_same_identity() -> None:
     assert second.status_code == 201
     assert third.status_code == 429
     assert third.json()["detail"] == "Rate limit exceeded"
+
+
+def test_rate_limit_prunes_expired_buckets_when_over_budget() -> None:
+    middleware = RateLimitMiddleware(
+        app=None,
+        max_requests=2,
+        window_seconds=10,
+        max_buckets=2,
+    )
+    middleware._buckets = {
+        "expired-a": (0.0, 1),
+        "expired-b": (1.0, 1),
+        "active": (95.0, 1),
+    }
+
+    middleware._prune_buckets(now=100.0)
+
+    assert middleware._buckets == {"active": (95.0, 1)}

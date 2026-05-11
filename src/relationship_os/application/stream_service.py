@@ -27,10 +27,12 @@ class StreamService:
         event_store: EventStore,
         projector_registry: VersionedProjectorRegistry,
         runtime_event_broker: RuntimeEventBroker | None = None,
+        projection_snapshot_min_delta: int = 50,
     ) -> None:
         self._event_store = event_store
         self._projector_registry = projector_registry
         self._runtime_event_broker = runtime_event_broker
+        self._projection_snapshot_min_delta = max(1, projection_snapshot_min_delta)
         self._projection_snapshots: dict[tuple[str, str, str], _ProjectionSnapshot] = {}
 
     async def append_events(
@@ -141,7 +143,11 @@ class StreamService:
             version=latest_version,
             state=deepcopy(projection["state"]),
         )
-        if latest_version > 0:
+        base_version = snapshot.version if snapshot is not None else 0
+        if (
+            latest_version > 0
+            and latest_version - base_version >= self._projection_snapshot_min_delta
+        ):
             await self._save_projection_snapshot(
                 stream_id=stream_id,
                 projector_name=projector_name,

@@ -87,6 +87,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         RateLimitMiddleware,
         max_requests=resolved_settings.rate_limit_requests,
         window_seconds=resolved_settings.rate_limit_window_seconds,
+        max_buckets=resolved_settings.rate_limit_max_buckets,
     )
     app.add_middleware(
         RequestGuardMiddleware,

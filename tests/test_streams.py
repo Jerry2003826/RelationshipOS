@@ -102,6 +102,51 @@ def test_stream_append_requires_admin_key_when_admin_key_configured() -> None:
     assert allowed_response.status_code == 201
 
 
+def test_stream_append_does_not_treat_missing_user_id_as_admin() -> None:
+    client = TestClient(
+        create_app(Settings(api_key="secret", allow_dev_admin_without_key=False))
+    )
+
+    response = client.post(
+        "/api/v1/streams/session-no-implicit-admin/events",
+        headers={"X-API-Key": "secret"},
+        json={"events": [{"event_type": "user.message.received", "payload": {}}]},
+    )
+
+    assert response.status_code == 403
+
+
+def test_owned_stream_read_requires_matching_user_or_admin() -> None:
+    client = TestClient(create_app(Settings(api_key="secret", admin_api_key="admin-secret")))
+    admin_headers = {"X-API-Key": "secret", "X-Admin-Key": "admin-secret"}
+    stream_id = "owned-session"
+    create_response = client.post(
+        f"/api/v1/streams/{stream_id}/events",
+        headers=admin_headers,
+        json={
+            "events": [
+                {
+                    "event_type": "session.started",
+                    "payload": {"user_id": "owner-user"},
+                }
+            ]
+        },
+    )
+    assert create_response.status_code == 201
+
+    anonymous_response = client.get(
+        f"/api/v1/streams/{stream_id}/events",
+        headers={"X-API-Key": "secret"},
+    )
+    owner_response = client.get(
+        f"/api/v1/streams/{stream_id}/events",
+        headers={"X-API-Key": "secret", "X-User-ID": "owner-user"},
+    )
+
+    assert anonymous_response.status_code == 403
+    assert owner_response.status_code == 200
+
+
 def test_rebuild_projection_reports_selected_streams() -> None:
     client = TestClient(create_app())
 
@@ -328,6 +373,37 @@ def test_stream_service_project_stream_uses_snapshot_for_incremental_replay() ->
     assert target_reads[1]["after_version"] == 2
 
 
+def test_stream_service_does_not_persist_small_projection_snapshots_by_default() -> None:
+    event_store = _CountingEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="snapshot-small-session",
+            expected_version=None,
+            events=[
+                NewEvent(event_type="user.message.received", payload={"content": "a"}),
+                NewEvent(event_type="assistant.message.sent", payload={"content": "b"}),
+            ],
+        )
+    )
+    projector_registry = VersionedProjectorRegistry()
+    projector_registry.register(SessionTranscriptProjector())
+    stream_service = StreamService(
+        event_store=event_store,
+        projector_registry=projector_registry,
+    )
+
+    asyncio.run(
+        stream_service.project_stream(
+            stream_id="snapshot-small-session",
+            projector_name="session-transcript",
+            projector_version="v1",
+        )
+    )
+    stream_ids = asyncio.run(event_store.list_stream_ids())
+
+    assert all(not stream_id.startswith("__projection_snapshot__:") for stream_id in stream_ids)
+
+
 def test_stream_service_restores_projection_snapshot_from_event_store() -> None:
     event_store = _CountingEventStore()
     asyncio.run(
@@ -345,6 +421,7 @@ def test_stream_service_restores_projection_snapshot_from_event_store() -> None:
     first_service = StreamService(
         event_store=event_store,
         projector_registry=projector_registry,
+        projection_snapshot_min_delta=1,
     )
     asyncio.run(
         first_service.project_stream(

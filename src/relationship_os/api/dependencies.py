@@ -46,7 +46,11 @@ async def verify_api_key(
     if configured_admin_key:
         is_admin = admin_key == configured_admin_key
     else:
-        is_admin = user_id is None
+        is_admin = (
+            container.settings.env == "development"
+            and container.settings.allow_dev_admin_without_key
+            and user_id is None
+        )
     return AuthContext(
         api_key=api_key,
         admin_key=admin_key,
@@ -88,10 +92,12 @@ async def assert_stream_access(
     stream_id: str,
     auth: AuthContext,
 ) -> None:
-    if auth.is_admin or auth.user_id is None:
+    if auth.is_admin:
         return
     owner = await get_stream_owner(container=container, stream_id=stream_id)
-    if owner is not None and owner != auth.user_id:
+    if owner is None:
+        return
+    if owner != auth.user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden stream",

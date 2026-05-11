@@ -75,10 +75,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         *,
         max_requests: int = 0,
         window_seconds: float = 60.0,
+        max_buckets: int = 10_000,
     ) -> None:
         super().__init__(app)
         self._max_requests = max(0, max_requests)
         self._window_seconds = max(1.0, window_seconds)
+        self._max_buckets = max(1, max_buckets)
         self._buckets: dict[str, tuple[float, int]] = {}
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
@@ -91,6 +93,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = self._rate_limit_key(request)
         now = time.monotonic()
+        if len(self._buckets) >= self._max_buckets and key not in self._buckets:
+            self._prune_buckets(now=now)
+            if len(self._buckets) >= self._max_buckets:
+                self._evict_oldest_bucket()
         window_start, count = self._buckets.get(key, (now, 0))
         if now - window_start >= self._window_seconds:
             window_start = now
@@ -104,6 +110,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             )
         self._buckets[key] = (window_start, count + 1)
         return await call_next(request)
+
+    def _prune_buckets(self, *, now: float) -> None:
+        self._buckets = {
+            key: bucket
+            for key, bucket in self._buckets.items()
+            if now - bucket[0] < self._window_seconds
+        }
+
+    def _evict_oldest_bucket(self) -> None:
+        if not self._buckets:
+            return
+        oldest_key = min(self._buckets.items(), key=lambda item: item[1][0])[0]
+        self._buckets.pop(oldest_key, None)
 
     def _rate_limit_key(self, request: Request) -> str:
         identity = (

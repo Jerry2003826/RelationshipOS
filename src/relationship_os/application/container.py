@@ -139,6 +139,7 @@ def build_container(settings: Settings) -> RuntimeContainer:
         event_store=event_store,
         projector_registry=projector_registry,
         runtime_event_broker=runtime_event_broker,
+        projection_snapshot_min_delta=settings.projection_snapshot_min_delta,
     )
     evaluation_service = EvaluationService(stream_service=stream_service)
     audit_service = AuditService(
