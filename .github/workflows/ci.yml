@@ -21,6 +21,11 @@ jobs:
       - name: Lint
         run: uv run ruff check .
 
+      - name: File-size budget
+        run: >
+          uv run python scripts/check_file_size.py
+          --rule "src/relationship_os/application/runtime_service.py<=5000"
+
       - name: Test
         run: uv run pytest --tb=short -q
 

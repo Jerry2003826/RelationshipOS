@@ -6,6 +6,7 @@ This checklist is the minimum gate before publishing a new build or demo branch.
 
 - Run the full unit/integration suite: `uv run pytest --tb=short -q`
 - Run linting: `uv run ruff check .`
+- Run file-size guardrails: `uv run python scripts/check_file_size.py --rule "src/relationship_os/application/runtime_service.py<=5000"`
 - Run router holdout evaluation: `uv run python router_v2/training/router_eval.py --data router_v2/training/holdout_zh.jsonl`
 - Confirm router model dependencies are installed and the model loads without production fallback.
 - Confirm `.env` or deployment config sets `RELATIONSHIP_OS_API_KEY`.
