@@ -1,4 +1,5 @@
 from relationship_os.application.runtime.friend_chat_memory_selection import (
+    build_fallback_memory_items,
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
     build_speakable_memory_items,
@@ -90,3 +91,25 @@ def test_build_speakable_memory_items_prefers_self_memory_for_self_factual_query
     )
 
     assert [item["value"] for item in items] == ["我喜欢榛子拿铁"]
+
+
+def test_build_fallback_memory_items_prioritizes_pet_name_matches() -> None:
+    items = build_fallback_memory_items(
+        user_message="我的猫叫什么名字？",
+        candidates=[
+            {
+                "scope": "self_user",
+                "value": "我在苏州长大",
+                "final_rank_score": 0.9,
+            },
+            {
+                "scope": "self_user",
+                "value": "user: 我那只猫叫月饼",
+                "final_rank_score": 0.5,
+            },
+        ],
+        routing_mode="factual_recall",
+    )
+
+    assert items[0]["value"] == "我那只猫叫月饼"
+    assert items[0]["scope"] == "self_user"

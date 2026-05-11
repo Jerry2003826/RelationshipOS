@@ -98,6 +98,7 @@ from relationship_os.application.runtime.friend_chat_fact_extractors import (
     normalize_fact_slot_digest,
 )
 from relationship_os.application.runtime.friend_chat_memory_selection import (
+    build_fallback_memory_items,
     build_friend_chat_memory_items,
     build_friend_chat_memory_values,
     build_speakable_memory_items,
@@ -4545,90 +4546,16 @@ class RuntimeService:
                 analysis.response_rendering_policy.rendering_mode,
             )
         )
-        query_keywords = self._text_keywords(user_message)
-        if routing_mode == "factual_recall":
-            lowered_message = user_message.casefold()
-            asks_pet_name = (
-                ("dog" in lowered_message and "name" in lowered_message)
-                or ("猫" in user_message and ("叫什么" in user_message or "名字" in user_message))
-                or ("狗" in user_message and ("叫什么" in user_message or "名字" in user_message))
-            )
-            asks_origin = (
-                "grew up" in lowered_message
-                or "where i grew up" in lowered_message
-                or "哪里长大" in user_message
-                or "在哪长大" in user_message
-                or ("长大" in user_message and "哪里" in user_message)
-            )
-            candidates.sort(
-                key=lambda item: (
-                    len(self._text_keywords(str(item.get("value", ""))) & query_keywords),
-                    1.5
-                    if asks_pet_name
-                    and any(
-                        token in str(item.get("value", "")).casefold()
-                        for token in (
-                            "dog",
-                            "retriever",
-                            "corgi",
-                            "cat",
-                            "named ",
-                            "name is ",
-                            "猫",
-                            "狗",
-                            "宠物",
-                            "叫",
-                        )
-                    )
-                    else 0.0,
-                    1.5
-                    if asks_origin
-                    and any(
-                        token in str(item.get("value", "")).casefold()
-                        for token in ("grew up", "from ", "长大", "住在")
-                    )
-                    else 0.0,
-                    1 if str(item.get("scope")) == "self_user" else 0,
-                    float(item.get("attribution_confidence", 0.0) or 0.0),
-                    float(item.get("final_rank_score", 0.0) or 0.0),
-                ),
-                reverse=True,
-            )
-        elif routing_mode == "social_disclosure":
-            candidates.sort(
-                key=lambda item: (
-                    1 if str(item.get("scope")) == "other_user" else 0,
-                    1 if str(item.get("attribution_guard", "hint_only")) != "hint_only" else 0,
-                    float(item.get("attribution_confidence", 0.0) or 0.0),
-                    float(item.get("final_rank_score", 0.0) or 0.0),
-                ),
-                reverse=True,
-            )
-        else:
+        if routing_mode not in {"factual_recall", "social_disclosure"}:
             candidates = self._trim_memory_for_edge(
                 recalled_memory=candidates,
                 edge_runtime_plan=analysis.edge_runtime_plan,
             )
-
-        items: list[dict[str, Any]] = []
-        for item in candidates[:8]:
-            value = str(item.get("value", ""))
-            if value.casefold().startswith("user:"):
-                value = value.split(":", 1)[1].strip()
-            items.append(
-                {
-                    "value": value,
-                    "scope": str(item.get("scope", "")),
-                    "source_user_id": str(item.get("source_user_id", "") or ""),
-                    "subject_user_id": str(item.get("subject_user_id", "") or ""),
-                    "subject_hint": str(item.get("subject_hint", "") or ""),
-                    "attribution_guard": str(item.get("attribution_guard", "") or ""),
-                    "attribution_confidence": float(item.get("attribution_confidence", 0.0) or 0.0),
-                    "memory_kind": str(item.get("memory_kind", "") or ""),
-                    "final_rank_score": float(item.get("final_rank_score", 0.0) or 0.0),
-                }
-            )
-        return items
+        return build_fallback_memory_items(
+            user_message=user_message,
+            candidates=candidates,
+            routing_mode=routing_mode,
+        )
 
     def _build_friend_chat_memory_values(
         self,
