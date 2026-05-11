@@ -35,11 +35,6 @@ from relationship_os.application.analyzers import (
     build_session_directive,
     build_system3_snapshot,
 )
-from relationship_os.application.analyzers.emotional_prompt import (
-    audit_unsupported_recall,
-    audit_unsupported_recall_v2,
-    build_emotional_prompt,
-)
 from relationship_os.application.analyzers.experts.plan_dag import execute_plan_dag
 from relationship_os.application.analyzers.user_profile import (
     UserProfileStore,
@@ -57,6 +52,11 @@ from relationship_os.application.memory_index import MemoryMediaAttachment
 from relationship_os.application.memory_service import MemoryService
 from relationship_os.application.policy_registry import get_default_compiled_policy_set
 from relationship_os.application.proactive_dispatch_handler import ProactiveDispatchHandler
+from relationship_os.application.runtime.light_recall_pipeline import (
+    LightRecallPipeline,
+    UnavailableLightRecallMemoryService,
+)
+from relationship_os.application.runtime.session_locks import SessionLockRegistry
 from relationship_os.application.stream_service import StreamService
 from relationship_os.domain.contracts.turn_input import TurnInput
 from relationship_os.domain.event_types import (
@@ -324,14 +324,23 @@ class RuntimeService:
         self._edge_max_memory_items = max(1, edge_max_memory_items)
         self._edge_max_prompt_tokens = max(256, edge_max_prompt_tokens)
         self._edge_max_completion_tokens = max(64, edge_max_completion_tokens)
+        self._light_recall_pipeline = LightRecallPipeline(
+            memory_service=memory_service,
+            llm_client=llm_client,
+            llm_model=llm_model,
+            llm_temperature=llm_temperature,
+            persona_text=persona_text,
+            entity_name=entity_name,
+            edge_max_memory_items=self._edge_max_memory_items,
+            edge_max_completion_tokens=self._edge_max_completion_tokens,
+        )
         self._semantic_turn_cache: dict[str, _UserTurnInterpretation] = {}
         self._background_factual_shadow_tasks: dict[str, asyncio.Task[None]] = {}
         self._background_memory_scope_tasks: dict[str, asyncio.Task[None]] = {}
         self._background_memory_scope_pending: dict[str, dict[str, Any]] = {}
         self._friend_chat_memory_scope_last_checkpoint_turn: dict[str, int] = {}
         self._friend_chat_memory_scope_last_checkpoint_at: dict[str, float] = {}
-        self._session_locks: dict[str, asyncio.Lock] = {}
-        self._session_locks_guard = asyncio.Lock()
+        self._session_lock_registry = SessionLockRegistry()
         self._user_profile_store = UserProfileStore()
         self._runtime_quality_doctor_interval_turns = max(
             0,
@@ -460,8 +469,7 @@ class RuntimeService:
         generate_reply: bool = True,
         metadata: dict[str, Any] | None = None,
     ) -> RuntimeTurnResult:
-        lock = await self._get_session_lock(session_id)
-        async with lock:
+        async with self._get_session_lock_registry().locked(session_id):
             return await self._process_turn_impl(
                 session_id=session_id,
                 turn_input=turn_input,
@@ -471,16 +479,14 @@ class RuntimeService:
             )
 
     async def _get_session_lock(self, session_id: str) -> asyncio.Lock:
-        if not hasattr(self, "_session_locks"):
-            self._session_locks = {}
-        if not hasattr(self, "_session_locks_guard"):
-            self._session_locks_guard = asyncio.Lock()
-        async with self._session_locks_guard:
-            lock = self._session_locks.get(session_id)
-            if lock is None:
-                lock = asyncio.Lock()
-                self._session_locks[session_id] = lock
-            return lock
+        return await self._get_session_lock_registry().get_lock(session_id)
+
+    def _get_session_lock_registry(self) -> SessionLockRegistry:
+        registry = getattr(self, "_session_lock_registry", None)
+        if registry is None:
+            registry = SessionLockRegistry()
+            self._session_lock_registry = registry
+        return registry
 
     async def _process_turn_impl(
         self,
@@ -8150,46 +8156,6 @@ class RuntimeService:
                 logger.warning("Failed to persist profile snapshot for user %s", user_id)
         return prefix
 
-    def _light_recall_cards(self, memory_recall: dict[str, Any]) -> list[dict[str, Any]]:
-        cards: list[dict[str, Any]] = []
-        for item in list(memory_recall.get("results") or [])[:3]:
-            if not isinstance(item, dict):
-                continue
-            summary = str(
-                item.get("summary")
-                or item.get("value")
-                or item.get("content")
-                or item.get("text")
-                or ""
-            ).strip()
-            if not summary:
-                continue
-            card = {
-                "summary": summary[:260],
-                "tags": list(item.get("tags") or item.get("categories") or [])[:3],
-            }
-            for key in ("entity", "entity_type", "category", "subject", "name", "type", "role"):
-                if item.get(key):
-                    card[key] = item[key]
-            cards.append(card)
-        return cards
-
-    def _light_recall_emotion_tags(self, user_message: str) -> list[str]:
-        text = user_message.lower()
-        tags: list[str] = []
-        cues = [
-            ("tired", ("tired", "exhausted", "累", "疲", "困")),
-            ("anxious", ("anxious", "worried", "焦虑", "紧张", "怕")),
-            ("sad", ("sad", "down", "难过", "低落", "伤心")),
-            ("angry", ("angry", "mad", "生气", "烦", "火")),
-            ("confused", ("confused", "lost", "迷茫", "不知道")),
-            ("happy", ("happy", "glad", "开心", "高兴")),
-        ]
-        for tag, terms in cues:
-            if any(term in text for term in terms):
-                tags.append(tag)
-        return tags[:4]
-
     async def _generate_light_recall_reply(
         self,
         *,
@@ -8200,157 +8166,34 @@ class RuntimeService:
         turn_input: TurnInput | None = None,
         profile_prefix: str | None = None,
     ) -> _ReplyArtifacts:
-        memory_recall: dict[str, Any] = {"results": [], "recall_count": 0}
-        recall_started = perf_counter()
-        try:
-            memory_recall = await self._memory_service.recall_person_memory(
-                session_id=session_id,
-                user_id=turn_context.user_id,
-                query=user_message,
-                limit=min(3, max(1, getattr(self, "_edge_max_memory_items", 3))),
-                attachments=[
-                    MemoryMediaAttachment(
-                        type=attachment.type,
-                        url=attachment.url,
-                        mime_type=attachment.mime_type,
-                        filename=attachment.filename,
-                    )
-                    for attachment in (turn_input.attachments if turn_input else [])
-                ],
-                enable_vector_search=True,
-                enable_entity_vector_search=False,
-                prefer_fast=True,
-                include_factual_shadow=True,
-            )
-        except Exception:
-            logger.warning("LIGHT_RECALL memory recall failed for session %s", session_id)
-        recall_ms = round((perf_counter() - recall_started) * 1000.0, 1)
-        memory_cards = self._light_recall_cards(memory_recall)
-        memory_results = [
-            dict(item)
-            for item in list(memory_recall.get("results") or [])[: len(memory_cards) or 3]
-            if isinstance(item, dict)
-        ]
-
-        base_events: list[NewEvent] = [
-            NewEvent(
-                event_type=MEMORY_RECALL_PERFORMED,
-                payload={
-                    "route": "LIGHT_RECALL",
-                    "query": user_message[:240],
-                    "recall_count": len(memory_cards),
-                    "results": memory_results,
-                    "conscience": dict(memory_recall.get("conscience") or {}),
-                    "memory_cards": memory_cards,
-                    "latency_ms": recall_ms,
-                    "profile_prefix_injected": bool(profile_prefix),
-                },
-            )
-        ]
-
-        if not generate_reply:
-            return _ReplyArtifacts(
-                assistant_response=None,
-                assistant_responses=[],
-                response_diagnostics={
-                    "route": "LIGHT_RECALL",
-                    "memory_card_count": len(memory_cards),
-                    "profile_prefix_injected": bool(profile_prefix),
-                    "recall_ms": recall_ms,
-                },
-                response_sequence_plan=None,
-                response_post_audit=None,
-                response_normalization=None,
-                runtime_quality_doctor_report=None,
-                events=base_events,
-            )
-
-        name = getattr(self, "_entity_name", "Assistant")
-        persona_text = getattr(self, "_persona_text", "")
-        persona = f"Your name is {name}.\n{persona_text}".strip()
-        prompt = build_emotional_prompt(
-            persona=persona,
-            user_profile_prefix=profile_prefix,
-            recent_memory=memory_cards,
-            route="LIGHT_RECALL",
-            emotion_tags=self._light_recall_emotion_tags(user_message),
-            max_memory_cards=3,
-            include_profile_vec=bool(profile_prefix),
+        return await self._get_light_recall_pipeline().run(
+            session_id=session_id,
+            user_message=user_message,
+            generate_reply=generate_reply,
+            turn_context=turn_context,
+            turn_input=turn_input,
+            profile_prefix=profile_prefix,
         )
 
-        recent_context = []
-        for msg in turn_context.transcript_messages[-6:]:
-            role = str(msg.get("role", "")).upper()
-            content = msg.get("content", "")
-            if role and content:
-                recent_context.append(f"{role}: {content}")
-        user_content = user_message
-        if recent_context:
-            user_content = (
-                "Recent Conversation:\n"
-                + "\n".join(recent_context)
-                + f"\n\nUSER'S LATEST MESSAGE: {user_message}"
-            )
-
-        started = perf_counter()
-        try:
-            llm_response = await self._llm_client.complete(
-                LLMRequest(
-                    messages=[
-                        LLMMessage(role="system", content=prompt.to_system_prompt()),
-                        LLMMessage(role="user", content=user_content),
-                    ],
-                    model=self._llm_model,
-                    temperature=min(0.7, float(getattr(self, "_llm_temperature", 0.2))),
-                    max_tokens=getattr(self, "_edge_max_completion_tokens", 260),
-                )
-            )
-            assistant_response = str(llm_response.output_text).strip()
-            latency = llm_response.latency_ms
-        except Exception:
-            logger.warning("LIGHT_RECALL reply generation failed for session %s", session_id)
-            assistant_response = "I'm here with you. I can keep this light and grounded."
-            latency = int((perf_counter() - started) * 1000)
-
-        unsupported = audit_unsupported_recall(assistant_response, memory_cards)
-        binding_mismatches = audit_unsupported_recall_v2(assistant_response, memory_cards)
-        response_audit = {
-            "route": "LIGHT_RECALL",
-            "status": "warn" if unsupported or binding_mismatches else "pass",
-            "unsupported_recall": unsupported,
-            "binding_mismatches": binding_mismatches,
-        }
-        base_events.extend(
-            [
-                NewEvent(
-                    event_type=ASSISTANT_MESSAGE_SENT,
-                    payload={"content": assistant_response},
+    def _get_light_recall_pipeline(self) -> LightRecallPipeline:
+        pipeline = getattr(self, "_light_recall_pipeline", None)
+        if pipeline is None:
+            pipeline = LightRecallPipeline(
+                memory_service=getattr(
+                    self,
+                    "_memory_service",
+                    UnavailableLightRecallMemoryService(),
                 ),
-                NewEvent(
-                    event_type=RESPONSE_POST_AUDITED,
-                    payload=response_audit,
-                ),
-            ]
-        )
-
-        return _ReplyArtifacts(
-            assistant_response=assistant_response,
-            assistant_responses=[assistant_response],
-            response_diagnostics={
-                "route": "LIGHT_RECALL",
-                "memory_card_count": len(memory_cards),
-                "profile_prefix_injected": bool(profile_prefix),
-                "recall_ms": recall_ms,
-                "latency_ms": latency,
-                "unsupported_recall_count": len(unsupported),
-                "binding_mismatch_count": len(binding_mismatches),
-            },
-            response_sequence_plan=None,
-            response_post_audit=response_audit,
-            response_normalization=None,
-            runtime_quality_doctor_report=None,
-            events=base_events,
-        )
+                llm_client=getattr(self, "_llm_client", None),
+                llm_model=getattr(self, "_llm_model", ""),
+                llm_temperature=getattr(self, "_llm_temperature", 0.2),
+                persona_text=getattr(self, "_persona_text", ""),
+                entity_name=getattr(self, "_entity_name", "Assistant"),
+                edge_max_memory_items=getattr(self, "_edge_max_memory_items", 3),
+                edge_max_completion_tokens=getattr(self, "_edge_max_completion_tokens", 260),
+            )
+            self._light_recall_pipeline = pipeline
+        return pipeline
 
     async def _generate_fast_pong_reply(
         self,
