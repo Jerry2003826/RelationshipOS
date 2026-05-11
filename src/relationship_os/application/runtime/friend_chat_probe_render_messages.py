@@ -157,6 +157,47 @@ def build_friend_chat_plaintext_probe_repair_messages(
     ]
 
 
+def build_friend_chat_social_repair_messages(
+    *,
+    user_message: str,
+    social_cues: dict[str, Any] | None,
+) -> list[LLMMessage] | None:
+    if not social_cues:
+        return None
+    subject_token = str(social_cues.get("subject_token", "") or "").strip()
+    entity_token = str(social_cues.get("entity_token", "") or "").strip()
+    disclosure_posture = str(social_cues.get("disclosure_posture", "") or "").strip()
+    relation = str(social_cues.get("subject_entity_relation", "") or "").strip()
+    system_lines = [
+        "你需要回一条普通聊天里的社交边界回复。",
+        "只回一条自然中文聊天消息。",
+        "不要括号动作，不要场景描写，不要反问。",
+        "不要编新事实，只能基于给出的社交线索。",
+        "如果知道一点，就轻轻带一下；如果需要保留，就在正文里明确保留姿态。",
+        "不要输出 JSON。",
+    ]
+    user_lines = [
+        f"原问题：{user_message}",
+        f"人物：{subject_token or '未知'}",
+        f"相关实体：{entity_token or '未知'}",
+    ]
+    if relation:
+        user_lines.append(f"关系线索：{relation}")
+    if disclosure_posture:
+        user_lines.append(f"披露姿态：{disclosure_posture}")
+    user_lines.extend(
+        [
+            "要求：只回一条自然中文聊天消息。",
+            "要求：正文里要把你只知道一点、不会把细节说满表达出来。",
+            "要求：不要输出空白，不要输出 JSON。",
+        ]
+    )
+    return [
+        LLMMessage(role="system", content="\n".join(system_lines)),
+        LLMMessage(role="user", content="\n".join(user_lines)),
+    ]
+
+
 def coerce_friend_chat_structured_probe_response(
     response: Any,
     *,

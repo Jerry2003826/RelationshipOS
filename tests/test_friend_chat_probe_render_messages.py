@@ -2,6 +2,7 @@ from types import SimpleNamespace
 
 from relationship_os.application.runtime.friend_chat_probe_render_messages import (
     build_friend_chat_plaintext_probe_repair_messages,
+    build_friend_chat_social_repair_messages,
     build_friend_chat_structured_probe_messages,
     build_friend_chat_structured_probe_repair_messages,
     coerce_friend_chat_structured_probe_response,
@@ -41,6 +42,23 @@ def test_build_friend_chat_plaintext_probe_repair_messages_uses_prompt_and_feedb
 
     assert "不要输出 JSON" in messages[0].content
     assert "阿宁" in messages[1].content
+
+
+def test_build_friend_chat_social_repair_messages_uses_social_cues() -> None:
+    messages = build_friend_chat_social_repair_messages(
+        user_message="你是不是知道一点阿宁和海盐的事？",
+        social_cues={
+            "subject_token": "阿宁",
+            "entity_token": "海盐",
+            "disclosure_posture": "partial",
+            "subject_entity_relation": "海盐是阿宁的猫",
+        },
+    )
+
+    assert messages is not None
+    assert "社交边界回复" in messages[0].content
+    assert "阿宁" in messages[1].content
+    assert "海盐" in messages[1].content
 
 
 def test_coerce_friend_chat_structured_probe_response_parses_json_response() -> None:
