@@ -52,6 +52,8 @@ from relationship_os.application.memory_index import MemoryMediaAttachment
 from relationship_os.application.memory_service import MemoryService
 from relationship_os.application.policy_registry import get_default_compiled_policy_set
 from relationship_os.application.proactive_dispatch_handler import ProactiveDispatchHandler
+from relationship_os.application.runtime.event_builder import build_lightweight_turn_events
+from relationship_os.application.runtime.fast_pong_pipeline import FastPongPipeline
 from relationship_os.application.runtime.light_recall_pipeline import (
     LightRecallPipeline,
     UnavailableLightRecallMemoryService,
@@ -334,6 +336,14 @@ class RuntimeService:
             edge_max_memory_items=self._edge_max_memory_items,
             edge_max_completion_tokens=self._edge_max_completion_tokens,
         )
+        self._fast_pong_pipeline = FastPongPipeline(
+            llm_client=llm_client,
+            llm_model=llm_model,
+            llm_temperature=llm_temperature,
+            persona_text=persona_text,
+            entity_name=entity_name,
+            edge_max_completion_tokens=self._edge_max_completion_tokens,
+        )
         self._semantic_turn_cache: dict[str, _UserTurnInterpretation] = {}
         self._background_factual_shadow_tasks: dict[str, asyncio.Task[None]] = {}
         self._background_memory_scope_tasks: dict[str, asyncio.Task[None]] = {}
@@ -537,43 +547,13 @@ class RuntimeService:
                 turn_context=turn_context,
             )
 
-            events = self._build_session_start_events(
+            events = build_lightweight_turn_events(
                 session_id=session_id,
+                user_message=user_message_text,
                 metadata_payload=metadata or {},
                 turn_context=turn_context,
+                turn_input=turn_input,
             )
-            user_payload = {"content": user_message_text}
-            if turn_input and turn_input.has_media:
-                user_payload["attachments"] = [
-                    {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
-                    for a in turn_input.attachments
-                ]
-            events.append(
-                NewEvent(
-                    event_type=USER_MESSAGE_RECEIVED,
-                    payload=user_payload,
-                    metadata=metadata or {},
-                )
-            )
-
-            if turn_context.runtime_state:
-                prev_relationship = turn_context.runtime_state.get("relationship_state", {})
-                if prev_relationship:
-                    events.append(
-                        NewEvent(
-                            event_type=RELATIONSHIP_STATE_UPDATED,
-                            payload=prev_relationship,
-                        )
-                    )
-                prev_context = turn_context.runtime_state.get("context_frame", {})
-                if prev_context:
-                    events.append(
-                        NewEvent(
-                            event_type=CONTEXT_FRAME_COMPUTED,
-                            payload=prev_context,
-                        )
-                    )
-
             events.extend(reply_artifacts.events)
             reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
         elif router_decision.route_type == "LIGHT_RECALL":
@@ -595,41 +575,13 @@ class RuntimeService:
                 profile_prefix=profile_prefix,
             )
 
-            events = self._build_session_start_events(
+            events = build_lightweight_turn_events(
                 session_id=session_id,
+                user_message=user_message_text,
                 metadata_payload=metadata or {},
                 turn_context=turn_context,
+                turn_input=turn_input,
             )
-            user_payload = {"content": user_message_text}
-            if turn_input and turn_input.has_media:
-                user_payload["attachments"] = [
-                    {"type": a.type, "url": a.url, "mime_type": a.mime_type, "filename": a.filename}
-                    for a in turn_input.attachments
-                ]
-            events.append(
-                NewEvent(
-                    event_type=USER_MESSAGE_RECEIVED,
-                    payload=user_payload,
-                    metadata=metadata or {},
-                )
-            )
-            if turn_context.runtime_state:
-                prev_relationship = turn_context.runtime_state.get("relationship_state", {})
-                if prev_relationship:
-                    events.append(
-                        NewEvent(
-                            event_type=RELATIONSHIP_STATE_UPDATED,
-                            payload=prev_relationship,
-                        )
-                    )
-                prev_context = turn_context.runtime_state.get("context_frame", {})
-                if prev_context:
-                    events.append(
-                        NewEvent(
-                            event_type=CONTEXT_FRAME_COMPUTED,
-                            payload=prev_context,
-                        )
-                    )
             events.extend(reply_artifacts.events)
             reply_and_proactive_ms = round((perf_counter() - stage_started) * 1000.0, 1)
         else:
@@ -8202,83 +8154,25 @@ class RuntimeService:
         generate_reply: bool,
         turn_context: _TurnContext,
     ) -> _ReplyArtifacts:
-        if not generate_reply:
-            return _ReplyArtifacts(
-                assistant_response=None,
-                assistant_responses=[],
-                response_diagnostics={},
-                response_sequence_plan=None,
-                response_post_audit=None,
-                response_normalization=None,
-                runtime_quality_doctor_report=None,
-                events=[],
-            )
-
-        recent_context = []
-        for msg in turn_context.transcript_messages[-6:]:
-            role = str(msg.get("role", "")).upper()
-            content = msg.get("content", "")
-            if role and content:
-                recent_context.append(f"{role}: {content}")
-
-        context_str = "\n".join(recent_context)
-        name = getattr(self, "_entity_name", "Assistant")
-        persona_text = getattr(self, "_persona_text", "")
-
-        system_prompt = (
-            f"Your name is {name}. Keep your response extremely brief, casual, and human-like.\n"
-            f"If appropriate, reply using a similar tone and length as the user.\n"
-            f"Persona: {persona_text}"
-        ).strip()
-
-        messages = [LLMMessage(role="system", content=system_prompt)]
-        if context_str:
-            messages.append(
-                LLMMessage(
-                    role="user",
-                    content=(
-                        f"Recent Conversation:\n{context_str}"
-                        f"\n\nUSER'S LATEST MESSAGE: {user_message}"
-                    ),
-                )
-            )
-        else:
-            messages.append(LLMMessage(role="user", content=user_message))
-
-        started = perf_counter()
-        try:
-            llm_response = await self._llm_client.complete(
-                LLMRequest(
-                    messages=messages,
-                    model=self._llm_model,
-                    temperature=min(0.6, float(self._llm_temperature)),
-                    max_tokens=self._edge_max_completion_tokens,
-                )
-            )
-            assistant_response = str(llm_response.output_text).strip()
-            latency = llm_response.latency_ms
-        except Exception as e:
-            logger.warning(f"Fast pong generation failed: {e}")
-            assistant_response = "..."
-            latency = int((perf_counter() - started) * 1000)
-
-        events: list[NewEvent] = [
-            NewEvent(
-                event_type=ASSISTANT_MESSAGE_SENT,
-                payload={"content": assistant_response},
-            )
-        ]
-
-        return _ReplyArtifacts(
-            assistant_response=assistant_response,
-            assistant_responses=[assistant_response],
-            response_diagnostics={"fast_pong": True, "latency_ms": latency},
-            response_sequence_plan=None,
-            response_post_audit=None,
-            response_normalization=None,
-            runtime_quality_doctor_report=None,
-            events=events,
+        return await self._get_fast_pong_pipeline().run(
+            user_message=user_message,
+            generate_reply=generate_reply,
+            turn_context=turn_context,
         )
+
+    def _get_fast_pong_pipeline(self) -> FastPongPipeline:
+        pipeline = getattr(self, "_fast_pong_pipeline", None)
+        if pipeline is None:
+            pipeline = FastPongPipeline(
+                llm_client=getattr(self, "_llm_client", None),
+                llm_model=getattr(self, "_llm_model", ""),
+                llm_temperature=getattr(self, "_llm_temperature", 0.2),
+                persona_text=getattr(self, "_persona_text", ""),
+                entity_name=getattr(self, "_entity_name", "Assistant"),
+                edge_max_completion_tokens=getattr(self, "_edge_max_completion_tokens", 260),
+            )
+            self._fast_pong_pipeline = pipeline
+        return pipeline
 
     def _latest_event(
         self,
