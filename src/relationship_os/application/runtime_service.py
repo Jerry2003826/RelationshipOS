@@ -52,6 +52,7 @@ from relationship_os.application.memory_index import MemoryMediaAttachment
 from relationship_os.application.memory_service import MemoryService
 from relationship_os.application.policy_registry import get_default_compiled_policy_set
 from relationship_os.application.proactive_dispatch_handler import ProactiveDispatchHandler
+from relationship_os.application.runtime.dispatch_outcome_recorder import DispatchOutcomeRecorder
 from relationship_os.application.runtime.event_builder import build_lightweight_turn_events
 from relationship_os.application.runtime.fast_pong_pipeline import FastPongPipeline
 from relationship_os.application.runtime.light_recall_pipeline import (
@@ -90,8 +91,6 @@ from relationship_os.domain.event_types import (
     PROACTIVE_ACTUATION_UPDATED,
     PROACTIVE_AGGREGATE_GOVERNANCE_ASSESSED,
     PROACTIVE_CADENCE_UPDATED,
-    PROACTIVE_DISPATCH_OUTCOME_RECORDED,
-    PROACTIVE_FOLLOWUP_DISPATCHED,
     PROACTIVE_FOLLOWUP_UPDATED,
     PROACTIVE_GUARDRAIL_UPDATED,
     PROACTIVE_ORCHESTRATION_UPDATED,
@@ -373,6 +372,9 @@ class RuntimeService:
             llm_temperature=llm_temperature,
             runtime_projector_version=runtime_projector_version,
             persona_text=persona_text,
+        )
+        self._dispatch_outcome_recorder = DispatchOutcomeRecorder(
+            proactive_dispatch_handler=self._proactive_dispatch_handler
         )
 
     async def dispatch_proactive_followup(
@@ -779,42 +781,19 @@ class RuntimeService:
         session_id: str,
         prior_events: list[StoredEvent],
     ) -> None:
-        """Auto-record 'responded' outcome when user replies after a proactive dispatch."""
-        if not prior_events:
-            return
-        last_dispatch = next(
-            (e for e in reversed(prior_events) if e.event_type == PROACTIVE_FOLLOWUP_DISPATCHED),
-            None,
-        )
-        if last_dispatch is None:
-            return
-        already_recorded = any(
-            e.event_type == PROACTIVE_DISPATCH_OUTCOME_RECORDED
-            and e.occurred_at > last_dispatch.occurred_at
-            for e in prior_events
-        )
-        if already_recorded:
-            return
-        user_reply_after_dispatch = next(
-            (
-                e
-                for e in prior_events
-                if e.event_type == USER_MESSAGE_RECEIVED
-                and e.occurred_at > last_dispatch.occurred_at
-            ),
-            None,
-        )
-        if user_reply_after_dispatch is None:
-            return
-        response_latency = max(
-            0.0,
-            (user_reply_after_dispatch.occurred_at - last_dispatch.occurred_at).total_seconds(),
-        )
-        await self._proactive_dispatch_handler.record_dispatch_outcome(
+        await self._get_dispatch_outcome_recorder().maybe_record(
             session_id=session_id,
-            outcome_type="responded",
-            response_latency_seconds=response_latency,
+            prior_events=prior_events,
         )
+
+    def _get_dispatch_outcome_recorder(self) -> DispatchOutcomeRecorder:
+        recorder = getattr(self, "_dispatch_outcome_recorder", None)
+        if recorder is None:
+            recorder = DispatchOutcomeRecorder(
+                proactive_dispatch_handler=self._proactive_dispatch_handler
+            )
+            self._dispatch_outcome_recorder = recorder
+        return recorder
 
     async def _load_turn_context(self, *, session_id: str) -> _TurnContext:
         return await self._get_turn_context_loader().load(session_id=session_id)
