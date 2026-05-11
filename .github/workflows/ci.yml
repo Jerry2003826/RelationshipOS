@@ -23,3 +23,6 @@ jobs:
 
       - name: Test
         run: uv run pytest --tb=short -q
+
+      - name: Router holdout smoke gate
+        run: uv run python router_v2/training/router_eval.py --data router_v2/training/holdout_zh.jsonl

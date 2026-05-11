@@ -109,9 +109,11 @@ class UserProfileStore:
         with self._lock:
             return {uid: v.copy() for uid, v in self._vectors.items()}
 
-    def load(self, snapshot: Mapping[str, np.ndarray]) -> None:
+    def load(self, snapshot: Mapping[str, np.ndarray | list[float]]) -> None:
         with self._lock:
-            self._vectors = {uid: v.copy() for uid, v in snapshot.items()}
+            self._vectors = {
+                uid: np.asarray(v, dtype=np.float32).copy() for uid, v in snapshot.items()
+            }
             # Counts are not restored — they refer to runtime-only stats.
 
 

@@ -3,7 +3,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import AuthDep, ContainerDep, assert_session_access
 from relationship_os.api.errors import legacy_lifecycle_error_response
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -44,9 +44,25 @@ class TurnRequest(BaseModel):
 
 
 @router.get("")
-async def list_sessions(container: ContainerDep) -> dict[str, object]:
+async def list_sessions(
+    container: ContainerDep,
+    _auth: AuthDep,
+    offset: int = Query(default=0, ge=0),
+    limit: int | None = Query(default=None, ge=1, le=1000),
+) -> dict[str, object]:
     sessions = await container.runtime_service.list_sessions()
-    return {"sessions": sessions}
+    if _auth.user_id is not None and not _auth.is_admin:
+        sessions = [
+            session for session in sessions if session.get("user_id") == _auth.user_id
+        ]
+    total = len(sessions)
+    paged_sessions = sessions[offset : offset + limit] if limit is not None else sessions[offset:]
+    return {
+        "sessions": paged_sessions,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+    }
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -55,10 +71,16 @@ async def create_session(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    if _auth.user_id is not None and payload.user_id not in {None, _auth.user_id}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create a session for another user",
+        )
+    resolved_user_id = payload.user_id or _auth.user_id
     try:
         return await container.runtime_service.create_session(
             session_id=payload.session_id,
-            user_id=payload.user_id,
+            user_id=resolved_user_id,
             metadata=payload.metadata,
         )
     except SessionAlreadyExistsError as exc:
@@ -72,7 +94,9 @@ async def create_session(
 async def get_session(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     try:
         return await container.stream_service.project_stream(
             stream_id=session_id,
@@ -87,7 +111,9 @@ async def get_session(
 async def get_inner_monologue_buffer(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     return await container.stream_service.project_stream(
         stream_id=session_id,
         projector_name="inner-monologue-buffer",
@@ -99,7 +125,9 @@ async def get_inner_monologue_buffer(
 async def get_session_snapshots(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     return await container.stream_service.project_stream(
         stream_id=session_id,
         projector_name="session-snapshots",
@@ -111,7 +139,9 @@ async def get_session_snapshots(
 async def get_session_memory(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     return await container.memory_service.get_session_memory(session_id=session_id)
 
 
@@ -119,7 +149,9 @@ async def get_session_memory(
 async def get_session_memory_graph(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     return await container.memory_service.get_session_temporal_kg(session_id=session_id)
 
 
@@ -127,6 +159,7 @@ async def get_session_memory_graph(
 async def recall_session_memory(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
     query: str | None = None,
     limit: int = Query(default=5, ge=1, le=20),
     topic: str | None = None,
@@ -134,6 +167,7 @@ async def recall_session_memory(
     dialogue_act: str | None = None,
     include_filtered: bool = False,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     context_filters = {
         key: value
         for key, value in {
@@ -159,6 +193,21 @@ async def process_turn(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
+    if _auth.user_id is not None:
+        existing_events = await container.stream_service.read_stream(
+            stream_id=session_id,
+            limit=1,
+        )
+        if not existing_events:
+            try:
+                await container.runtime_service.create_session(
+                    session_id=session_id,
+                    user_id=_auth.user_id,
+                    metadata=payload.metadata,
+                )
+            except SessionAlreadyExistsError:
+                pass
     turn_input = TurnInput(
         text=payload.content,
         attachments=[

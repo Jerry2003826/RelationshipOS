@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import pickle
 from dataclasses import dataclass
 from pathlib import Path
@@ -156,9 +157,16 @@ class PriorClassifier:
 
 
 def load_or_fallback(model_path: Path) -> Tier2Classifier | PriorClassifier:
+    production_env = (os.environ.get("RELATIONSHIP_OS_ENV") or "").strip().lower()
     if model_path.exists():
         try:
             return Tier2Classifier.load(model_path)
         except Exception as exc:  # noqa: BLE001
             logger.warning("failed to load tier2 model %s: %s", model_path, exc)
+            if production_env in {"prod", "production"}:
+                raise RuntimeError(
+                    f"tier2 model exists but could not be loaded: {model_path}"
+                ) from exc
+    elif production_env in {"prod", "production"}:
+        raise RuntimeError(f"tier2 model is required in production: {model_path}")
     return PriorClassifier()

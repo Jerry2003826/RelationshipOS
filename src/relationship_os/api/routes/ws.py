@@ -5,6 +5,7 @@ from typing import Literal
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field, ValidationError
 
+from relationship_os.api.dependencies import get_stream_owner
 from relationship_os.api.routes.runtime import build_runtime_overview_payload
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -95,11 +96,43 @@ class RuntimeSubscriptionState:
 @router.websocket("/runtime")
 async def runtime_websocket(websocket: WebSocket) -> None:
     container: RuntimeContainer = websocket.app.state.container
+    if not _websocket_origin_allowed(websocket, container):
+        await websocket.close(code=1008)
+        return
+
+    configured_api_key = container.settings.api_key
+    if configured_api_key:
+        provided_api_key = websocket.headers.get("x-api-key") or websocket.query_params.get(
+            "api_key"
+        )
+        if provided_api_key != configured_api_key:
+            await websocket.close(code=1008)
+            return
+
+    connection_registered = False
+    max_connections = max(0, int(container.settings.websocket_max_connections))
+    if max_connections > 0:
+        current_connections = int(
+            getattr(websocket.app.state, "runtime_ws_connection_count", 0)
+        )
+        if current_connections >= max_connections:
+            await websocket.close(code=1008)
+            return
+        websocket.app.state.runtime_ws_connection_count = current_connections + 1
+        connection_registered = True
+
     broker_subscription = await container.stream_service.subscribe_runtime_events()
     if broker_subscription is None:
+        if connection_registered:
+            websocket.app.state.runtime_ws_connection_count = max(
+                0,
+                int(getattr(websocket.app.state, "runtime_ws_connection_count", 1)) - 1,
+            )
         await websocket.close(code=1011)
         return
 
+    user_id = websocket.headers.get("x-user-id") or websocket.query_params.get("user_id")
+    user_id = user_id.strip() if user_id and user_id.strip() else None
     subscription_state = RuntimeSubscriptionState()
     await websocket.accept()
     await websocket.send_json(
@@ -120,7 +153,14 @@ async def runtime_websocket(websocket: WebSocket) -> None:
     )
     try:
         while True:
-            message = await websocket.receive_json()
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive_json(),
+                    timeout=max(1.0, container.settings.websocket_heartbeat_timeout_seconds),
+                )
+            except TimeoutError:
+                await websocket.close(code=1001)
+                return
             message_type = message.get("type")
             if message_type == "ping":
                 await websocket.send_json({"type": "pong"})
@@ -136,6 +176,20 @@ async def runtime_websocket(websocket: WebSocket) -> None:
                     }
                 )
                 continue
+
+            if user_id and request.stream_id:
+                owner = await get_stream_owner(
+                    container=container,
+                    stream_id=request.stream_id,
+                )
+                if owner is not None and owner != user_id:
+                    await websocket.send_json(
+                        {
+                            "type": "error",
+                            "detail": "forbidden stream",
+                        }
+                    )
+                    continue
 
             subscription_state.apply(request)
             await websocket.send_json(
@@ -156,6 +210,26 @@ async def runtime_websocket(websocket: WebSocket) -> None:
         sender_task.cancel()
         await asyncio.gather(sender_task, return_exceptions=True)
         await broker_subscription.close()
+        if connection_registered:
+            websocket.app.state.runtime_ws_connection_count = max(
+                0,
+                int(getattr(websocket.app.state, "runtime_ws_connection_count", 1)) - 1,
+            )
+
+
+def _websocket_origin_allowed(websocket: WebSocket, container: RuntimeContainer) -> bool:
+    allowlist_raw = (
+        container.settings.websocket_allowed_origins
+        or container.settings.cors_origins
+        or ""
+    )
+    allowed = {origin.strip() for origin in allowlist_raw.split(",") if origin.strip()}
+    if not allowed or "*" in allowed:
+        return True
+    origin = websocket.headers.get("origin")
+    if not origin:
+        return True
+    return origin in allowed
 
 
 async def _forward_runtime_updates(

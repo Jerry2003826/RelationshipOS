@@ -62,6 +62,11 @@ def _f1(tp: int, fp: int, fn: int) -> float:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", type=Path, required=True)
+    ap.add_argument(
+        "--model",
+        type=Path,
+        default=Path("router_v2/policies/router/model.joblib"),
+    )
     ap.add_argument("--dump-csv", type=Path, default=None)
     ap.add_argument(
         "--mock-llm",
@@ -82,7 +87,7 @@ def main() -> int:
                 ensure_ascii=False,
             )
 
-    router = VanguardRouterV2.from_default(call_llm=call_llm)
+    router = VanguardRouterV2.from_default(call_llm=call_llm, model_path=args.model)
 
     # Warm-up pass (first call pays import amortization costs)
     for r in rows[:3]:

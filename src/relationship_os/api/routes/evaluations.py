@@ -1,7 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from relationship_os.api.dependencies import AuthDep, ContainerDep
+from relationship_os.api.dependencies import (
+    AuthDep,
+    ContainerDep,
+    assert_session_access,
+    require_admin,
+)
 from relationship_os.api.errors import legacy_lifecycle_error_response
 from relationship_os.application.analyzers.proactive.lifecycle_projection import (
     LegacyLifecycleStreamUnsupportedError,
@@ -27,7 +32,9 @@ class SetScenarioBaselineRequest(BaseModel):
 @router.get("/sessions")
 async def list_session_evaluations(
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     return await container.evaluation_service.list_session_evaluations()
 
 
@@ -35,7 +42,9 @@ async def list_session_evaluations(
 async def evaluate_session(
     session_id: str,
     container: ContainerDep,
+    _auth: AuthDep,
 ) -> dict[str, object]:
+    await assert_session_access(container=container, session_id=session_id, auth=_auth)
     try:
         return await container.evaluation_service.evaluate_session(session_id=session_id)
     except LegacyLifecycleStreamUnsupportedError as exc:
@@ -62,6 +71,7 @@ async def run_scenarios(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     try:
         return await container.scenario_evaluation_service.run_scenarios(
             scenario_ids=payload.scenario_ids or None
@@ -95,6 +105,7 @@ async def set_scenario_baseline(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     try:
         return await container.scenario_evaluation_service.set_baseline(
             label=label,
@@ -114,6 +125,7 @@ async def clear_scenario_baseline(
     container: ContainerDep,
     _auth: AuthDep,
 ) -> dict[str, object]:
+    require_admin(_auth)
     try:
         return await container.scenario_evaluation_service.clear_baseline(label=label)
     except ScenarioBaselineNotFoundError as exc:

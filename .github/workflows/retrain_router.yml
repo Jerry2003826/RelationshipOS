@@ -2,7 +2,7 @@ name: retrain-router
 
 # Weekly retrain + eval of the Vanguard Router v2 tier-2 classifier from
 # accumulated shadow logs. Opens a PR with the new model.joblib only if
-# the Macro F1 on the merged set stays above the gate.
+# the Macro F1 on the fixed holdout set stays above the gate.
 #
 # Runs Sunday 19:00 UTC (= Monday 03:00 UTC+8 / 05:00 AEST).
 
@@ -56,7 +56,8 @@ jobs:
         id: eval
         run: |
           python router_v2/training/router_eval.py \
-              --data router_v2/training/data/merged.jsonl \
+              --model router_v2/policies/router/model.joblib.candidate \
+              --data router_v2/training/holdout_zh.jsonl \
               --dump-csv router_v2/training/data/eval_candidate.csv \
               | tee /tmp/eval.txt
           python - <<'PY'
@@ -98,7 +99,8 @@ jobs:
             Automated weekly retrain of Vanguard Router v2 tier-2 classifier.
 
             * Training data: last-7-day shadow logs + static seeds
-            * Metrics: see workflow logs (`macro_f1` gated at 0.71)
+            * Holdout: `router_v2/training/holdout_zh.jsonl`
+            * Metrics: see workflow logs (`macro_f1` gated at 0.71 on holdout)
             * Diff: `router_v2/policies/router/model.joblib`
           labels: |
             router

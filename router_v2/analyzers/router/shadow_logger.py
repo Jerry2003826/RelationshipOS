@@ -18,10 +18,11 @@ from __future__ import annotations
 
 import json
 import os
+import queue
 import random
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -41,7 +42,7 @@ class JsonlShadowLogger:
         if self.sample_rate < 1.0 and random.random() > self.sample_rate:
             return
         record.setdefault("turn_id", _mk_turn_id())
-        line = json.dumps(record, ensure_ascii=False, default=str)
+        line = json.dumps(record, ensure_ascii=True, default=str)
         assert self._lock is not None
         with self._lock:
             with open(self.path, "a", encoding="utf-8") as f:
@@ -56,11 +57,88 @@ class JsonlShadowLogger:
             "source": source,
             "ts": time.time(),
         }
-        line = json.dumps(rec, ensure_ascii=False)
+        line = json.dumps(rec, ensure_ascii=True)
         assert self._lock is not None
         with self._lock:
             with open(self.path, "a", encoding="utf-8") as f:
                 f.write(line + "\n")
+
+
+@dataclass
+class AsyncJsonlShadowLogger:
+    """Queue-backed JSONL logger for router hot paths.
+
+    Calls only enqueue records with ``put_nowait``; disk I/O is handled by
+    a daemon thread. If the queue is full, the sample is dropped rather than
+    slowing down routing.
+    """
+
+    path: Path | str
+    sample_rate: float = 1.0
+    max_bytes_hint: int = 50 * 1024 * 1024
+    max_queue_size: int = 10_000
+    _queue: queue.Queue[dict | None] = field(init=False)
+    _sync_logger: JsonlShadowLogger = field(init=False)
+    _worker: threading.Thread = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._queue = queue.Queue(maxsize=max(1, int(self.max_queue_size)))
+        self._sync_logger = JsonlShadowLogger(
+            path=self.path,
+            sample_rate=self.sample_rate,
+            max_bytes_hint=self.max_bytes_hint,
+        )
+        self._worker = threading.Thread(
+            target=self._drain,
+            name="router-shadow-jsonl",
+            daemon=True,
+        )
+        self._worker.start()
+
+    def __call__(self, record: dict) -> None:
+        try:
+            self._queue.put_nowait(dict(record))
+        except queue.Full:
+            return
+
+    def attach_label(self, turn_id: str, label: str, source: str = "implicit") -> None:
+        rec = {
+            "kind": "label",
+            "turn_id": turn_id,
+            "label": label,
+            "source": source,
+            "ts": time.time(),
+            "_write_as_label": True,
+        }
+        try:
+            self._queue.put_nowait(rec)
+        except queue.Full:
+            return
+
+    def close(self, timeout: float = 1.0) -> None:
+        try:
+            self._queue.put_nowait(None)
+        except queue.Full:
+            return
+        self._worker.join(timeout=timeout)
+
+    def _drain(self) -> None:
+        while True:
+            record = self._queue.get()
+            if record is None:
+                return
+            try:
+                if record.pop("_write_as_label", False):
+                    self._sync_logger.attach_label(
+                        turn_id=str(record["turn_id"]),
+                        label=str(record["label"]),
+                        source=str(record.get("source", "implicit")),
+                    )
+                else:
+                    self._sync_logger(record)
+            except Exception:
+                # Shadow logging must never affect routing availability.
+                continue
 
 
 def _mk_turn_id() -> str:

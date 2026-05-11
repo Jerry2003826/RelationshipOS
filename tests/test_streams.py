@@ -10,7 +10,9 @@ from relationship_os.application.analyzers.proactive.lifecycle_projection import
     LEGACY_LIFECYCLE_STREAM_DETAIL,
     LEGACY_LIFECYCLE_STREAM_ERROR,
 )
+from relationship_os.application.projectors import SessionTranscriptProjector
 from relationship_os.application.stream_service import StreamService
+from relationship_os.core.config import Settings
 from relationship_os.domain.events import NewEvent, StoredEvent
 from relationship_os.domain.projectors import VersionedProjectorRegistry
 from relationship_os.infrastructure.event_store.memory import InMemoryEventStore
@@ -82,6 +84,24 @@ def test_append_detects_optimistic_concurrency_conflict() -> None:
     assert conflict_response.status_code == 409
 
 
+def test_stream_append_requires_admin_key_when_admin_key_configured() -> None:
+    client = TestClient(create_app(Settings(api_key="secret", admin_api_key="admin-secret")))
+
+    forbidden_response = client.post(
+        "/api/v1/streams/session-admin/events",
+        headers={"X-API-Key": "secret"},
+        json={"events": [{"event_type": "user.message.received", "payload": {}}]},
+    )
+    allowed_response = client.post(
+        "/api/v1/streams/session-admin/events",
+        headers={"X-API-Key": "secret", "X-Admin-Key": "admin-secret"},
+        json={"events": [{"event_type": "user.message.received", "payload": {}}]},
+    )
+
+    assert forbidden_response.status_code == 403
+    assert allowed_response.status_code == 201
+
+
 def test_rebuild_projection_reports_selected_streams() -> None:
     client = TestClient(create_app())
 
@@ -103,6 +123,24 @@ def test_rebuild_projection_reports_selected_streams() -> None:
     assert body["projector"] == {"name": "session-transcript", "version": "v1"}
     assert body["stream_count"] == 2
     assert {item["stream_id"] for item in body["streams"]} == {"session-a", "session-b"}
+
+
+def test_projector_rebuild_requires_admin_key_when_admin_key_configured() -> None:
+    client = TestClient(create_app(Settings(api_key="secret", admin_api_key="admin-secret")))
+
+    forbidden_response = client.post(
+        "/api/v1/projectors/session-transcript/rebuild",
+        headers={"X-API-Key": "secret"},
+        json={"stream_ids": []},
+    )
+    allowed_response = client.post(
+        "/api/v1/projectors/session-transcript/rebuild",
+        headers={"X-API-Key": "secret", "X-Admin-Key": "admin-secret"},
+        json={"stream_ids": []},
+    )
+
+    assert forbidden_response.status_code == 403
+    assert allowed_response.status_code == 200
 
 
 @dataclass
@@ -160,6 +198,192 @@ def test_in_memory_event_store_read_all_returns_global_event_order() -> None:
     events = asyncio.run(event_store.read_all())
 
     assert [event.payload["step"] for event in events] == [1, 2, 3]
+
+
+def test_in_memory_event_store_read_stream_supports_pagination() -> None:
+    event_store = InMemoryEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="session-paged",
+            expected_version=None,
+            events=[
+                NewEvent(event_type="user.message.received", payload={"step": 1}),
+                NewEvent(event_type="assistant.message.sent", payload={"step": 2}),
+                NewEvent(event_type="user.message.received", payload={"step": 3}),
+            ],
+        )
+    )
+
+    events = asyncio.run(
+        event_store.read_stream(stream_id="session-paged", after_version=1, limit=1)
+    )
+
+    assert [event.version for event in events] == [2]
+    assert [event.payload["step"] for event in events] == [2]
+
+
+def test_stream_service_read_stream_forwards_pagination_to_event_store() -> None:
+    event_store = InMemoryEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="session-paged-service",
+            expected_version=None,
+            events=[
+                NewEvent(event_type="user.message.received", payload={"step": 1}),
+                NewEvent(event_type="assistant.message.sent", payload={"step": 2}),
+                NewEvent(event_type="user.message.received", payload={"step": 3}),
+            ],
+        )
+    )
+    stream_service = StreamService(
+        event_store=event_store,
+        projector_registry=VersionedProjectorRegistry(),
+    )
+
+    events = asyncio.run(
+        stream_service.read_stream(stream_id="session-paged-service", after_version=1, limit=2)
+    )
+
+    assert [event.version for event in events] == [2, 3]
+
+
+class _CountingEventStore(InMemoryEventStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.read_stream_calls: list[dict[str, object]] = []
+
+    async def read_stream(
+        self,
+        *,
+        stream_id: str,
+        after_version: int = 0,
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
+        self.read_stream_calls.append(
+            {"stream_id": stream_id, "after_version": after_version, "limit": limit}
+        )
+        return await super().read_stream(
+            stream_id=stream_id,
+            after_version=after_version,
+            limit=limit,
+        )
+
+
+def test_stream_service_project_stream_uses_snapshot_for_incremental_replay() -> None:
+    event_store = _CountingEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="snapshot-session",
+            expected_version=None,
+            events=[
+                NewEvent(event_type="user.message.received", payload={"content": "a"}),
+                NewEvent(event_type="assistant.message.sent", payload={"content": "b"}),
+            ],
+        )
+    )
+    projector_registry = VersionedProjectorRegistry()
+    projector_registry.register(SessionTranscriptProjector())
+    stream_service = StreamService(
+        event_store=event_store,
+        projector_registry=projector_registry,
+    )
+
+    first = asyncio.run(
+        stream_service.project_stream(
+            stream_id="snapshot-session",
+            projector_name="session-transcript",
+            projector_version="v1",
+        )
+    )
+    asyncio.run(
+        event_store.append(
+            stream_id="snapshot-session",
+            expected_version=None,
+            events=[NewEvent(event_type="user.message.received", payload={"content": "c"})],
+        )
+    )
+    incremental = asyncio.run(
+        stream_service.project_stream(
+            stream_id="snapshot-session",
+            projector_name="session-transcript",
+            projector_version="v1",
+        )
+    )
+    full_events = asyncio.run(event_store.read_stream(stream_id="snapshot-session"))
+    full = stream_service.project_events(
+        stream_id="snapshot-session",
+        events=full_events,
+        projector_name="session-transcript",
+        projector_version="v1",
+    )
+
+    target_reads = [
+        call
+        for call in event_store.read_stream_calls
+        if call["stream_id"] == "snapshot-session"
+    ]
+
+    assert first["state"]["messages"][0]["content"] == "a"
+    assert incremental["state"] == full["state"]
+    assert target_reads[1]["after_version"] == 2
+
+
+def test_stream_service_restores_projection_snapshot_from_event_store() -> None:
+    event_store = _CountingEventStore()
+    asyncio.run(
+        event_store.append(
+            stream_id="snapshot-persist-session",
+            expected_version=None,
+            events=[
+                NewEvent(event_type="user.message.received", payload={"content": "a"}),
+                NewEvent(event_type="assistant.message.sent", payload={"content": "b"}),
+            ],
+        )
+    )
+    projector_registry = VersionedProjectorRegistry()
+    projector_registry.register(SessionTranscriptProjector())
+    first_service = StreamService(
+        event_store=event_store,
+        projector_registry=projector_registry,
+    )
+    asyncio.run(
+        first_service.project_stream(
+            stream_id="snapshot-persist-session",
+            projector_name="session-transcript",
+            projector_version="v1",
+        )
+    )
+    asyncio.run(
+        event_store.append(
+            stream_id="snapshot-persist-session",
+            expected_version=None,
+            events=[NewEvent(event_type="user.message.received", payload={"content": "c"})],
+        )
+    )
+
+    restored_service = StreamService(
+        event_store=event_store,
+        projector_registry=projector_registry,
+    )
+    restored = asyncio.run(
+        restored_service.project_stream(
+            stream_id="snapshot-persist-session",
+            projector_name="session-transcript",
+            projector_version="v1",
+        )
+    )
+    target_reads = [
+        call
+        for call in event_store.read_stream_calls
+        if call["stream_id"] == "snapshot-persist-session"
+    ]
+
+    assert [message["content"] for message in restored["state"]["messages"]] == [
+        "a",
+        "b",
+        "c",
+    ]
+    assert target_reads[-1]["after_version"] == 2
 
 
 def test_stream_service_apply_events_matches_full_runtime_projection() -> None:

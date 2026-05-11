@@ -39,7 +39,16 @@ class Settings(BaseSettings):
     proactive_followup_poll_interval_seconds: float = 5.0
     proactive_followup_max_dispatch_per_cycle: int = 2
     api_key: str = ""
+    admin_api_key: str = ""
     cors_origins: str = ""
+    trusted_hosts: str = ""
+    websocket_allowed_origins: str = ""
+    websocket_max_connections: int = 100
+    websocket_heartbeat_timeout_seconds: float = 60.0
+    max_request_bytes: int = 1_000_000
+    max_json_depth: int = 32
+    rate_limit_requests: int = 0
+    rate_limit_window_seconds: float = 60.0
     default_projector_version: str = Field(default="v2")
     persona_file: str = "persona.md"
     entity_id: str = "server"

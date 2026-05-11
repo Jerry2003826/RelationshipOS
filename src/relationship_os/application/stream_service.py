@@ -1,5 +1,7 @@
 import hashlib
 import json
+from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
@@ -7,6 +9,15 @@ from relationship_os.application.runtime_events import RuntimeEventBroker, Runti
 from relationship_os.domain.event_store import EventStore
 from relationship_os.domain.events import NewEvent, StoredEvent
 from relationship_os.domain.projectors import VersionedProjectorRegistry
+
+_PROJECTION_SNAPSHOT_EVENT_TYPE = "system.projection_snapshot.saved"
+_PROJECTION_SNAPSHOT_PREFIX = "__projection_snapshot__:"
+
+
+@dataclass(slots=True)
+class _ProjectionSnapshot:
+    version: int
+    state: dict[str, object]
 
 
 class StreamService:
@@ -20,6 +31,7 @@ class StreamService:
         self._event_store = event_store
         self._projector_registry = projector_registry
         self._runtime_event_broker = runtime_event_broker
+        self._projection_snapshots: dict[tuple[str, str, str], _ProjectionSnapshot] = {}
 
     async def append_events(
         self,
@@ -40,14 +52,35 @@ class StreamService:
             )
         return stored_events
 
-    async def read_stream(self, *, stream_id: str) -> list[StoredEvent]:
-        return await self._event_store.read_stream(stream_id=stream_id)
+    async def read_stream(
+        self,
+        *,
+        stream_id: str,
+        after_version: int = 0,
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
+        return await self._event_store.read_stream(
+            stream_id=stream_id,
+            after_version=after_version,
+            limit=limit,
+        )
 
-    async def read_all_events(self) -> list[StoredEvent]:
-        return await self._event_store.read_all()
+    async def read_all_events(
+        self,
+        *,
+        offset: int = 0,
+        limit: int | None = None,
+    ) -> list[StoredEvent]:
+        events = await self._event_store.read_all(offset=offset, limit=limit)
+        return [event for event in events if not _is_internal_stream_id(event.stream_id)]
 
     async def list_stream_ids(self) -> list[str]:
-        return await self._event_store.list_stream_ids()
+        stream_ids = await self._event_store.list_stream_ids()
+        return [
+            stream_id
+            for stream_id in stream_ids
+            if not _is_internal_stream_id(stream_id)
+        ]
 
     async def subscribe_runtime_events(self) -> RuntimeEventSubscription | None:
         if self._runtime_event_broker is None:
@@ -61,13 +94,62 @@ class StreamService:
         projector_name: str,
         projector_version: str,
     ) -> dict[str, object]:
-        events = await self._event_store.read_stream(stream_id=stream_id)
-        return self.project_events(
-            stream_id=stream_id,
-            events=events,
-            projector_name=projector_name,
-            projector_version=projector_version,
+        self._projector_registry.resolve(
+            name=projector_name,
+            version=projector_version,
         )
+        snapshot_key = (stream_id, projector_name, projector_version)
+        snapshot = self._projection_snapshots.get(snapshot_key)
+        if snapshot is None:
+            snapshot = await self._load_projection_snapshot(
+                stream_id=stream_id,
+                projector_name=projector_name,
+                projector_version=projector_version,
+            )
+        if snapshot is not None:
+            events = await self._event_store.read_stream(
+                stream_id=stream_id,
+                after_version=snapshot.version,
+            )
+            if not events:
+                return {
+                    "projector": {
+                        "name": projector_name,
+                        "version": projector_version,
+                    },
+                    "stream_id": stream_id,
+                    "state": deepcopy(snapshot.state),
+                }
+            projection = self.apply_events(
+                stream_id=stream_id,
+                state=deepcopy(snapshot.state),
+                events=events,
+                projector_name=projector_name,
+                projector_version=projector_version,
+            )
+        else:
+            events = await self._event_store.read_stream(stream_id=stream_id)
+            projection = self.project_events(
+                stream_id=stream_id,
+                events=events,
+                projector_name=projector_name,
+                projector_version=projector_version,
+            )
+
+        latest_version = events[-1].version if events else 0
+        self._projection_snapshots[snapshot_key] = _ProjectionSnapshot(
+            version=latest_version,
+            state=deepcopy(projection["state"]),
+        )
+        if latest_version > 0:
+            await self._save_projection_snapshot(
+                stream_id=stream_id,
+                projector_name=projector_name,
+                projector_version=projector_version,
+                version=latest_version,
+                state=projection["state"],
+            )
+        return projection
 
     def project_events(
         self,
@@ -206,6 +288,70 @@ class StreamService:
         encoded = json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode()
         return hashlib.sha256(encoded).hexdigest()
 
+    async def _load_projection_snapshot(
+        self,
+        *,
+        stream_id: str,
+        projector_name: str,
+        projector_version: str,
+    ) -> _ProjectionSnapshot | None:
+        snapshot_stream_id = _projection_snapshot_stream_id(
+            stream_id=stream_id,
+            projector_name=projector_name,
+            projector_version=projector_version,
+        )
+        events = await self._event_store.read_stream(stream_id=snapshot_stream_id)
+        for event in reversed(events):
+            if event.event_type != _PROJECTION_SNAPSHOT_EVENT_TYPE:
+                continue
+            payload = event.payload
+            if (
+                payload.get("stream_id") != stream_id
+                or payload.get("projector_name") != projector_name
+                or payload.get("projector_version") != projector_version
+            ):
+                continue
+            version = payload.get("version")
+            state = payload.get("state")
+            if isinstance(version, int) and isinstance(state, dict):
+                snapshot = _ProjectionSnapshot(version=version, state=deepcopy(state))
+                self._projection_snapshots[
+                    (stream_id, projector_name, projector_version)
+                ] = snapshot
+                return snapshot
+        return None
+
+    async def _save_projection_snapshot(
+        self,
+        *,
+        stream_id: str,
+        projector_name: str,
+        projector_version: str,
+        version: int,
+        state: object,
+    ) -> None:
+        snapshot_stream_id = _projection_snapshot_stream_id(
+            stream_id=stream_id,
+            projector_name=projector_name,
+            projector_version=projector_version,
+        )
+        await self._event_store.append(
+            stream_id=snapshot_stream_id,
+            expected_version=None,
+            events=[
+                NewEvent(
+                    event_type=_PROJECTION_SNAPSHOT_EVENT_TYPE,
+                    payload={
+                        "stream_id": stream_id,
+                        "projector_name": projector_name,
+                        "projector_version": projector_version,
+                        "version": version,
+                        "state": deepcopy(state),
+                    },
+                )
+            ],
+        )
+
     def _normalize(self, value: object) -> object:
         if isinstance(value, datetime):
             return value.isoformat()
@@ -219,3 +365,18 @@ class StreamService:
                 for key, item in sorted(value.items(), key=lambda item: str(item[0]))
             }
         return value
+
+
+def _is_internal_stream_id(stream_id: str) -> bool:
+    return stream_id.startswith(_PROJECTION_SNAPSHOT_PREFIX)
+
+
+def _projection_snapshot_stream_id(
+    *,
+    stream_id: str,
+    projector_name: str,
+    projector_version: str,
+) -> str:
+    key = f"{stream_id}\0{projector_name}\0{projector_version}"
+    digest = hashlib.sha256(key.encode("utf-8")).hexdigest()
+    return f"{_PROJECTION_SNAPSHOT_PREFIX}{digest}"

@@ -2,6 +2,11 @@
 
 > 这篇是给想真正读懂 RelationshipOS 的人看的。如果你只是想跑一下,看 [README](../README.md) 就够了。
 > 这里会讲清楚四件事:**为什么这么设计 / 各模块怎么配合 / 关键权衡 / 未来怎么演化**。
+>
+> 2026-04-30 implementation note: `LIGHT_RECALL` now has a real runtime path
+> (shallow recall + `EmotionalPrompt` + single reply). The expert DAG remains
+> dependency-ordered; only the foundation/read stage uses parallel `asyncio.gather`.
+> Router holdout Macro F1 is **0.873** on `holdout_zh.jsonl`.
 
 ---
 
