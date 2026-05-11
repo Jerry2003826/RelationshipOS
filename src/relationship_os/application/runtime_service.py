@@ -121,6 +121,7 @@ from relationship_os.application.runtime.session_lifecycle import (
     SessionLifecycleService,
 )
 from relationship_os.application.runtime.session_locks import SessionLockRegistry
+from relationship_os.application.runtime.transcript_summary import summarize_early_messages
 from relationship_os.application.runtime.turn_analysis_event_builder import (
     build_session_directive_payload as build_turn_session_directive_payload,
 )
@@ -1923,19 +1924,7 @@ class RuntimeService:
 
     @staticmethod
     def _summarize_early_messages(messages: list[dict[str, str]]) -> str:
-        """Compress early conversation into key facts for small-model context."""
-        lines: list[str] = []
-        for msg in messages:
-            role = msg.get("role", "")
-            content = (msg.get("content") or "").strip()
-            if not content or role == "system":
-                continue
-            tag = "User" if role == "user" else "You"
-            truncated = content[:80] + ("…" if len(content) > 80 else "")
-            lines.append(f"{tag}: {truncated}")
-        if len(lines) > 30:
-            lines = lines[:15] + ["..."] + lines[-15:]
-        return "\n".join(lines)
+        return summarize_early_messages(messages)
 
     def _is_edge_profile(self) -> bool:
         return self._runtime_profile in {"edge_desktop_4b", "friend_chat_zh_v1"}
