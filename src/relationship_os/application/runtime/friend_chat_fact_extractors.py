@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 _STRIP_CHARS = "。！？；;，, "
 
@@ -83,3 +84,93 @@ def extract_social_entity_token(value: str) -> str:
             if entity:
                 return entity
     return ""
+
+
+def normalize_communication_preference(text: str) -> str:
+    raw = str(text or "").strip(_STRIP_CHARS)
+    if not raw:
+        return ""
+    if ("语音" in raw or "长语音" in raw or "语音条" in raw) and any(
+        token in raw for token in ("别发", "别给我发", "不爱", "怕", "不喜欢", "别太长", "太长")
+    ):
+        return "别发太长语音"
+    if "大道理" in raw:
+        return "别讲大道理"
+    return ""
+
+
+def normalize_fact_slot_digest(payload: Any) -> dict[str, Any]:
+    data = payload if isinstance(payload, dict) else {}
+    pet_name = str(data.get("pet_name", "") or "").strip()
+    pet_kind = str(data.get("pet_kind", "") or "").strip()
+    legacy_pet = str(data.get("pet", "") or "").strip()
+    if legacy_pet and not pet_name:
+        match = re.search(r"叫(?P<name>[\u4e00-\u9fffA-Za-z0-9]{1,12})", legacy_pet)
+        if match is None:
+            match = re.search(
+                r"named (?P<name>[A-Za-z][A-Za-z\s-]{0,20})",
+                legacy_pet,
+                re.IGNORECASE,
+            )
+        if match:
+            pet_name = str(match.group("name") or "").strip()
+        if not pet_kind:
+            for kind in ("猫", "狗", "宠物"):
+                if kind in legacy_pet:
+                    pet_kind = kind
+                    break
+    living_facts = [
+        str(value).strip(_STRIP_CHARS)
+        for value in list(data.get("living_facts") or [])
+        if str(value).strip()
+    ]
+    hometown = str(data.get("hometown", "") or "").strip(_STRIP_CHARS)
+    if hometown.startswith("我在") and hometown.endswith("长大"):
+        hometown = hometown.removeprefix("我在").removesuffix("长大").strip()
+    drink_preference = str(data.get("drink_preference", "") or "").strip(_STRIP_CHARS)
+    communication_preference = str(data.get("communication_preference", "") or "").strip(
+        _STRIP_CHARS
+    )
+    return {
+        "hometown": hometown,
+        "pet_name": pet_name,
+        "pet_kind": pet_kind,
+        "drink_preference": drink_preference,
+        "communication_preference": normalize_communication_preference(communication_preference),
+        "living_facts": living_facts,
+        "stable_slots": [
+            str(value).strip()
+            for value in list(data.get("stable_slots") or [])
+            if str(value).strip()
+        ],
+    }
+
+
+def fact_slot_digest_values(
+    digest: dict[str, Any],
+    *,
+    include_living_facts: bool = False,
+) -> list[str]:
+    values = []
+    hometown = str(digest.get("hometown", "") or "").strip()
+    pet_name = str(digest.get("pet_name", "") or "").strip()
+    pet_kind = str(digest.get("pet_kind", "") or "").strip()
+    drink_preference = str(digest.get("drink_preference", "") or "").strip()
+    communication_preference = str(digest.get("communication_preference", "") or "").strip()
+    if hometown:
+        values.append(f"hometown:{hometown}")
+    if pet_name:
+        values.append(f"pet_name:{pet_name}")
+    if pet_kind:
+        values.append(f"pet_kind:{pet_kind}")
+    if drink_preference:
+        values.append(f"drink_preference:{drink_preference}")
+    if communication_preference:
+        values.append(f"communication_preference:{communication_preference}")
+    if include_living_facts:
+        values.extend(
+            f"living_fact:{str(value).strip(_STRIP_CHARS)}"
+            for value in list(digest.get("living_facts") or [])
+            if str(value).strip()
+        )
+    return [value for value in values if value]
