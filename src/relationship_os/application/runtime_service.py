@@ -106,6 +106,7 @@ from relationship_os.application.runtime.friend_chat_probe_parser import (
 )
 from relationship_os.application.runtime.friend_chat_probe_planning import (
     build_friend_chat_probe_answer_plan,
+    build_friend_chat_probe_snapshot,
 )
 from relationship_os.application.runtime.friend_chat_probe_repair import (
     build_friend_chat_probe_repair_feedback,
@@ -4245,42 +4246,13 @@ class RuntimeService:
             metadata.get("friend_chat_relationship_digest")
         )
         social_cues = self._build_social_hint_cues(metadata) or {}
-        return {
-            "factual_slots": {
-                "hometown": str(factual_slots.get("hometown", "") or "").strip(),
-                "pet_name": str(factual_slots.get("pet_name", "") or "").strip(),
-                "pet_kind": str(factual_slots.get("pet_kind", "") or "").strip(),
-                "drink_preference": str(factual_slots.get("drink_preference", "") or "").strip(),
-                "communication_preference": str(
-                    factual_slots.get("communication_preference", "") or ""
-                ).strip(),
-                "living_facts": list(factual_slots.get("living_facts") or [])[:3],
-                "stable_slots": list(factual_slots.get("stable_slots") or [])[:6],
-            },
-            "state_snapshot": {
-                "signals": list(narrative_digest.get("signals") or [])[:6],
-                "markers": list(narrative_digest.get("markers") or [])[:6],
-                "dominant_tone": str(narrative_digest.get("dominant_tone", "") or "").strip(),
-            },
-            "relationship_snapshot": {
-                "signals": list(relationship_digest.get("signals") or [])[:6],
-                "markers": list(relationship_digest.get("markers") or [])[:6],
-                "interaction_band": str(
-                    relationship_digest.get("interaction_band", "") or ""
-                ).strip(),
-                "total_interactions": int(
-                    relationship_digest.get("total_interactions")
-                    or metadata.get("friend_chat_total_interactions", 0)
-                    or 0
-                ),
-            },
-            "social_snapshot": {
-                "subject_token": str(social_cues.get("subject_token", "") or "").strip(),
-                "entity_token": str(social_cues.get("entity_token", "") or "").strip(),
-                "disclosure_posture": str(social_cues.get("disclosure_posture", "") or "").strip(),
-                "fact_hint": str(social_cues.get("fact_hint", "") or "").strip(),
-            },
-        }
+        return build_friend_chat_probe_snapshot(
+            factual_slots=factual_slots,
+            narrative_digest=narrative_digest,
+            relationship_digest=relationship_digest,
+            social_cues=social_cues,
+            metadata=metadata,
+        )
 
     def _friend_chat_probe_only_kind(self, metadata: dict[str, Any]) -> str:
         if not self._is_friend_chat_profile():

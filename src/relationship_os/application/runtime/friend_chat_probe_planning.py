@@ -40,6 +40,52 @@ def _infer_probe_kind(metadata: dict[str, Any]) -> str:
     return ""
 
 
+def build_friend_chat_probe_snapshot(
+    *,
+    factual_slots: dict[str, Any],
+    narrative_digest: dict[str, Any],
+    relationship_digest: dict[str, Any],
+    social_cues: dict[str, Any],
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "factual_slots": {
+            "hometown": str(factual_slots.get("hometown", "") or "").strip(),
+            "pet_name": str(factual_slots.get("pet_name", "") or "").strip(),
+            "pet_kind": str(factual_slots.get("pet_kind", "") or "").strip(),
+            "drink_preference": str(factual_slots.get("drink_preference", "") or "").strip(),
+            "communication_preference": str(
+                factual_slots.get("communication_preference", "") or ""
+            ).strip(),
+            "living_facts": list(factual_slots.get("living_facts") or [])[:3],
+            "stable_slots": list(factual_slots.get("stable_slots") or [])[:6],
+        },
+        "state_snapshot": {
+            "signals": list(narrative_digest.get("signals") or [])[:6],
+            "markers": list(narrative_digest.get("markers") or [])[:6],
+            "dominant_tone": str(narrative_digest.get("dominant_tone", "") or "").strip(),
+        },
+        "relationship_snapshot": {
+            "signals": list(relationship_digest.get("signals") or [])[:6],
+            "markers": list(relationship_digest.get("markers") or [])[:6],
+            "interaction_band": str(
+                relationship_digest.get("interaction_band", "") or ""
+            ).strip(),
+            "total_interactions": int(
+                relationship_digest.get("total_interactions")
+                or metadata.get("friend_chat_total_interactions", 0)
+                or 0
+            ),
+        },
+        "social_snapshot": {
+            "subject_token": str(social_cues.get("subject_token", "") or "").strip(),
+            "entity_token": str(social_cues.get("entity_token", "") or "").strip(),
+            "disclosure_posture": str(social_cues.get("disclosure_posture", "") or "").strip(),
+            "fact_hint": str(social_cues.get("fact_hint", "") or "").strip(),
+        },
+    }
+
+
 def _infer_probe_cues_from_snapshot(
     *,
     probe_kind: str,
